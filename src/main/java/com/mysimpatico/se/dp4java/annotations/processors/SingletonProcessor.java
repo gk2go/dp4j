@@ -96,6 +96,7 @@ public class SingletonProcessor extends AbstractProcessor {
                  */
                 final Element defaultConstructor;
                 Element temp = null;
+                //com.sun.tools.javac.code.Flags.GENERATEDCONSTR
                 if (element.getKind() == ElementKind.CONSTRUCTOR) {
                     Set<Modifier> constructorMods = element.getModifiers();
                     if (!constructorMods.contains(Modifier.PRIVATE)) {
@@ -144,7 +145,8 @@ public class SingletonProcessor extends AbstractProcessor {
                     JCCompilationUnit defConstructor = (JCCompilationUnit) trees.getPath(defaultConstructor).getCompilationUnit();
                     Set<Modifier> constructorModifiers = defaultConstructor.getModifiers();
                     JCTree tree = defConstructor.getTree();
-                    tree.
+                    defConstructor.defs.append(tree);
+//                    tree.
                     constructorModifiers.remove(Modifier.PROTECTED);
                     constructorModifiers.remove(Modifier.PUBLIC);
                     constructorModifiers.add(Modifier.PRIVATE);
