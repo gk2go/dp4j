@@ -7,17 +7,19 @@ package com.mysimpatico.se.dp4java.annotations.processors;
 import com.mysimpatico.se.dp4java.annotations.singleton.Singleton;
 import com.mysimpatico.se.dp4java.annotations.singleton.getInstance;
 import com.mysimpatico.se.dp4java.annotations.singleton.instance;
-import com.sun.source.tree.ClassTree;
+import com.sun.source.tree.*;
 import com.sun.source.tree.CompilationUnitTree;
 import com.sun.source.tree.MethodTree;
 import com.sun.source.tree.ModifiersTree;
 import com.sun.source.tree.Tree;
 import com.sun.source.tree.VariableTree;
 import com.sun.source.util.Trees;
+import com.sun.tools.javac.code.*;
 import com.sun.tools.javac.model.JavacElements;
 import com.sun.tools.javac.processing.JavacProcessingEnvironment;
 import com.sun.tools.javac.tree.JCTree;
-import com.sun.tools.javac.tree.JCTree.JCCompilationUnit;
+import com.sun.tools.javac.tree.JCTree.*;
+import com.sun.tools.javac.tree.JCTree.JCMethodDecl;
 import com.sun.tools.javac.tree.JCTree.JCVariableDecl;
 import java.io.File;
 import java.io.IOException;
@@ -59,6 +61,10 @@ public class SingletonProcessor extends AbstractProcessor {
         super.init(processingEnv);
         trees = Trees.instance(processingEnv);
         elementUtils = JavacElements.instance(((JavacProcessingEnvironment) processingEnv).getContext());
+    }
+
+    private JCMethodDecl toUnit(Element element) {
+        return (JCMethodDecl) trees.getPath(element).getCompilationUnit();
     }
 
     @Override
@@ -142,14 +148,26 @@ public class SingletonProcessor extends AbstractProcessor {
 
                 //make default constructor private
                 if (!privateConstructors) { // == defaultConstructor != null
-                    JCCompilationUnit defConstructor = (JCCompilationUnit) trees.getPath(defaultConstructor).getCompilationUnit();
-                    Set<Modifier> constructorModifiers = defaultConstructor.getModifiers();
-                    JCTree tree = defConstructor.getTree();
-                    defConstructor.defs.append(tree);
+                    JCCompilationUnit type = (JCCompilationUnit) trees.getPath(e).getCompilationUnit();
+                    for (JCTree def : type.defs) {
+                        if (def instanceof JCClassDecl) {
+                            JCClassDecl d = (JCClassDecl) def;
+                            for (JCTree me : d.defs) {
+                                if (me instanceof JCMethodDecl) {
+                                    JCMethodDecl m = (JCMethodDecl) me;
+                                    if ((m.mods.flags & Flags.GENERATEDCONSTR) != 0) {
+                                        m.mods = treeMaker.Modifiers(Flags.PRIVATE);
+                                    }
+                                }
+                            }
+                        }
+                    }
+
+
+
+//                    defConstructor.mods = treeMaker.Modifiers(Flags.PRIVATE);
 //                    tree.
-                    constructorModifiers.remove(Modifier.PROTECTED);
-                    constructorModifiers.remove(Modifier.PUBLIC);
-                    constructorModifiers.add(Modifier.PRIVATE);
+
 
 //                    Task<WorkingCopy> task = new Task<WorkingCopy>()   {
 //

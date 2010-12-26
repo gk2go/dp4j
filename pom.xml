@@ -91,6 +91,11 @@
             <artifactId>org-netbeans-modules-masterfs</artifactId>
             <version>RELEASE70-BETA</version>
         </dependency>
+        <dependency>
+            <groupId>${project.groupId}</groupId>
+            <artifactId>lombok-mvn</artifactId>
+            <version>${project.version}</version>
+        </dependency>
     </dependencies>
     <profiles>
     <profile>

@@ -1,3 +1,4 @@
 com.mysimpatico.se.dp4java.annotations.processors.SingletonProcessor
 com.mysimpatico.se.dp4java.annotations.processors.InstanceProcessor
 com.mysimpatico.se.dp4java.annotations.processors.GetInstanceProcessor
+lombok.javac.apt.Processor
