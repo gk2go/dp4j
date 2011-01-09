@@ -39,7 +39,7 @@ import com.sun.tools.javac.util.Name;
 public class SingletonProcessor extends AbstractProcessor {
 
     private Trees trees;
-    private TreeMaker treeMaker;
+    private TreeMaker tm;
     private static JavacElements elementUtils;
     private Name.Table nameTable;
 
@@ -56,7 +56,7 @@ public class SingletonProcessor extends AbstractProcessor {
     public boolean process(Set<? extends TypeElement> annotations, RoundEnvironment roundEnv) {
         Thread.currentThread().setContextClassLoader(getClass().getClassLoader());
         final Messager msgr = processingEnv.getMessager();
-        treeMaker = TreeMaker.instance(((JavacProcessingEnvironment) processingEnv).getContext());
+        tm = TreeMaker.instance(((JavacProcessingEnvironment) processingEnv).getContext());
 
         for (final Element e : roundEnv.getElementsAnnotatedWith(Singleton.class)) {
             Set<Modifier> modifiers = e.getModifiers();
@@ -109,44 +109,44 @@ public class SingletonProcessor extends AbstractProcessor {
             //make default constructor private
 
             JCCompilationUnit singletonCU = (JCCompilationUnit) trees.getPath(e).getCompilationUnit();
+            JCMethodDecl defCon = null;
             for (JCTree def : singletonCU.defs) {
                 if (def instanceof JCClassDecl) {
                     JCClassDecl singletonClass = (JCClassDecl) def;
-
                     if (singletonClass.name.equals(singletonClassName)) {
                         if (!privateConstructors) {
                             for (JCTree singletonMethod : singletonClass.defs) {
 
                                 if (singletonMethod instanceof JCMethodDecl) {
-                                    JCMethodDecl m = (JCMethodDecl) singletonMethod;
-                                    if ((m.mods.flags & Flags.GENERATEDCONSTR) != 0) {
-                                        m.mods = treeMaker.Modifiers(Flags.PRIVATE);
+                                    defCon = (JCMethodDecl) singletonMethod;
+                                    if ((defCon.mods.flags & Flags.GENERATEDCONSTR) != 0) {
+                                        defCon.mods = tm.Modifiers(Flags.PRIVATE);
                                     }
                                 }
                             }
                         }
-                        final JCModifiers privateStaticMods = treeMaker.Modifiers(Flags.PRIVATE + Flags.STATIC);
-                        final JCIdent instanceType = treeMaker.Ident(singletonClassName);
+                        final JCIdent instanceType = tm.Ident(singletonClassName);
 
-                        Name instanceName = nameTable.fromString(instance.class.getSimpleName());
+                        final Name instanceName = nameTable.fromString(instance.class.getSimpleName());
                         if (!instanceFound) {
-                            final JCVariableDecl instance = treeMaker.VarDef(privateStaticMods, instanceName, instanceType, null);
+                            final JCTree instanceAnnTree = tm.Ident(instanceName);
+                            final JCExpression initVal = null;
+                            final JCAnnotation instanceAnn = tm.Annotation(instanceAnnTree, List.<JCExpression>nil());
+                            final JCVariableDecl instance = tm.VarDef(tm.Modifiers(Flags.PRIVATE + Flags.STATIC, List.of(instanceAnn)), instanceName, instanceType, initVal);
                             singletonClass.defs = singletonClass.defs.append(instance);
                         }
 
                         if (!getInstanceFound) {
-                            final String getInstanceMethod = "@getInstance public static " + enclosingClass + " getInstance(){ return instance; }";
-
-                            final JCStatement retType = treeMaker.Return(treeMaker.Ident(instanceName));
+                            final JCStatement retType = tm.Return(tm.Ident(instanceName));
                             final com.sun.tools.javac.util.List<JCStatement> retStmt = com.sun.tools.javac.util.List.of(retType);
-                            final JCBlock body = treeMaker.Block(0, retStmt);
-                            final com.sun.tools.javac.util.List<JCStatement> methodGenericParams = com.sun.tools.javac.util.List.nil();
+                            final JCBlock body = tm.Block(0, retStmt);
                             final List<JCVariableDecl> parameters = com.sun.tools.javac.util.List.nil();
                             final List<JCExpression> throwsClauses = com.sun.tools.javac.util.List.nil();
                             final Name getInstanceName = nameTable.fromString(getInstance.class.getSimpleName());
-                            final JCTree getInstanceAnnTree = treeMaker.Ident(getInstanceName);
-                            final JCExpression annotationMethodDefaultValue = treeMaker.Annotation(getInstanceAnnTree, List.<JCExpression>nil());
-//                                treeMaker.MethodDef(treeMaker.Modifiers(Flags.PUBLIC, List.<JCAnnotation>nil()), getInstanceName, instanceType, methodGenericParams, parameters, throwsClauses, body, annotationMethodDefaultValue);
+                            final JCTree getInstanceAnnTree = tm.Ident(getInstanceName);
+                            final JCAnnotation getInstanceAnn = tm.Annotation(getInstanceAnnTree, List.<JCExpression>nil());
+                            final JCMethodDecl getInstanceM = tm.MethodDef(tm.Modifiers(Flags.PUBLIC + Flags.STATIC, List.of(getInstanceAnn)), getInstanceName, instanceType, List.<JCTypeParameter>nil(), parameters, throwsClauses, body, null);
+                            singletonClass.defs = singletonClass.defs.append(getInstanceM);
                         }
                     }
                 }
