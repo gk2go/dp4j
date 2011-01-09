@@ -6,17 +6,15 @@
 package com.mysimpatico.se.dp4java.annotations;
 
 import com.mysimpatico.se.dp4java.annotations.singleton.Singleton;
-import com.mysimpatico.se.dp4java.annotations.singleton.instance;
 
 /**
  *
  * @author Gabriele
  */
 @Singleton
-public class SS {
+public class PrivateConstructor {
 
-    int index = 5;
-    public void he(){
+    public void hello(){
 
     }
 }
