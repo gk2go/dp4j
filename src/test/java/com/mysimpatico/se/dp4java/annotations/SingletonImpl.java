@@ -16,8 +16,7 @@ import com.mysimpatico.se.dp4java.annotations.singleton.*;
 
         @getInstance
 	public static synchronized SingletonImpl getInstance() {
-        S s = new S();
-            if (instance == null) {
+		if (instance == null) {
 			instance = new SingletonImpl();
 		}
 		return instance;

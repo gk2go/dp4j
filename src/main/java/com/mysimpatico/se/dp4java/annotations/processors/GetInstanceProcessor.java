@@ -45,31 +45,31 @@ public class GetInstanceProcessor extends AbstractProcessor{
             if(!returnClass.contains(enclosingClass)){ //skip ()
                 msgr.printMessage(Kind.ERROR,"the return type must be of type " + enclosingClass ,e);
             }
-            
+
             final Singleton ann = singleton.getAnnotation(Singleton.class);
             if(ann == null){
                 msgr.printMessage(Kind.ERROR,"enclosing class must be annotated with Singleton", e);
             }
-            
-            final DirectoryScanner ds = new DirectoryScanner();
-            String file = enclosingClass.replaceAll("\\.", "\\" + File.separator);
-            final File classFile = new File(file);
-            System.out.println(classFile.getAbsolutePath());
-            String srcDir = System.getProperty("user.dir");
-            ds.setBasedir(srcDir);
-            final String classs = anyDir + classFile.getName() + ".java";
-            ds.setIncludes(new String[]{classs});
-            ds.scan();
-            String[] includedFiles = ds.getIncludedFiles();
-            if(includedFiles.length != 1){
-                msgr.printMessage(Kind.ERROR,"not declared in separate file?" + e);
-            }
-            File srcFile = new File(srcDir, includedFiles[0]);
-            try {
-                Scanner sc = new Scanner(srcFile);
-            } catch (FileNotFoundException ex) {
-                Logger.getLogger(GetInstanceProcessor.class.getName()).log(Level.SEVERE, null, ex);
-            }
+
+//            final DirectoryScanner ds = new DirectoryScanner();
+//            String file = enclosingClass.replaceAll("\\.", "\\" + File.separator);
+//            final File classFile = new File(file);
+//            System.out.println(classFile.getAbsolutePath());
+//            String srcDir = System.getProperty("user.dir");
+//            ds.setBasedir(srcDir);
+//            final String classs = anyDir + classFile.getName() + ".java";
+//            ds.setIncludes(new String[]{classs});
+//            ds.scan();
+//            String[] includedFiles = ds.getIncludedFiles();
+//            if(includedFiles.length != 1){
+//                msgr.printMessage(Kind.ERROR,"not declared in separate file?" + e);
+//            }
+//            File srcFile = new File(srcDir, includedFiles[0]);
+//            try {
+//                Scanner sc = new Scanner(srcFile);
+//            } catch (FileNotFoundException ex) {
+//                Logger.getLogger(GetInstanceProcessor.class.getName()).log(Level.SEVERE, null, ex);
+//            }
         }
         return true;
     }
