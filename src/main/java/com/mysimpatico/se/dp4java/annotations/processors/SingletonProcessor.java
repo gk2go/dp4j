@@ -7,39 +7,25 @@ package com.mysimpatico.se.dp4java.annotations.processors;
 import com.mysimpatico.se.dp4java.annotations.singleton.Singleton;
 import com.mysimpatico.se.dp4java.annotations.singleton.getInstance;
 import com.mysimpatico.se.dp4java.annotations.singleton.instance;
-import com.sun.source.tree.*;
-import com.sun.source.tree.CompilationUnitTree;
-import com.sun.source.tree.MethodTree;
-import com.sun.source.tree.ModifiersTree;
-import com.sun.source.tree.Tree;
-import com.sun.source.tree.VariableTree;
 import com.sun.source.util.Trees;
+import com.sun.tools.internal.ws.processor.generator.Names;
 import com.sun.tools.javac.code.*;
 import com.sun.tools.javac.model.JavacElements;
 import com.sun.tools.javac.processing.JavacProcessingEnvironment;
 import com.sun.tools.javac.tree.JCTree;
 import com.sun.tools.javac.tree.JCTree.*;
+import com.sun.tools.javac.tree.JCTree.JCAnnotation;
 import com.sun.tools.javac.tree.JCTree.JCMethodDecl;
-import com.sun.tools.javac.tree.JCTree.JCVariableDecl;
 import java.io.File;
-import java.io.IOException;
-import java.util.Collections;
-import java.util.List;
 import java.util.Set;
 import javax.annotation.processing.*;
 import javax.lang.model.*;
 import javax.lang.model.element.*;
 import javax.tools.Diagnostic.Kind;
 import org.codehaus.plexus.util.DirectoryScanner;
-import org.netbeans.api.java.source.JavaSource;
-import org.netbeans.api.java.source.JavaSource.Phase;
-import org.netbeans.api.java.source.ModificationResult;
-import org.netbeans.api.java.source.Task;
 import com.sun.tools.javac.tree.TreeMaker;
-import org.netbeans.api.java.source.WorkingCopy;
-import org.openide.filesystems.FileObject;
-import org.openide.filesystems.FileUtil;
-import org.openide.util.Exceptions;
+import com.sun.tools.javac.util.List;
+import com.sun.tools.javac.util.Context;
 import com.sun.tools.javac.util.Name;
 
 /**
@@ -55,16 +41,15 @@ public class SingletonProcessor extends AbstractProcessor {
     private Trees trees;
     private TreeMaker treeMaker;
     private static JavacElements elementUtils;
+    private Name.Table nameTable;
 
     @Override
     public void init(ProcessingEnvironment processingEnv) {
         super.init(processingEnv);
+        final Context context = ((JavacProcessingEnvironment) processingEnv).getContext();
+        nameTable = Name.Table.instance(context);
         trees = Trees.instance(processingEnv);
-        elementUtils = JavacElements.instance(((JavacProcessingEnvironment) processingEnv).getContext());
-    }
-
-    private JCMethodDecl toUnit(Element element) {
-        return (JCMethodDecl) trees.getPath(element).getCompilationUnit();
+        elementUtils = JavacElements.instance(context);
     }
 
     @Override
@@ -78,7 +63,7 @@ public class SingletonProcessor extends AbstractProcessor {
             if (modifiers.contains(Modifier.ABSTRACT)) {
                 msgr.printMessage(Kind.ERROR, "a Singleton must not be abstract", e);
             }
-            List<? extends Element> enclosedElements = e.getEnclosedElements();
+            java.util.List<? extends Element> enclosedElements = e.getEnclosedElements();
             boolean getInstanceFound = false;
             boolean instanceFound = false;
             boolean privateConstructors = false;
@@ -86,7 +71,7 @@ public class SingletonProcessor extends AbstractProcessor {
             for (final Element element : enclosedElements) {
                 if (element.getAnnotation(instance.class) != null) {
                     if (instanceFound == true) {
-                        msgr.printMessage(Kind.ERROR, "Found multiple methods annotated with @getInstance while at most one must be annotated", e);
+                        msgr.printMessage(Kind.ERROR, "Found multiple methods annotated with @instance while at most one must be annotated", e);
                     }
                     instanceFound = true;
                 }
@@ -96,109 +81,77 @@ public class SingletonProcessor extends AbstractProcessor {
                     }
                     getInstanceFound = true;
                 }
+            }
 
-                /**
-                 * TODO: figure out implicit empty constructor
-                 */
-                final Element defaultConstructor;
-                Element temp = null;
-                //com.sun.tools.javac.code.Flags.GENERATEDCONSTR
-                if (element.getKind() == ElementKind.CONSTRUCTOR) {
-                    Set<Modifier> constructorMods = element.getModifiers();
-                    if (!constructorMods.contains(Modifier.PRIVATE)) {
-                        if (constructorMods.contains(Modifier.PUBLIC)) {
-                            MethodTree tree = (MethodTree) trees.getTree(element);
-                            if (!tree.getParameters().isEmpty() || tree.getBody().getStatements().size() != 1) {
-                                msgr.printMessage(Kind.ERROR, "Singleton constructors must be private", element);
-                            } else {
-                                temp = element;
-                            }
-                        } else {
-                            msgr.printMessage(Kind.ERROR, "Singleton constructors must be private", e);
-                        }
-                    }
-                }
-
-                defaultConstructor = temp;
-
-                enclosingClass = e.toString();
-                final String anyDir = "**\\";
-                final DirectoryScanner ds = new DirectoryScanner();
-                final String file = enclosingClass.replaceAll("\\.", "\\" + File.separator);
-                final String srcDir = System.getProperty("user.dir");
-                final File classFile = new File(srcDir, file);
-                final String classs = anyDir + classFile.getName() + ".java";
-                ds.setIncludes(new String[]{classs});
-                ds.setBasedir(srcDir);
-                ds.scan();
-                String[] includedFiles = ds.getIncludedFiles();
-                if (includedFiles.length != 1) {
-                    msgr.printMessage(Kind.ERROR, "not declared in separate file?" + e);
-                }
-                File srcFile = new File(srcDir, includedFiles[0]);
-                if (!srcFile.exists()) {
-                    msgr.printMessage(Kind.ERROR, "file?" + e);
-                }
+            enclosingClass = e.toString();
+//            final String anyDir = "**\\";
+//            final DirectoryScanner ds = new DirectoryScanner();
+//            final String file = enclosingClass.replaceAll("\\.", "\\" + File.separator);
+//            final String srcDir = System.getProperty("user.dir");
+//            final File classFile = new File(srcDir, file);
+//            final String classs = anyDir + classFile.getName() + ".java";
+//            ds.setIncludes(new String[]{classs});
+//            ds.setBasedir(srcDir);
+//            ds.scan();
+//            String[] includedFiles = ds.getIncludedFiles();
+//            if (includedFiles.length != 1) {
+//                msgr.printMessage(Kind.ERROR, "not declared in separate file?" + e);
+//            }
+//            File srcFile = new File(srcDir, includedFiles[0]);
+//            if (!srcFile.exists()) {
+//                msgr.printMessage(Kind.ERROR, "file?" + e);
+//            }
 //                FileObject fileObj = FileUtil.toFileObject(srcFile);
 //                final JavaSource classSource = JavaSource.forFileObject(fileObj);
 
-                if (!getInstanceFound) {
-                }
+            final Name singletonClassName = nameTable.fromString(e.getSimpleName());
 
+            //make default constructor private
 
-                //make default constructor private
-                if (!privateConstructors) { // == defaultConstructor != null
-                    JCCompilationUnit type = (JCCompilationUnit) trees.getPath(e).getCompilationUnit();
-                    for (JCTree def : type.defs) {
-                        if (def instanceof JCClassDecl) {
-                            JCClassDecl d = (JCClassDecl) def;
-                            for (JCTree me : d.defs) {
-                                if (me instanceof JCMethodDecl) {
-                                    JCMethodDecl m = (JCMethodDecl) me;
+            JCCompilationUnit singletonCU = (JCCompilationUnit) trees.getPath(e).getCompilationUnit();
+            for (JCTree def : singletonCU.defs) {
+                if (def instanceof JCClassDecl) {
+                    JCClassDecl singletonClass = (JCClassDecl) def;
+
+                    if (singletonClass.name.equals(singletonClassName)) {
+                        if (!privateConstructors) {
+                            for (JCTree singletonMethod : singletonClass.defs) {
+
+                                if (singletonMethod instanceof JCMethodDecl) {
+                                    JCMethodDecl m = (JCMethodDecl) singletonMethod;
                                     if ((m.mods.flags & Flags.GENERATEDCONSTR) != 0) {
                                         m.mods = treeMaker.Modifiers(Flags.PRIVATE);
                                     }
                                 }
                             }
                         }
+                        final JCModifiers privateStaticMods = treeMaker.Modifiers(Flags.PRIVATE + Flags.STATIC);
+                        final JCIdent instanceType = treeMaker.Ident(singletonClassName);
+
+                        Name instanceName = nameTable.fromString(instance.class.getSimpleName());
+                        if (!instanceFound) {
+                            final JCVariableDecl instance = treeMaker.VarDef(privateStaticMods, instanceName, instanceType, null);
+                            singletonClass.defs = singletonClass.defs.append(instance);
+                        }
+
+                        if (!getInstanceFound) {
+                            final String getInstanceMethod = "@getInstance public static " + enclosingClass + " getInstance(){ return instance; }";
+
+                            final JCStatement retType = treeMaker.Return(treeMaker.Ident(instanceName));
+                            final com.sun.tools.javac.util.List<JCStatement> retStmt = com.sun.tools.javac.util.List.of(retType);
+                            final JCBlock body = treeMaker.Block(0, retStmt);
+                            final com.sun.tools.javac.util.List<JCStatement> methodGenericParams = com.sun.tools.javac.util.List.nil();
+                            final List<JCVariableDecl> parameters = com.sun.tools.javac.util.List.nil();
+                            final List<JCExpression> throwsClauses = com.sun.tools.javac.util.List.nil();
+                            final Name getInstanceName = nameTable.fromString(getInstance.class.getSimpleName());
+                            final JCTree getInstanceAnnTree = treeMaker.Ident(getInstanceName);
+                            final JCExpression annotationMethodDefaultValue = treeMaker.Annotation(getInstanceAnnTree, List.<JCExpression>nil());
+//                                treeMaker.MethodDef(treeMaker.Modifiers(Flags.PUBLIC, List.<JCAnnotation>nil()), getInstanceName, instanceType, methodGenericParams, parameters, throwsClauses, body, annotationMethodDefaultValue);
+                        }
                     }
-
-
-
-//                    defConstructor.mods = treeMaker.Modifiers(Flags.PRIVATE);
-//                    tree.
-
-
-//                    Task<WorkingCopy> task = new Task<WorkingCopy>()   {
-//
-//                        @Override
-//                        public void run(WorkingCopy workingCopy) throws Exception {
-//                           workingCopy.toPhase(Phase.RESOLVED); // is it neccessary?
-//
-////                           final TreeMaker treeMaker = workingCopy.getTreeMaker();
-//
-//                            ModifiersTree Modifiers = treeMaker.Modifiers(constructorModifiers);
-//
-//                            MethodTree singletonConstructor = treeMaker.Constructor(Modifiers, Collections.EMPTY_LIST, Collections.EMPTY_LIST, Collections.EMPTY_LIST, "");
-//                            ClassTree clazz = (ClassTree) trees.getTree(e);
-//                            ClassTree modifiedClazz = treeMaker.addClassMember(clazz, singletonConstructor);
-//                            workingCopy.rewrite(clazz, modifiedClazz);
-//
-//                        }
-//                    };
-//                    ModificationResult result;
-//                    try {
-//                        result = classSource.runModificationTask(task);
-//                        result.commit();
-//                    } catch (IOException ex) {
-//                        Exceptions.printStackTrace(ex);
-//                    }
                 }
             }
-
-            if (!getInstanceFound) {
-                final String getInstanceMethod = "@getInstance public static " + enclosingClass + " getInstance(){ return instance; }";
-            }
+            System.out.println(singletonCU);
         }
         return true;
     }

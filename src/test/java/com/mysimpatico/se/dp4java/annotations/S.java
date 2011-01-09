@@ -14,10 +14,22 @@ public class S {
 
     @getInstance
     public static synchronized S getInstance() {
-        SingletonImpl singletonImpl = new SingletonImpl();
+        SingletonImpl singletonImpl /*= new SingletonImpl()*/;
         if (instance == null) {
             instance = new S();
         }
         return instance;
     }
+}
+
+@Singleton
+class S1 {
+
+//    @getInstance
+//    static synchronized S1 getInstance() {
+////        if (instance == null) {
+////            instance = new S1();
+////        }
+//        return new S1();
+//    }
 }
