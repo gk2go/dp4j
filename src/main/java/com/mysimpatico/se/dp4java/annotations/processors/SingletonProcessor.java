@@ -27,7 +27,7 @@ import com.sun.tools.javac.tree.TreeMaker;
 import com.sun.tools.javac.util.List;
 import com.sun.tools.javac.util.Context;
 import com.sun.tools.javac.util.Name;
-
+import com.sun.tools.javac.code.Type;
 /**
  *
  *  TODO: there must be only one instance, getInstance
@@ -67,7 +67,6 @@ public class SingletonProcessor extends AbstractProcessor {
             boolean getInstanceFound = false;
             boolean instanceFound = false;
             boolean privateConstructors = false;
-            String enclosingClass = null;
             for (final Element element : enclosedElements) {
                 if (element.getAnnotation(instance.class) != null) {
                     if (instanceFound == true) {
@@ -82,27 +81,6 @@ public class SingletonProcessor extends AbstractProcessor {
                     getInstanceFound = true;
                 }
             }
-
-            enclosingClass = e.toString();
-//            final String anyDir = "**\\";
-//            final DirectoryScanner ds = new DirectoryScanner();
-//            final String file = enclosingClass.replaceAll("\\.", "\\" + File.separator);
-//            final String srcDir = System.getProperty("user.dir");
-//            final File classFile = new File(srcDir, file);
-//            final String classs = anyDir + classFile.getName() + ".java";
-//            ds.setIncludes(new String[]{classs});
-//            ds.setBasedir(srcDir);
-//            ds.scan();
-//            String[] includedFiles = ds.getIncludedFiles();
-//            if (includedFiles.length != 1) {
-//                msgr.printMessage(Kind.ERROR, "not declared in separate file?" + e);
-//            }
-//            File srcFile = new File(srcDir, includedFiles[0]);
-//            if (!srcFile.exists()) {
-//                msgr.printMessage(Kind.ERROR, "file?" + e);
-//            }
-//                FileObject fileObj = FileUtil.toFileObject(srcFile);
-//                final JavaSource classSource = JavaSource.forFileObject(fileObj);
 
             final Name singletonClassName = nameTable.fromString(e.getSimpleName());
 
@@ -126,26 +104,27 @@ public class SingletonProcessor extends AbstractProcessor {
                             }
                         }
                         final JCIdent instanceType = tm.Ident(singletonClassName);
-
-                        final Name instanceName = nameTable.fromString(instance.class.getSimpleName());
+                        final Name instanceName = nameTable.fromString(instance.class.getSimpleName()); //just to say: instance as variable name
+                        final Name instanceAnnName = nameTable.fromString(instance.class.getSimpleName());
+                        final JCTree instanceAnnTree = tm.Ident(instanceAnnName);
+                        final JCExpression initVal = null;
+                        final JCAnnotation instanceAnn = tm.Annotation(instanceAnnTree, List.<JCExpression>nil());
+                        final JCVariableDecl instance = tm.VarDef(tm.Modifiers(Flags.PRIVATE + Flags.STATIC, List.of(instanceAnn)), instanceName, instanceType, initVal);
                         if (!instanceFound) {
-                            final JCTree instanceAnnTree = tm.Ident(instanceName);
-                            final JCExpression initVal = null;
-                            final JCAnnotation instanceAnn = tm.Annotation(instanceAnnTree, List.<JCExpression>nil());
-                            final JCVariableDecl instance = tm.VarDef(tm.Modifiers(Flags.PRIVATE + Flags.STATIC, List.of(instanceAnn)), instanceName, instanceType, initVal);
                             singletonClass.defs = singletonClass.defs.append(instance);
                         }
 
                         if (!getInstanceFound) {
-                            final JCStatement retType = tm.Return(tm.Ident(instanceName));
-                            final com.sun.tools.javac.util.List<JCStatement> retStmt = com.sun.tools.javac.util.List.of(retType);
+                            final JCStatement retType = tm.Return(tm.Ident(instance.getName()));
+                            final List<JCStatement> retStmt = List.of(retType);
                             final JCBlock body = tm.Block(0, retStmt);
                             final List<JCVariableDecl> parameters = com.sun.tools.javac.util.List.nil();
                             final List<JCExpression> throwsClauses = com.sun.tools.javac.util.List.nil();
-                            final Name getInstanceName = nameTable.fromString(getInstance.class.getSimpleName());
-                            final JCTree getInstanceAnnTree = tm.Ident(getInstanceName);
+                            final Name getInstanceAnnName = nameTable.fromString(getInstance.class.getSimpleName());
+                            final JCTree getInstanceAnnTree = tm.Ident(getInstanceAnnName);
                             final JCAnnotation getInstanceAnn = tm.Annotation(getInstanceAnnTree, List.<JCExpression>nil());
-                            final JCMethodDecl getInstanceM = tm.MethodDef(tm.Modifiers(Flags.PUBLIC + Flags.STATIC, List.of(getInstanceAnn)), getInstanceName, instanceType, List.<JCTypeParameter>nil(), parameters, throwsClauses, body, null);
+                            final JCExpression methodType = instance.type != null ? tm.Type(instance.type) : instance.vartype;
+                            final JCMethodDecl getInstanceM = tm.MethodDef(tm.Modifiers(Flags.PUBLIC + Flags.STATIC, List.of(getInstanceAnn)), getInstanceAnnName, methodType, List.<JCTypeParameter>nil(), parameters, throwsClauses, body, null);
                             singletonClass.defs = singletonClass.defs.append(getInstanceM);
                         }
                     }
@@ -155,151 +134,4 @@ public class SingletonProcessor extends AbstractProcessor {
         }
         return true;
     }
-
-//    private VariableTree createInstance(TypeElement classElement){
-//        final Name varName = elementUtils.getName("instance");
-//        JCCompilationUnit classCU = (JCCompilationUnit) trees.getPath(classElement).getCompilationUnit();
-//        new JCVariableDecl();
-//
-//        Processor.buildTypeExpressionForClass(this.treeMaker,elementUtils,instance.class, null);
-//        treeMaker.VarDef(treeMaker.Modifiers(Flags.FINAL), varName, null, null);
-//    }
-//
-//
-//    private JCExpression ident( String fcn )
-//    {
-//        String[] parts = fcn.split( "\\." );
-//        JCExpression e = treeMaker.Ident( ctx.fromString( parts[0] ) );
-//        for ( int i = 1; i < parts.length; i++ )
-//        {
-//            e = ctx.maker.Select( e, ctx.fromString( parts[i] ) );
-//        }
-//        return e;
-//    }
-//
-//
-//    private JCMethodDecl createGetter() {
-//
-//        JCVariableDecl fieldNode = (JCVariableDecl) field.get();
-//		JCStatement returnStatement = treeMaker.Return(treeMaker.Ident(fieldNode.getName()));
-//
-//		JCBlock methodBody = treeMaker.Block(0, List.of(returnStatement));
-//		Name methodName = field.toName(toGetterName(fieldNode));
-//		JCExpression methodType = fieldNode.type != null ? treeMaker.Type(fieldNode.type) : fieldNode.vartype;
-//
-//		List<JCTypeParameter> methodGenericParams = List.nil();
-//		List<JCVariableDecl> parameters = List.nil();
-//		List<JCExpression> throwsClauses = List.nil();
-//		JCExpression annotationMethodDefaultValue = null;
-//
-//		return treeMaker.MethodDef(treeMaker.Modifiers(access, List.<JCAnnotation>nil()), methodName, methodType,
-//				methodGenericParams, parameters, throwsClauses, methodBody, annotationMethodDefaultValue);
-//	}
-    private boolean isDefaultConstructor() {
-        return true;
-    }
-//    private void addMissingSuperCall(final TypeElement element) {
-//        final String className = element.getQualifiedName().toString();
-//        final JCClassDecl classDeclaration =
-//                // look up class declaration from a local map
-//                this.findClassDeclarationForName(className);
-//        if (classDeclaration == null) {
-//            this.error(element, "Can't find class declaration for " + className);
-//        } else {
-//            this.info(element, "Creating renderHead(response) method");
-//            final JCTree extending = classDeclaration.extending;
-//            if (extending != null) {
-//                final String p = extending.toString();
-//                if (p.startsWith("com.myclient")) {
-//                    // leave it alone, we'll edit the super class instead, if
-//                    // necessary
-//                    return;
-//                } else {
-//                    // @formatter:off (turns off eclipse formatter if configured)
-//
-//                    // define method parameter name
-//                    final com.sun.tools.javac.util.Name paramName =
-//                            elementUtils.getName("response");
-//                    // Create @Override annotation
-//                    final JCAnnotation overrideAnnotation =
-//                            this.treeMaker.Annotation(
-//                            Processor.buildTypeExpressionForClass(
-//                            this.treeMaker,
-//                            elementUtils,
-//                            Override.class),
-//                            // with no annotation parameters
-//                            List.<JCExpression>nil());
-//                    // public
-//                    final JCModifiers mods =
-//                            this.treeMaker.Modifiers(Flags.PUBLIC,
-//                            List.of(overrideAnnotation));
-//                    // parameters:(final IHeaderResponse response)
-//                    final List<JCVariableDecl> params =
-//                            List.of(this.treeMaker.VarDef(this.treeMaker.Modifiers(Flags.FINAL),
-//                            paramName,
-//                            Processor.buildTypeExpressionForClass(this.treeMaker,
-//                            elementUtils,
-//                            IHeaderResponse.class),
-//                            null));
-//
-//                    //method return type: void
-//                    final JCExpression returnType =
-//                            this.treeMaker.TypeIdent(TypeTags.VOID);
-//
-//
-//                    // super.renderHead(response);
-//                    final List<JCStatement> statements =
-//                            List.<JCStatement>of(
-//                            // Execute this:
-//                            this.treeMaker.Exec(
-//                            // Create a Method call:
-//                            this.treeMaker.Apply(
-//                            // (no generic type arguments)
-//                            List.<JCExpression>nil(),
-//                            // super.renderHead
-//                            this.treeMaker.Select(
-//                            this.treeMaker.Ident(
-//                            elementUtils.getName("super")),
-//                            elementUtils.getName("renderHead")),
-//                            // (response)
-//                            List.<JCExpression>of(this.treeMaker.Ident(paramName)))));
-//                    // build code block from statements
-//                    final JCBlock body = this.treeMaker.Block(0, statements);
-//                    // build method
-//                    final JCMethodDecl methodDef =
-//                            this.treeMaker.MethodDef(
-//                            // public
-//                            mods,
-//                            // renderHead
-//                            elementUtils.getName("renderHead"),
-//                            // void
-//                            returnType,
-//                            // <no generic parameters>
-//                            List.<JCTypeParameter>nil(),
-//                            // (final IHeaderResponse response)
-//                            params,
-//                            // <no declared exceptions>
-//                            List.<JCExpression>nil(),
-//                            // super.renderHead(response);
-//                            body,
-//                            // <no default value>
-//                            null);
-//
-//                    // add this method to the class tree
-//                    classDeclaration.defs =
-//                            classDeclaration.defs.append(methodDef);
-//
-//                    // @formatter:on turn eclipse formatter on again
-//                    this.info(element,
-//                            "Created renderHead(response) method successfully");
-//
-//                }
-//            }
-//
-//        }
-//    }
-//    private static Filer filer;
-//    private static Types types;
-//    private IdentityHashMap<JCCompilationUnit, Void> compilationUnits;
-//    private Map<String, JCCompilationUnit> typeMap;
 }
