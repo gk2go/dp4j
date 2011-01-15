@@ -28,6 +28,7 @@ import com.sun.tools.javac.util.List;
 import com.sun.tools.javac.util.Context;
 import com.sun.tools.javac.util.Name;
 import com.sun.tools.javac.code.Type;
+
 /**
  *
  *  TODO: there must be only one instance, getInstance
@@ -41,17 +42,125 @@ public class SingletonProcessor extends AbstractProcessor {
     private Trees trees;
     private TreeMaker tm;
     private static JavacElements elementUtils;
-    private Name.Table nameTable;
 
     @Override
     public void init(ProcessingEnvironment processingEnv) {
         super.init(processingEnv);
         final Context context = ((JavacProcessingEnvironment) processingEnv).getContext();
-        nameTable = Name.Table.instance(context);
         trees = Trees.instance(processingEnv);
         elementUtils = JavacElements.instance(context);
     }
 
+//    private List<JCStatement> createLazyGetterBody(TreeMaker maker, JavacNode fieldNode) {
+//        /*
+//        java.util.concurrent.atomic.AtomicReference<ValueType> value = this.fieldName.get();
+//        if (value == null) {
+//        synchronized (this.fieldName) {
+//        value = this.fieldName.get();
+//        if (value == null) {
+//        value = new java.util.concurrent.atomic.AtomicReference<ValueType>(new ValueType());
+//        this.fieldName.set(value);
+//        }
+//        }
+//        }
+//        return value.get();
+//         */
+//
+//        ListBuffer<JCStatement> statements = ListBuffer.lb();
+//
+//        JCVariableDecl field = (JCVariableDecl) fieldNode.get();
+//        field.type = null;
+//        if (field.vartype instanceof JCPrimitiveTypeTree) {
+//            String boxed = TYPE_MAP.get(((JCPrimitiveTypeTree) field.vartype).typetag);
+//            if (boxed != null) {
+//                field.vartype = chainDotsString(maker, fieldNode, boxed);
+//            }
+//        }
+//
+//        Name valueName = fieldNode.toName("value");
+//
+//        /* java.util.concurrent.atomic.AtomicReference<ValueType> value = this.fieldName.get();*/ {
+//            JCTypeApply valueVarType = maker.TypeApply(chainDotsString(maker, fieldNode, AR), List.of(copyType(maker, field)));
+//            statements.append(maker.VarDef(maker.Modifiers(0), valueName, valueVarType, callGet(fieldNode, createFieldAccessor(maker, fieldNode, FieldAccess.ALWAYS_FIELD))));
+//        }
+//
+//        /* if (value == null) { */ {
+//            JCSynchronized synchronizedStatement;
+//            /* synchronized (this.fieldName) { */ {
+//                ListBuffer<JCStatement> synchronizedStatements = ListBuffer.lb();
+//                /* value = this.fieldName.get(); */ {
+//                    JCExpressionStatement newAssign = maker.Exec(maker.Assign(maker.Ident(valueName), callGet(fieldNode, createFieldAccessor(maker, fieldNode, FieldAccess.ALWAYS_FIELD))));
+//                    synchronizedStatements.append(newAssign);
+//                }
+//
+//                /* if (value == null) { */ {
+//                    ListBuffer<JCStatement> innerIfStatements = ListBuffer.lb();
+//                    /* value = new java.util.concurrent.atomic.AtomicReference<ValueType>(new ValueType());*/ {
+//                        JCTypeApply valueVarType = maker.TypeApply(chainDotsString(maker, fieldNode, AR), List.of(copyType(maker, field)));
+//                        JCNewClass newInstance = maker.NewClass(null, NIL_EXPRESSION, valueVarType, List.<JCExpression>of(field.init), null);
+//
+//                        JCStatement statement = maker.Exec(maker.Assign(maker.Ident(valueName), newInstance));
+//                        innerIfStatements.append(statement);
+//                    }
+//                    /* this.fieldName.set(value); */ {
+//                        JCStatement statement = callSet(fieldNode, createFieldAccessor(maker, fieldNode, FieldAccess.ALWAYS_FIELD), maker.Ident(valueName));
+//                        innerIfStatements.append(statement);
+//                    }
+//
+//                    JCBinary isNull = maker.Binary(JCTree.EQ, maker.Ident(valueName), maker.Literal(Javac.getCTCint(TypeTags.class, "BOT"), null));
+//                    JCIf ifStatement = maker.If(isNull, maker.Block(0, innerIfStatements.toList()), null);
+//                    synchronizedStatements.append(ifStatement);
+//                }
+//
+//                synchronizedStatement = maker.Synchronized(createFieldAccessor(maker, fieldNode, FieldAccess.ALWAYS_FIELD), maker.Block(0, synchronizedStatements.toList()));
+//            }
+//
+//            JCBinary isNull = maker.Binary(JCTree.EQ, maker.Ident(valueName), maker.Literal(Javac.getCTCint(TypeTags.class, "BOT"), null));
+//            JCIf ifStatement = maker.If(isNull, maker.Block(0, List.<JCStatement>of(synchronizedStatement)), null);
+//            statements.append(ifStatement);
+//        }
+//        /* return value.get(); */
+//        statements.append(maker.Return(callGet(fieldNode, maker.Ident(valueName))));
+//
+//// update the field type and init last
+//
+//        /* private final java.util.concurrent.atomic.AtomicReference<java.util.concurrent.atomic.AtomicReference<ValueType> fieldName = new java.util.concurrent.atomic.AtomicReference<java.util.concurrent.atomic.AtomicReference<ValueType>>(); */ {
+//            field.vartype = maker.TypeApply(chainDotsString(maker, fieldNode, AR), List.<JCExpression>of(maker.TypeApply(chainDotsString(maker, fieldNode, AR), List.of(copyType(maker, field)))));
+//            field.init = maker.NewClass(null, NIL_EXPRESSION, copyType(maker, field), NIL_EXPRESSION, null);
+//        }
+//
+//        return statements.toList();
+//    }
+//
+//    private JCExpression copyType(JCVariableDecl fieldNode) {
+//		return fieldNode.type != null ? tm.Type(fieldNode.type) : fieldNode.vartype;
+//	}
+//
+//    public static JCExpression chainDotsString(TreeMaker maker, JavacNode node, String elems) {
+//		return chainDots(maker, node, elems.split("\\."));
+//	}
+//
+//    	/**
+//	 * In javac, dotted access of any kind, from {@code java.lang.String} to {@code var.methodName}
+//	 * is represented by a fold-left of {@code Select} nodes with the leftmost string represented by
+//	 * a {@code Ident} node. This method generates such an expression.
+//	 *
+//	 * For example, maker.Select(maker.Select(maker.Ident(NAME[java]), NAME[lang]), NAME[String]).
+//	 *
+//	 * @see com.sun.tools.javac.tree.JCTree.JCIdent
+//	 * @see com.sun.tools.javac.tree.JCTree.JCFieldAccess
+//	 */
+//	public static JCExpression chainDots(TreeMaker maker, JavacNode node, String... elems) {
+//		assert elems != null;
+//		assert elems.length > 0;
+//
+//		JCExpression e = maker.Ident(node.toName(elems[0]));
+//		for (int i = 1 ; i < elems.length ; i++) {
+//			e = maker.Select(e, node.toName(elems[i]));
+//		}
+//
+//		return e;
+//	}
     @Override
     public boolean process(Set<? extends TypeElement> annotations, RoundEnvironment roundEnv) {
         Thread.currentThread().setContextClassLoader(getClass().getClassLoader());
@@ -82,7 +191,7 @@ public class SingletonProcessor extends AbstractProcessor {
                 }
             }
 
-            final Name singletonClassName = nameTable.fromString(e.getSimpleName());
+            final Name singletonClassName = elementUtils.getName(e.getSimpleName());
 
             //make default constructor private
 
@@ -104,15 +213,23 @@ public class SingletonProcessor extends AbstractProcessor {
                             }
                         }
                         final JCIdent instanceType = tm.Ident(singletonClassName);
-                        final Name instanceName = nameTable.fromString(instance.class.getSimpleName()); //just to say: instance as variable name
-                        final Name instanceAnnName = nameTable.fromString(instance.class.getSimpleName());
+                        final Name instanceName = elementUtils.getName(instance.class.getSimpleName()); //just to say: instance as variable name
+                        final Name instanceAnnName = elementUtils.getName(instance.class.getSimpleName());
                         final JCTree instanceAnnTree = tm.Ident(instanceAnnName);
-                        final JCExpression initVal = null;
+                        tm.TypeApply(instanceType, null);
                         final JCAnnotation instanceAnn = tm.Annotation(instanceAnnTree, List.<JCExpression>nil());
-                        final JCVariableDecl instance = tm.VarDef(tm.Modifiers(Flags.PRIVATE + Flags.STATIC, List.of(instanceAnn)), instanceName, instanceType, initVal);
+                        final JCExpression initVal = tm.Create(defCon.sym, List.<JCExpression>nil());
+                        final JCVariableDecl instance = tm.VarDef(tm.Modifiers(Flags.PRIVATE + Flags.STATIC + Flags.FINAL, List.of(instanceAnn)), instanceName, instanceType, initVal);
+
                         if (!instanceFound) {
                             singletonClass.defs = singletonClass.defs.append(instance);
                         }
+
+//                        JCTypeApply valueVarType = tm.TypeApply(singletonClass., List.<JCExpression>nil());
+////                        JCNewClass newInstance = maker.NewClass(null, NIL_EXPRESSION, valueVarType, List.<JCExpression>of(field.init), null);
+////                        JCStatement statement = maker.Exec(maker.Assign(maker.Ident(valueName), newInstance));
+//
+//                        instance.getType()
 
                         if (!getInstanceFound) {
                             final JCStatement retType = tm.Return(tm.Ident(instance.getName()));
@@ -120,7 +237,7 @@ public class SingletonProcessor extends AbstractProcessor {
                             final JCBlock body = tm.Block(0, retStmt);
                             final List<JCVariableDecl> parameters = com.sun.tools.javac.util.List.nil();
                             final List<JCExpression> throwsClauses = com.sun.tools.javac.util.List.nil();
-                            final Name getInstanceAnnName = nameTable.fromString(getInstance.class.getSimpleName());
+                            final Name getInstanceAnnName = elementUtils.getName(getInstance.class.getSimpleName()); //TODO: chainDots to avoid import statements
                             final JCTree getInstanceAnnTree = tm.Ident(getInstanceAnnName);
                             final JCAnnotation getInstanceAnn = tm.Annotation(getInstanceAnnTree, List.<JCExpression>nil());
                             final JCExpression methodType = instance.type != null ? tm.Type(instance.type) : instance.vartype;
