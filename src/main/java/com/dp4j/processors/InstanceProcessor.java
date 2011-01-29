@@ -4,7 +4,6 @@
  */
 package com.dp4j.processors;
 
-import com.dp4j.instance;
 import com.dp4j.Singleton;
 import java.util.*;
 import javax.annotation.processing.*;
@@ -29,13 +28,11 @@ import javax.tools.Diagnostic.Kind;
  */
 @SupportedAnnotationTypes("com.mysimpatico.se.dp4java.annotations.singleton.instance") //singleton instance
 @SupportedSourceVersion(SourceVersion.RELEASE_6)
-public class InstanceProcessor extends AbstractProcessor {
+public class InstanceProcessor extends DProcessor {
 
     @Override
-    public boolean process(Set<? extends TypeElement> annotations, RoundEnvironment roundEnv) {
-        final Messager msgr = processingEnv.getMessager();
-        for (Element e : roundEnv.getElementsAnnotatedWith(instance.class)) {
-            Set<Modifier> mods = e.getModifiers();
+    protected void processElement(Element e) {
+         Set<Modifier> mods = e.getModifiers();
             if (!mods.contains(Modifier.STATIC)) {
                 msgr.printMessage(Kind.ERROR, "instance must be static", e);
             }
@@ -55,7 +52,5 @@ public class InstanceProcessor extends AbstractProcessor {
             if (ann == null) {
                 msgr.printMessage(Kind.ERROR, "enclosing class must be annotated with Singleton", e);
             }
-        }
-        return true;
     }
 }
