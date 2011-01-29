@@ -16,4 +16,7 @@ public class SS {
     public void he(){
 
     }
+
+    @instance
+    public static final SS ssInst = new SS();
 }
