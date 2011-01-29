@@ -2,15 +2,16 @@ It's preferred to default to modify the code and generate new code directly into
 The only exception so far is the Singleton pattern. To such such exception add explicit attribute which instead adds the code.
 
 
-
-
-2. initialize instance to the no-args constructor
-3. make instance final and not private anymore (private only when not final, or the user explicited the instance)
-4. change codebase to com.dp4j
 5. superfually support all patterns (and @Documented)
 6. support -Averbose=false option for javac users
 7. Support lazy
 
 
+
+
 DONE:
+1. Verify that all constructors are private, after having possibly privatized the default constructor.
+2. initialize instance to the no-args constructor (done in prev rev)
+3. make instance final and private. But if an instance is annotated already as final it's no problem too.
+4. change codebase to com.dp4j (done in prev rev)
 6. figure out if NB requires agent support -> it does

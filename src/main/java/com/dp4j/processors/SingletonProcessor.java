@@ -76,6 +76,10 @@ public class SingletonProcessor extends AbstractProcessor {
                         msgr.printMessage(Kind.ERROR, "Found multiple methods annotated with @instance while at most one must be annotated", e);
                     }
                     instanceFound = true;
+                    Set<Modifier> instanceMods = element.getModifiers();
+                    if(!instanceMods.contains(Modifier.PRIVATE) && !instanceMods.contains(Modifier.FINAL)){
+                        msgr.printMessage(Kind.ERROR, instanceName + ": it's possible for external objects to change the singleton since the instance is neither declared private nor final.");
+                    }
                     instanceName = elementUtils.getName(element.getSimpleName());
                 }
 
@@ -118,9 +122,7 @@ public class SingletonProcessor extends AbstractProcessor {
                         final JCTree instanceAnnTree = getIdentAfterImporting(instance.class);//tm.Ident(instanceAnnName);
                         tm.TypeApply(instanceType, null);
                         final JCAnnotation instanceAnn = tm.Annotation(instanceAnnTree, List.<JCExpression>nil());
-                        if (defCon == null) {
-                            msgr.printMessage(Kind.ERROR, "No ");
-                        }
+                        
                         final JCExpression initVal = tm.Create(defCon.sym, List.<JCExpression>nil());
                         final JCVariableDecl instance = tm.VarDef(tm.Modifiers(Flags.PRIVATE + Flags.STATIC + Flags.FINAL, List.of(instanceAnn)), instanceName, instanceType, initVal);
 
