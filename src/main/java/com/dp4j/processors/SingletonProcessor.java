@@ -114,18 +114,18 @@ public class SingletonProcessor extends AbstractProcessor {
                             }
                         }
                         final JCIdent instanceType = tm.Ident(singletonClassName);
-
-                        final JCTree instanceAnnTree = getIdentAfterImporting(instance.class);//tm.Ident(instanceAnnName);
                         tm.TypeApply(instanceType, null);
-                        final JCAnnotation instanceAnn = tm.Annotation(instanceAnnTree, List.<JCExpression>nil());
-
-                        final JCExpression initVal = tm.Create(defCon.sym, List.<JCExpression>nil());
-                        final JCVariableDecl instance = tm.VarDef(tm.Modifiers(Flags.PRIVATE + Flags.STATIC + Flags.FINAL, List.of(instanceAnn)), instanceName, instanceType, initVal);
 
                         if (!instanceFound) {
+                            if(defCon == null){
+                                msgr.printMessage(Kind.ERROR, "no singleton instance was found and the no no-args constructor found to create one.");
+                            }
+                            final JCExpression initVal = tm.Create(defCon.sym, List.<JCExpression>nil());
+                            final JCTree instanceAnnTree = getIdentAfterImporting(instance.class);
+                            final JCAnnotation instanceAnn = tm.Annotation(instanceAnnTree, List.<JCExpression>nil());
+                            final JCVariableDecl instance = tm.VarDef(tm.Modifiers(Flags.PRIVATE + Flags.STATIC + Flags.FINAL, List.of(instanceAnn)), instanceName, instanceType, initVal);
                             singletonClass.defs = singletonClass.defs.append(instance);
                         }
-
 //                        JCTypeApply valueVarType = tm.TypeApply(singletonClass., List.<JCExpression>nil());
 ////                        JCNewClass newInstance = maker.NewClass(null, NIL_EXPRESSION, valueVarType, List.<JCExpression>of(field.init), null);
 ////                        JCStatement statement = maker.Exec(maker.Assign(maker.Ident(valueName), newInstance));
@@ -133,7 +133,7 @@ public class SingletonProcessor extends AbstractProcessor {
 //                        instance.getType()
 
                         if (!getInstanceFound) {
-                            final JCStatement retType = tm.Return(tm.Ident(instance.getName()));
+                            final JCStatement retType = tm.Return(tm.Ident(instanceName));
                             final List<JCStatement> retStmt = List.of(retType);
                             final JCBlock body = tm.Block(0, retStmt);
                             final List<JCVariableDecl> parameters = com.sun.tools.javac.util.List.nil();
@@ -141,7 +141,7 @@ public class SingletonProcessor extends AbstractProcessor {
                             final Name getInstanceAnnName = elementUtils.getName(getInstance.class.getSimpleName());
                             final JCTree getInstanceAnnTree = getIdentAfterImporting(getInstance.class);//tm.Ident(getInstanceAnnName);
                             final JCAnnotation getInstanceAnn = tm.Annotation(getInstanceAnnTree, List.<JCExpression>nil());
-                            final JCExpression methodType = instance.type != null ? tm.Type(instance.type) : instance.vartype;
+                            final JCExpression methodType = instanceType;
                             final JCMethodDecl getInstanceM = tm.MethodDef(tm.Modifiers(Flags.PUBLIC + Flags.STATIC, List.of(getInstanceAnn)), getInstanceAnnName, methodType, List.<JCTypeParameter>nil(), parameters, throwsClauses, body, null);
 
                             singletonClass.defs = singletonClass.defs.append(getInstanceM);

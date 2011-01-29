@@ -17,6 +17,10 @@ public class SS {
 
     }
 
+    private SS(int i){
+
+    }
+
     @instance
-    public static final SS ssInst = new SS();
+    public static final SS ssInst = new SS(5);
 }
