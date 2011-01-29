@@ -1,4 +1,4 @@
-package com.mysimpatico.se.dp4java.annotations;
+package com.dp4j;
 
 import java.io.File;
 import javax.tools.FileObject;
@@ -20,7 +20,7 @@ public class AppTest {
         //            }
         //            FileObject fileObj = FileUtil.toFileObject(srcFile);
         //            final JavaSource classSource = JavaSource.forFileObject(fileObj);
-        SS sS = new SS();
-        sS.index = 4;
+//        SS sS = new SS();
+//        sS.index = 4;
     }
 }

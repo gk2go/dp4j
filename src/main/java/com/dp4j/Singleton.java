@@ -1,5 +1,5 @@
 
-package com.mysimpatico.se.dp4java.annotations.singleton;
+package com.dp4j;
 
 import java.lang.annotation.Documented;
 import java.lang.annotation.ElementType;

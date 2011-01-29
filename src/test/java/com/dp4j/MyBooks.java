@@ -1,22 +1,16 @@
-package com.mysimpatico.se.dp4java.annotations;
+package com.dp4j;
 /*
  * To change this template, choose Tools | Templates
  * and open the template in the editor.
  */
-import com.mysimpatico.se.dp4java.annotations.singleton.*;
 
-/**
- *
- * @author Gabriele
- */
-@com.mysimpatico.se.dp4java.annotations.singleton.Singleton
+@com.dp4j.Singleton
 public class MyBooks {
 private int year; //fields
     private String title;
     private String author;
 
-
     public void hello(){
-		instance = null;	
+		      System.out.println(instance);
     }
 }

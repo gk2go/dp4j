@@ -1,3 +1,3 @@
-com.mysimpatico.se.dp4java.annotations.processors.SingletonProcessor
-com.mysimpatico.se.dp4java.annotations.processors.InstanceProcessor
-com.mysimpatico.se.dp4java.annotations.processors.GetInstanceProcessor
+com.dp4j.processors.SingletonProcessor
+com.dp4j.processors.InstanceProcessor
+com.dp4j.processors.GetInstanceProcessor

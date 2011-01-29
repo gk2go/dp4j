@@ -3,20 +3,16 @@
  * and open the template in the editor.
  */
 
-package com.mysimpatico.se.dp4java.annotations.processors;
+package com.dp4j.processors;
 
-import java.io.FileNotFoundException;
+import com.dp4j.getInstance;
+import com.dp4j.Singleton;
 import java.util.*;
-import java.util.logging.Level;
-import java.util.logging.Logger;
 import javax.annotation.processing.*;
 import javax.lang.model.*;
 import javax.lang.model.element.*;
 import javax.lang.model.type.TypeMirror;
 import javax.tools.Diagnostic.Kind;
-import com.mysimpatico.se.dp4java.annotations.singleton.*;
-import java.io.File;
-import org.codehaus.plexus.util.DirectoryScanner;
 /**
  *
  * Processes @instance annotation verifying that it's:
