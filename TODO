@@ -1,9 +1,9 @@
-Given that not even NetBeans supports modifying the AST during compilation, as is possible by Javac, it's preferred to default to actually modifying the code and generate new code directly into the source file. That earns transparency, visibility, portability, and hopefully ease of implementation. The plan is to use the filer api (of apt) to get the current file and write to it. It be worthwhile to look more into the Java source, although that looks primarily targetted at changing the editor. So first try the filer, it's cheap.
+It's preferred to default to modify the code and generate new code directly into the source file for most patterns. That earns transparency, visibility, portability, and hopefully ease of implementation. The plan is to use the filer api (of apt) to get the current file and write to it. It be worthwhile to look more into the Java source, although that looks primarily targetted at changing the editor. So first try the filer, it's cheap.
+The only exception so far is the Singleton pattern. To such such exception add explicit attribute which instead adds the code.
 
 
 
 
-1. Verify that all constructors are private, after having possibly privatized the default constructor.
 2. initialize instance to the no-args constructor
 3. make instance final and not private anymore (private only when not final, or the user explicited the instance)
 4. change codebase to com.dp4j

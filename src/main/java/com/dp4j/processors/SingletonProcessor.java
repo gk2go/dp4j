@@ -22,14 +22,15 @@ import com.sun.tools.javac.tree.TreeMaker;
 import com.sun.tools.javac.util.List;
 import com.sun.tools.javac.util.Context;
 import com.sun.tools.javac.util.Name;
+import java.util.Collections;
+import java.util.HashSet;
 
 /**
  *
  *  TODO: there must be only one instance, getInstance
  * @author simpatico
  */
-@SupportedAnnotationTypes(value= {"com.dp4j.Singleton", "org.jpatterns.gof.SingletonPattern", "com.google.code.annotation.pattern.design.creational.Singleton"}) //singleton
-
+@SupportedAnnotationTypes(value = {"com.dp4j.Singleton", "org.jpatterns.gof.SingletonPattern", "com.google.code.annotation.pattern.design.creational.Singleton"}) //singleton
 @SupportedSourceVersion(SourceVersion.RELEASE_6)
 public class SingletonProcessor extends AbstractProcessor {
 
@@ -45,8 +46,12 @@ public class SingletonProcessor extends AbstractProcessor {
         elementUtils = JavacElements.instance(context);
     }
 
-    protected Set<? extends Element> getElementsAnnotated(final RoundEnvironment roundEnv){
-        final Set<? extends Element> annotatatedElements = roundEnv.getElementsAnnotatedWith(Singleton.class);
+    protected Set<? extends Element> getElementsAnnotated(final RoundEnvironment roundEnv, Set<? extends TypeElement> annotations) {
+        final Set<Element> annotatatedElements = new HashSet<Element>();
+        for (TypeElement ann : annotations) {
+            final Set<? extends Element> annElements = roundEnv.getElementsAnnotatedWith(ann);
+            annotatatedElements.addAll(annElements);
+        }
         return annotatatedElements;
     }
 
@@ -56,7 +61,7 @@ public class SingletonProcessor extends AbstractProcessor {
         final Messager msgr = processingEnv.getMessager();
         tm = TreeMaker.instance(((JavacProcessingEnvironment) processingEnv).getContext());
 
-        for (final Element e : getElementsAnnotated(roundEnv)){
+        for (final Element e : getElementsAnnotated(roundEnv, annotations)) {
             Set<Modifier> modifiers = e.getModifiers();
             if (modifiers.contains(Modifier.ABSTRACT)) {
                 msgr.printMessage(Kind.ERROR, "a Singleton must not be abstract", e);
@@ -64,14 +69,16 @@ public class SingletonProcessor extends AbstractProcessor {
             java.util.List<? extends Element> enclosedElements = e.getEnclosedElements();
             boolean getInstanceFound = false;
             boolean instanceFound = false;
-            boolean privateConstructors = false;
+            Name instanceName = elementUtils.getName(instance.class.getSimpleName()); //just to say: instance as variable name
             for (final Element element : enclosedElements) {
                 if (element.getAnnotation(instance.class) != null) {
                     if (instanceFound == true) {
                         msgr.printMessage(Kind.ERROR, "Found multiple methods annotated with @instance while at most one must be annotated", e);
                     }
                     instanceFound = true;
+                    instanceName = elementUtils.getName(element.getSimpleName());
                 }
+
                 if (element.getAnnotation(getInstance.class) != null) {
                     if (getInstanceFound == true) {
                         msgr.printMessage(Kind.ERROR, "Found multiple methods annotated with @getInstance while at most one must be annotated", e);
@@ -82,31 +89,38 @@ public class SingletonProcessor extends AbstractProcessor {
 
             final Name singletonClassName = elementUtils.getName(e.getSimpleName());
 
-            //make default constructor private
-
             JCCompilationUnit singletonCU = (JCCompilationUnit) trees.getPath(e).getCompilationUnit();
             JCMethodDecl defCon = null;
             for (JCTree def : singletonCU.defs) {
                 if (def instanceof JCClassDecl) {
                     JCClassDecl singletonClass = (JCClassDecl) def;
                     if (singletonClass.name.equals(singletonClassName)) {
-                        if (!privateConstructors) {
-                            for (JCTree singletonMethod : singletonClass.defs) {
-
-                                if (singletonMethod instanceof JCMethodDecl) {
-                                    defCon = (JCMethodDecl) singletonMethod;
-                                    if ((defCon.mods.flags & Flags.GENERATEDCONSTR) != 0) {
-                                        defCon.mods = tm.Modifiers(Flags.PRIVATE);
+                        for (JCTree singletonMethod : singletonClass.defs) {
+                            try {
+                                JCMethodDecl constructor = (JCMethodDecl) singletonMethod;
+                                if (constructor.name.contentEquals("<init>")) {
+                                    if (constructor.params.isEmpty()) {
+                                        defCon = constructor;
+                                        if ((constructor.mods.flags & Flags.GENERATEDCONSTR) != 0) {
+                                            defCon.mods = tm.Modifiers(Flags.PRIVATE);
+                                        }
+                                    }
+                                    if ((constructor.mods.flags & Flags.PRIVATE) == 0) {
+                                        msgr.printMessage(Kind.ERROR, "Singleton constructors must be private, or else it will be possible to instantiate them: " + constructor);
                                     }
                                 }
+                            } catch (ClassCastException ce) {
+                                //it wasn't a method
                             }
                         }
                         final JCIdent instanceType = tm.Ident(singletonClassName);
-                        final Name instanceName = elementUtils.getName(instance.class.getSimpleName()); //just to say: instance as variable name
-                        final Name instanceAnnName = elementUtils.getName(instance.class.getSimpleName());
+
                         final JCTree instanceAnnTree = getIdentAfterImporting(instance.class);//tm.Ident(instanceAnnName);
                         tm.TypeApply(instanceType, null);
                         final JCAnnotation instanceAnn = tm.Annotation(instanceAnnTree, List.<JCExpression>nil());
+                        if (defCon == null) {
+                            msgr.printMessage(Kind.ERROR, "No ");
+                        }
                         final JCExpression initVal = tm.Create(defCon.sym, List.<JCExpression>nil());
                         final JCVariableDecl instance = tm.VarDef(tm.Modifiers(Flags.PRIVATE + Flags.STATIC + Flags.FINAL, List.of(instanceAnn)), instanceName, instanceType, initVal);
 
@@ -127,7 +141,6 @@ public class SingletonProcessor extends AbstractProcessor {
                             final List<JCVariableDecl> parameters = com.sun.tools.javac.util.List.nil();
                             final List<JCExpression> throwsClauses = com.sun.tools.javac.util.List.nil();
                             final Name getInstanceAnnName = elementUtils.getName(getInstance.class.getSimpleName());
-
                             final JCTree getInstanceAnnTree = getIdentAfterImporting(getInstance.class);//tm.Ident(getInstanceAnnName);
                             final JCAnnotation getInstanceAnn = tm.Annotation(getInstanceAnnTree, List.<JCExpression>nil());
                             final JCExpression methodType = instance.type != null ? tm.Type(instance.type) : instance.vartype;
@@ -143,7 +156,7 @@ public class SingletonProcessor extends AbstractProcessor {
         return true;
     }
 
-    JCExpression getIdentAfterImporting(final Class clazz){
+    JCExpression getIdentAfterImporting(final Class clazz) {
         final String fullName = clazz.getCanonicalName();
         final String[] names = fullName.split("\\.");
         JCExpression e = tm.Ident(elementUtils.getName(names[0]));
@@ -154,5 +167,4 @@ public class SingletonProcessor extends AbstractProcessor {
         }
         return e;
     }
-
 }
