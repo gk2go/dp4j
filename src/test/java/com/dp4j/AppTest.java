@@ -1,13 +1,12 @@
 package com.dp4j;
 
-import java.io.File;
-import javax.tools.FileObject;
 import org.junit.Test;
 
 /**
  * Unit test for simple App.
  */
 public class AppTest {
+    private static AppTest instance = new AppTest();
 
     /**
      * We need one test so that Maven will happily run the test phase
@@ -22,5 +21,9 @@ public class AppTest {
         //            final JavaSource classSource = JavaSource.forFileObject(fileObj);
 //        SS sS = new SS();
 //        sS.index = 4;
+        AppTest pp = AppTest.instance;
+//        SingletonImpl ss = SingletonImpl.instance;
+
+        System.out.println("hello from dummy test");
     }
 }

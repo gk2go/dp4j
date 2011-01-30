@@ -1,3 +1,4 @@
 com.dp4j.processors.SingletonProcessor
 com.dp4j.processors.InstanceProcessor
 com.dp4j.processors.GetInstanceProcessor
+com.dp4j.processors.PrivateAccessProcessor

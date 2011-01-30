@@ -16,6 +16,11 @@ import com.sun.tools.javac.tree.TreeMaker;
 import com.sun.tools.javac.util.Context;
 import java.util.HashSet;
 import com.dp4j.templateMethod;
+import com.sun.tools.javac.code.Flags;
+import com.sun.tools.javac.code.TypeTags;
+import com.sun.tools.javac.util.List;
+import com.sun.tools.javac.util.ListBuffer;
+import com.sun.tools.javac.util.Name;
 
 /**
  *
@@ -28,6 +33,50 @@ public abstract class DProcessor extends AbstractProcessor {
     protected TreeMaker tm;
     protected static JavacElements elementUtils;
     protected Messager msgr;
+
+    public JCVariableDecl getVarDecl(JCModifiers mods, final String varName, final String idName, final String methodName, final String... params) {
+        JCMethodInvocation valueSetter = getMethodInvoc(methodName, params);
+        return tm.VarDef(mods, elementUtils.getName(varName), getId(idName), valueSetter);
+    }
+
+    private List<JCExpression> getParamsList(final boolean... params){
+        final ListBuffer<JCExpression> lb = ListBuffer.lb();
+        for (boolean param : params) {
+            lb.append(tm.Literal(TypeTags.INT, param));
+        }
+        final List<JCExpression> paramsList = lb.toList();
+        return paramsList;
+    }
+
+    public JCMethodInvocation getMethodInvoc(final String methodName, final boolean... boolParams){
+        final JCExpression methodN = getIdAfterImporting(methodName);
+        final List<JCExpression> paramsList = getParamsList(boolParams);
+        final JCMethodInvocation mInvoc = tm.Apply(List.<JCExpression>nil(), methodN, paramsList);
+        return mInvoc;
+    }
+
+    public JCMethodInvocation getMethodInvoc(final String methodName, final String... stringParams){
+        JCExpression methodN = getIdAfterImporting(methodName);
+        final ListBuffer<JCExpression> lb = ListBuffer.lb();
+        for (String param : stringParams) {
+            lb.append(tm.Literal(param));
+        }
+        final List<JCExpression> paramsList = lb.toList();
+        final JCMethodInvocation mInvoc = tm.Apply(List.<JCExpression>nil(), methodN, paramsList);
+        return mInvoc;
+    }
+
+    public JCVariableDecl getVarDecl(final String varName, final String idName, final String methodName, final String... params) {
+        return getVarDecl(tm.Modifiers(Flags.FINAL), varName, idName, methodName, params);
+    }
+
+    public JCExpression getId(final String typeName) {
+        return getIdAfterImporting(typeName);
+    }
+
+    public JCExpression getId(final Name typeName) {
+        return getId(typeName.toString());
+    }
 
     @Override
     public void init(ProcessingEnvironment processingEnv) {
@@ -57,6 +106,21 @@ public abstract class DProcessor extends AbstractProcessor {
             processElement(e);
         }
         return true;
+    }
+
+    protected JCExpression getIdentAfterImporting(final Class clazz) {
+        return getIdAfterImporting(clazz.getCanonicalName());
+    }
+
+    protected JCExpression getIdAfterImporting(final String methodName) {
+        final String[] names = methodName.split("\\.");
+        JCExpression e = tm.Ident(elementUtils.getName(names[0]));
+
+        for (int i = 1; i < names.length; i++) {
+            String name = names[i];
+            e = tm.Select(e, elementUtils.getName(name));
+        }
+        return e;
     }
 
     protected abstract void processElement(final Element e);

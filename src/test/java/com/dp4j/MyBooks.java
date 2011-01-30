@@ -11,6 +11,6 @@ private int year; //fields
     private String author;
 
     public void hello(){
-		      System.out.println(instance);
+//		      System.out.println(instance);
     }
 }

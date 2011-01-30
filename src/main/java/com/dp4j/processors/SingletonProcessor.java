@@ -8,8 +8,6 @@ import com.dp4j.*;
 import com.sun.tools.javac.code.*;
 import com.sun.tools.javac.tree.JCTree;
 import com.sun.tools.javac.tree.JCTree.*;
-import com.sun.tools.javac.tree.JCTree.JCAnnotation;
-import com.sun.tools.javac.tree.JCTree.JCMethodDecl;
 import java.util.Set;
 import javax.annotation.processing.*;
 import javax.lang.model.*;
@@ -80,7 +78,7 @@ public class SingletonProcessor extends DProcessor {
                             //it wasn't a method
                         }
                     }
-                    final JCIdent instanceType = tm.Ident(singletonClassName);
+                    final JCExpression instanceType = getId(singletonClassName);
                     tm.TypeApply(instanceType, null);
 
                     if (!instanceFound) {
@@ -119,15 +117,4 @@ public class SingletonProcessor extends DProcessor {
         System.out.println(singletonCU);
     }
 
-    JCExpression getIdentAfterImporting(final Class clazz) {
-        final String fullName = clazz.getCanonicalName();
-        final String[] names = fullName.split("\\.");
-        JCExpression e = tm.Ident(elementUtils.getName(names[0]));
-
-        for (int i = 1; i < names.length; i++) {
-            String name = names[i];
-            e = tm.Select(e, elementUtils.getName(name));
-        }
-        return e;
-    }
 }
