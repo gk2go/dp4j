@@ -35,20 +35,31 @@ public abstract class DProcessor extends AbstractProcessor {
     protected Messager msgr;
 
     public JCVariableDecl getVarDecl(JCModifiers mods, final String varName, final String idName, final String methodName, final String... params) {
-        JCMethodInvocation valueSetter = getMethodInvoc(methodName, params);
+        JCMethodInvocation valueSetter = (methodName != null)? getMethodInvoc(methodName, params): null;
         return tm.VarDef(mods, elementUtils.getName(varName), getId(idName), valueSetter);
     }
 
-    private List<JCExpression> getParamsList(final boolean... params){
+    public JCVariableDecl getVarDecl(final String varName, final String idName){
+        return getVarDecl(varName, idName, null, null);
+    }
+
+    public List<JCStatement> emptyList(){
+                final ListBuffer<JCStatement> lb = ListBuffer.lb();
+return lb.toList();
+    }
+
+    private List<JCExpression> getParamsList(final Boolean... params){
         final ListBuffer<JCExpression> lb = ListBuffer.lb();
         for (boolean param : params) {
-            lb.append(tm.Literal(TypeTags.INT, param));
+
+            int v = ((Boolean) param) ? 1 : 0;
+            lb.append(tm.Literal(TypeTags.BOOLEAN, v));
         }
         final List<JCExpression> paramsList = lb.toList();
         return paramsList;
     }
 
-    public JCMethodInvocation getMethodInvoc(final String methodName, final boolean... boolParams){
+    public JCMethodInvocation getMethodInvoc(final String methodName, final Boolean... boolParams){
         final JCExpression methodN = getIdAfterImporting(methodName);
         final List<JCExpression> paramsList = getParamsList(boolParams);
         final JCMethodInvocation mInvoc = tm.Apply(List.<JCExpression>nil(), methodN, paramsList);

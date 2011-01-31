@@ -47,7 +47,7 @@ public class PrivateAccessProcessor extends DProcessor {
                     if (!className.contains(".")) {
                         className = packageName.toString() + "." + className;
                     }
-                    JCVariableDecl classDecl = getVarDecl("clazz", "Class<?>", "Class.forName", className);
+                    JCVariableDecl classDecl = getVarDecl("clazz", "java.lang.Class", "java.lang.Class.forName", className);
                     final String field = "field";
                     String objName = fa.getIdentifier().toString();
                     JCVariableDecl fieldDecl = getVarDecl(field, "java.lang.reflect.Field", "clazz.getDeclaredField", objName);
@@ -59,16 +59,15 @@ public class PrivateAccessProcessor extends DProcessor {
                     tree.body.stats = tree.body.stats.prepend(setAccessibleExec);
                     tree.body.stats = tree.body.stats.prepend(fieldDecl); //no problem with for-each loop!
                     tree.body.stats = tree.body.stats.prepend(classDecl);
-
-                    System.out.println(clazz);
-                    System.out.println(varDec.vartype);
-                    System.out.println(varDec.type);
-                    System.out.println(fa.getIdentifier());
-                    com.sun.tools.javac.util.Name id = fa.getIdentifier();
-                    //TODO: make reflective call and then assign returned value to varDec.init.
+                    //FIXME: need to add this. Surround the whole
+                    JCVariableDecl exDecl = getVarDecl("ex", "java.lang.ClassNotFoundException");
+                     List<JCStatement> emptyList = emptyList();
+                    JCTree.JCCatch catchEx = tm.Catch(exDecl, tm.Block(0, emptyList));
+                    List<JCCatch> catchStm = List.of(catchEx);
+                    JCTry Try = tm.Try(tree.body, catchStm, tm.Block(0, emptyList));
                 }
             }
         }
-        System.out.println(trees.getPath(e).getCompilationUnit());
-    }
+        System.out.println(cut);
+   }
 }

@@ -21,9 +21,12 @@ public class AppTest {
         //            final JavaSource classSource = JavaSource.forFileObject(fileObj);
 //        SS sS = new SS();
 //        sS.index = 4;
+        try{
         AppTest pp = AppTest.instance;
 //        SingletonImpl ss = SingletonImpl.instance;
-
+        }catch(Exception e){
+            
+        }
         System.out.println("hello from dummy test");
     }
 }
