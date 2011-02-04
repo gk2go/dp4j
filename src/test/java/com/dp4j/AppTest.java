@@ -24,9 +24,10 @@ public class AppTest {
         try{
         AppTest pp = AppTest.instance;
 //        SingletonImpl ss = SingletonImpl.instance;
-        }catch(Exception e){
-            
+        }catch(Exception e ){
+            AppTest ppd = AppTest.instance;
         }
+
         System.out.println("hello from dummy test");
     }
 }

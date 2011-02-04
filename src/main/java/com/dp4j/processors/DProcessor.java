@@ -21,6 +21,7 @@ import com.sun.tools.javac.code.TypeTags;
 import com.sun.tools.javac.util.List;
 import com.sun.tools.javac.util.ListBuffer;
 import com.sun.tools.javac.util.Name;
+import javax.lang.model.util.Types;
 
 /**
  *
@@ -33,6 +34,8 @@ public abstract class DProcessor extends AbstractProcessor {
     protected TreeMaker tm;
     protected static JavacElements elementUtils;
     protected Messager msgr;
+    protected Types typeUtils;
+
 
     public JCVariableDecl getVarDecl(JCModifiers mods, final String varName, final String idName, final String methodName, final String... params) {
         JCMethodInvocation valueSetter = (methodName != null)? getMethodInvoc(methodName, params): null;
@@ -98,6 +101,7 @@ return lb.toList();
         Thread.currentThread().setContextClassLoader(getClass().getClassLoader());
         msgr = processingEnv.getMessager();
         tm = TreeMaker.instance(((JavacProcessingEnvironment) processingEnv).getContext());
+        typeUtils = processingEnv.getTypeUtils();
     }
 
     protected Set<? extends Element> getElementsAnnotated(final RoundEnvironment roundEnv, Set<? extends TypeElement> annotations) {
