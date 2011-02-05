@@ -12,9 +12,14 @@ import com.sun.source.tree.StatementTree;
 import com.sun.source.tree.Tree;
 import com.sun.source.util.TreePath;
 import com.sun.tools.javac.api.JavacScope;
+import com.sun.tools.javac.code.Scope.Entry;
 import com.sun.tools.javac.code.Symbol;
 import com.sun.tools.javac.code.Symbol.ClassSymbol;
+import com.sun.tools.javac.code.Symbol.VarSymbol;
 import com.sun.tools.javac.comp.AttrContext;
+import com.sun.tools.javac.comp.Env;
+import com.sun.tools.javac.model.FilteredMemberList;
+import com.sun.tools.javac.tree.JCTree;
 import java.util.List;
 import javax.annotation.processing.*;
 import javax.lang.model.*;
@@ -25,6 +30,7 @@ import com.sun.tools.javac.util.Name;
 import java.util.HashMap;
 import java.util.Map;
 import javax.lang.model.type.DeclaredType;
+import javax.lang.model.type.TypeMirror;
 import javax.tools.Diagnostic.Kind.*;
 
 /**
@@ -127,8 +133,8 @@ public class PrivateAccessProcessor extends DProcessor {
                                 lb.append(fieldDecl);
                                 lb.append(setAccessibleExec);
                             }
-                            for(i = indexOfStmt + 1; i < stats.size(); i++){
-                               lb.append(stats.get(i));
+                            for (i = indexOfStmt; i < stats.size(); i++) {
+                                lb.append(stats.get(i));
                             }
                             stats = lb.toList();
                             refIjected++;
@@ -204,8 +210,19 @@ public class PrivateAccessProcessor extends DProcessor {
         final JCMethodDecl tree = (JCMethodDecl) elementUtils.getTree(e);
         final TreePath treePath = trees.getPath(e);
         Map<String, JCExpression> vars = new HashMap<String, JCExpression>();
+
         for (JCVariableDecl var : tree.params) {
             addVar(vars, var);
+        }
+        TypeElement encClass = (TypeElement) e.getEnclosingElement();
+
+        FilteredMemberList allMembers = elementUtils.getAllMembers(encClass);
+        for (Symbol symbol : allMembers) {
+            String varName = symbol.toString();
+            if (symbol instanceof VarSymbol) {
+                VarSymbol v = (VarSymbol) symbol;
+                vars.put(varName, getId(v.type.toString()));
+            }
         }
         final CompilationUnitTree cut = treePath.getCompilationUnit();
         ExpressionTree packageName = cut.getPackageName();

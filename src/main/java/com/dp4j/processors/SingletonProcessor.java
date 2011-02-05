@@ -59,6 +59,7 @@ public class SingletonProcessor extends DProcessor {
         for (JCTree def : singletonCU.defs) {
             if (def instanceof JCClassDecl) {
                 JCClassDecl singletonClass = (JCClassDecl) def;
+
                 if (singletonClass.name.equals(singletonClassName)) {
                     for (JCTree singletonMethod : singletonClass.defs) {
                         try {
