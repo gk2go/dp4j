@@ -20,6 +20,9 @@ public class T extends K{
 
     @org.junit.Test
     public void t() {
+        if(pc.i > 0){
+            pc.i = 5;
+        }
         //         double j = 2.2250738585072012e-308;
         //        int pi = 3.14;
         final int fff = pc.i;

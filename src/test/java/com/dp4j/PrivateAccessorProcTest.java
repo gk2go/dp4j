@@ -6,12 +6,10 @@
 package com.dp4j;
 
 import com.dp4j.processors.PrivateAccessProcessor;
-import java.net.URL;
 import java.util.Arrays;
 import java.util.Collection;
 
 import javax.annotation.processing.Processor;
-import javax.tools.Diagnostic.Kind;
 
 import org.junit.Test;
 

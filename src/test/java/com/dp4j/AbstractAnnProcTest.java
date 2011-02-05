@@ -90,7 +90,7 @@ public abstract class AbstractAnnProcTest {
 
     private static String toResourcePath(Class<?> clazz) {
         URL systemResource = ClassLoader.getSystemResource(clazz.getCanonicalName());
-        return systemResource.toString();
+        return systemResource.getFile();
 //        return ClassUtils.convertClassNameToResourcePath(clazz.getName()) + SOURCE_FILE_SUFFIX;
     }
 
