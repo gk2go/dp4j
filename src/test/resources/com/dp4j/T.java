@@ -20,19 +20,27 @@ public class T extends K{
 
     @org.junit.Test
     public void t() {
-        if(pc.i > 0){
-            pc.i = 5;
-        }
+//        if(pc.i > 0){
+            int g = pc.i;
+//        }
         //         double j = 2.2250738585072012e-308;
         //        int pi = 3.14;
-        final int fff = pc.i;
+//        final int fff = pc.i;
+//        {
+//            int f = pc.i;
+//        }
+
+//        while(1 < 10){
+////           int kk = pc.i;
+//        }
+
         PrivateClass privateClass = new PrivateClass();
-        int ff = privateClass.i;
-         int pi = new PrivateClass().i;
+//        int ff = privateClass.i;
+//         int pi = new PrivateClass().i;
          int i  = new PrivateClass().j;
 
         try {
-            int kk = new PrivateClass().i;
+//            int kk = new PrivateClass().i;
         } catch (Exception e) {
         }
     }

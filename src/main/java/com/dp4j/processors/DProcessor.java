@@ -36,22 +36,21 @@ public abstract class DProcessor extends AbstractProcessor {
     protected Messager msgr;
     protected Types typeUtils;
 
-
     public JCVariableDecl getVarDecl(JCModifiers mods, final String varName, final String idName, final String methodName, final String... params) {
-        JCMethodInvocation valueSetter = (methodName != null)? getMethodInvoc(methodName, params): null;
+        JCMethodInvocation valueSetter = (methodName != null) ? getMethodInvoc(methodName, params) : null;
         return tm.VarDef(mods, elementUtils.getName(varName), getId(idName), valueSetter);
     }
 
-    public JCVariableDecl getVarDecl(final String varName, final String idName){
+    public JCVariableDecl getVarDecl(final String varName, final String idName) {
         return getVarDecl(varName, idName, null, null);
     }
 
-    public List<JCStatement> emptyList(){
-                final ListBuffer<JCStatement> lb = ListBuffer.lb();
-return lb.toList();
+    public List<JCStatement> emptyList() {
+        final ListBuffer<JCStatement> lb = ListBuffer.lb();
+        return lb.toList();
     }
 
-    private List<JCExpression> getParamsList(final Boolean... params){
+    private List<JCExpression> getParamsList(final Boolean... params) {
         final ListBuffer<JCExpression> lb = ListBuffer.lb();
         for (boolean param : params) {
 
@@ -62,14 +61,53 @@ return lb.toList();
         return paramsList;
     }
 
-    public JCMethodInvocation getMethodInvoc(final String methodName, final Boolean... boolParams){
+    private List<JCExpression> getParamsList(final Name... params) {
+        final ListBuffer<JCExpression> lb = ListBuffer.lb();
+        for (Name param : params) {
+            lb.append(tm.Ident(param));
+        }
+        final List<JCExpression> paramsList = lb.toList();
+        return paramsList;
+    }
+
+    private List<JCExpression> getParamsList(final JCExpression... params) {
+        final ListBuffer<JCExpression> lb = ListBuffer.lb();
+        for (JCExpression param : params) {
+            if (param instanceof JCNewClass) {
+                lb.append(tm.Exec(param).getExpression());
+            }
+            else if (param instanceof JCIdent){
+                JCIdent id = (JCIdent) param;
+                lb.append(tm.Ident(id.name));
+            }
+            else throw new RuntimeException();
+        }
+        final List<JCExpression> paramsList = lb.toList();
+        return paramsList;
+    }
+
+    public JCMethodInvocation getMethodInvoc(final String methodName, final JCExpression... exps) {
+        final JCExpression methodN = getIdAfterImporting(methodName);
+        final List<JCExpression> paramsList = getParamsList(exps);
+        final JCMethodInvocation mInvoc = tm.Apply(List.<JCExpression>nil(), methodN, paramsList);
+        return mInvoc;
+    }
+
+    public JCMethodInvocation getMethodInvoc(final String methodName, final Boolean... boolParams) {
         final JCExpression methodN = getIdAfterImporting(methodName);
         final List<JCExpression> paramsList = getParamsList(boolParams);
         final JCMethodInvocation mInvoc = tm.Apply(List.<JCExpression>nil(), methodN, paramsList);
         return mInvoc;
     }
 
-    public JCMethodInvocation getMethodInvoc(final String methodName, final String... stringParams){
+    public JCMethodInvocation getMethodInvoc(final String methodName, final Name... objs) {
+        final JCExpression methodN = getIdAfterImporting(methodName);
+        final List<JCExpression> paramsList = getParamsList(objs);
+        final JCMethodInvocation mInvoc = tm.Apply(List.<JCExpression>nil(), methodN, paramsList);
+        return mInvoc;
+    }
+
+    public JCMethodInvocation getMethodInvoc(final String methodName, final String... stringParams) {
         JCExpression methodN = getIdAfterImporting(methodName);
         final ListBuffer<JCExpression> lb = ListBuffer.lb();
         for (String param : stringParams) {
