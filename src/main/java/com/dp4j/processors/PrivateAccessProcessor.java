@@ -8,6 +8,7 @@ import com.sun.source.tree.*;
 import com.sun.source.util.TreePath;
 import com.sun.tools.javac.code.*;
 import com.sun.tools.javac.code.Symbol.*;
+import com.sun.tools.javac.code.Type.MethodType;
 import com.sun.tools.javac.model.FilteredMemberList;
 import com.sun.tools.javac.tree.JCTree;
 import javax.annotation.processing.*;
@@ -115,6 +116,10 @@ public class PrivateAccessProcessor extends DProcessor {
             }
         } else if (ifExp instanceof JCFieldAccess) {
             final JCFieldAccess fa = (JCFieldAccess) ifExp;
+            //            FIXME: recursively process fa.getExpression()
+            ExpProcResult processCond = processCond(fa.selected, vars, cut, packageName, scope, stats, stmt);
+            stats = processCond.getStats();
+            fa.selected = processCond.getExp();
             final boolean accessible = isAccessible(fa, vars, cut, packageName, scope);
             if (!accessible) {
                 stats = reflectField(fa, scope, cut, packageName, vars, stats, stmt); //when ifExp
@@ -146,13 +151,21 @@ public class PrivateAccessProcessor extends DProcessor {
         } else if (ifExp instanceof JCMethodInvocation) {
             JCMethodInvocation mi = (JCMethodInvocation) ifExp;
             final ListBuffer<JCExpression> lb = ListBuffer.lb();
-            for (JCExpression arg : mi.args) {
-                ExpProcResult result = processCond(arg, vars, cut, packageName, scope, stats, stmt);
-                stats = result.getStats();
-                lb.append(result.getExp());
+            if (!mi.args.isEmpty()) {
+                for (JCExpression arg : mi.args) {
+                    ExpProcResult result = processCond(arg, vars, cut, packageName, scope, stats, stmt);
+                    stats = result.getStats();
+                    lb.append(result.getExp());
+                }
+                mi.args = lb.toList();
             }
-            mi.args = lb.toList();
+            ExpProcResult result = processCond(mi.meth, vars, cut, packageName, scope, stats, stmt);
+            mi.meth = result.getExp();
             //check if method is accessible, maybe must check selector first, and possibly plugin invoke
+            JCExpression me = mi.meth;
+
+        } else if(ifExp instanceof JCNewClass){
+            //TODO: it's a method too! handle similarly
         }
         return new ExpProcResult(stats, ifExp);
     }
@@ -181,7 +194,7 @@ public class PrivateAccessProcessor extends DProcessor {
     JCTypeCast getReflectedFieldAccess(JCFieldAccess fa, final CompilationUnitTree cut, Object packageName, Map<String, JCExpression> vars) {
         final String fieldAccessedName = fa.name.toString();
         final String className = getClassNameOfAccessor(fa, vars, cut, packageName);
-        final VarSymbol s = getSymbol(className, fieldAccessedName);
+        final Symbol s = getSymbol(className, fieldAccessedName);
         Type type = s.type;
         if (s.type.isPrimitive()) {
             final TypeElement boxedClass = typeUtils.boxedClass(s.type);
@@ -240,13 +253,13 @@ public class PrivateAccessProcessor extends DProcessor {
         return lb.toList();
     }
 
-    private VarSymbol getSymbol(final String className, final String objName) {
+    private Symbol getSymbol(final String className, final String objName) {
         final ClassSymbol typ = elementUtils.getTypeElement(className);
         final List<Symbol> enclosedElements = typ.getEnclosedElements();
         for (Symbol symbol : enclosedElements) { //
             String qualifiedName = symbol.getQualifiedName().toString();
             if (objName.equals(qualifiedName)) { //TODO: will it confuse with method names too?
-                return (VarSymbol) symbol;
+                return  symbol;
             }
         }
         return null;
@@ -308,13 +321,18 @@ public class PrivateAccessProcessor extends DProcessor {
                 }
             }
             if (packageName != null && !imported) {
+                String tmp = className;
                 className = packageName.toString() + "." + className;
+                ClassSymbol te = elementUtils.getTypeElement(className);
+                if (te == null) { //must be java.lang
+                    return getQualifiedClassName("java.lang." + tmp, cut, packageName);
+                }
             }
         }
         return className;
     }
     boolean reflectionInjected = false;
-
+TypeElement encClass;
     @Override
     protected void processElement(Element e) {
         final JCMethodDecl tree = (JCMethodDecl) elementUtils.getTree(e);
@@ -325,7 +343,7 @@ public class PrivateAccessProcessor extends DProcessor {
         for (JCVariableDecl var : tree.params) {
             addVar(vars, var);
         }
-        TypeElement encClass = (TypeElement) e.getEnclosingElement();
+        encClass = (TypeElement) e.getEnclosingElement();
 
         FilteredMemberList allMembers = elementUtils.getAllMembers(encClass);
 
@@ -372,7 +390,25 @@ public class PrivateAccessProcessor extends DProcessor {
             if (get != null) { //is instance
                 className = get.toString();
             }//else is static
+        } else if (exp instanceof JCMethodInvocation){
+            JCMethodInvocation mi = (JCMethodInvocation) exp;
+            className = getReturnType(mi,cut);
+            //FIXME: what about chains and args of the method?
+        } else if(exp instanceof JCFieldAccess){
+            JCFieldAccess fa1 = (JCFieldAccess) exp;
+            String classNameOfAccessor = getClassNameOfAccessor(fa1, vars, cut, packageName);
+            final String fieldAccessedName = fa1.name.toString();
+            Symbol symbol = getSymbol(classNameOfAccessor, fieldAccessedName);
+            className = symbol.type.toString();
         }
         return getQualifiedClassName(className, cut, packageName);
+    }
+
+    private String getReturnType(JCMethodInvocation mi, CompilationUnitTree cut){
+        String mName = mi.meth.toString();
+        String className = encClass.getQualifiedName().toString();
+        MethodSymbol symbol = (MethodSymbol) getSymbol(className,mName);
+        Type.MethodType mt = (MethodType) symbol.type;
+        return mt.restype.toString();
     }
 }
