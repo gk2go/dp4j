@@ -17,6 +17,8 @@ import com.sun.tools.javac.util.Context;
 import java.util.HashSet;
 import com.dp4j.templateMethod;
 import com.sun.tools.javac.code.Flags;
+import com.sun.tools.javac.code.Symbol;
+import com.sun.tools.javac.code.*;
 import com.sun.tools.javac.code.TypeTags;
 import com.sun.tools.javac.util.List;
 import com.sun.tools.javac.util.ListBuffer;

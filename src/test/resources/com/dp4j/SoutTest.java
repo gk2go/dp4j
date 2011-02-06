@@ -16,7 +16,6 @@ class PrivateClass{
 
 public class SoutTest {
 
-
     @org.junit.Test
             public void test(){
                 System.out.println(PrivateClass.k);

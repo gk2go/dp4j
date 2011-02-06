@@ -29,12 +29,13 @@ import javax.tools.StandardJavaFileManager;
 import javax.tools.ToolProvider;
 import javax.tools.Diagnostic.Kind;
 import javax.tools.JavaCompiler.CompilationTask;
+import org.apache.commons.lang.StringUtils;
 
 /**
  *
  * @author simpatico
  */
-public class PrivateAccessProcTest extends AbstractAnnotationProcessorTest {
+public class PrivateAccessProcTest {
 
     private static final JavaCompiler COMPILER = ToolProvider.getSystemJavaCompiler();
 
@@ -78,31 +79,33 @@ public class PrivateAccessProcTest extends AbstractAnnotationProcessorTest {
         return new File(dir, clazz.getCanonicalName().replace(".", File.separator) + ".class").getAbsolutePath();
     }
 
-//    @org.junit.Test
-//    public void mostComprehensiveTest() throws IOException {
-//        final Runtime runtime = Runtime.getRuntime();
-//        runtime.traceInstructions(true);
-//        runtime.traceMethodCalls(true);
-//        File targetClasses = getFile(workingdir, "target", "classes");
-//        File targetTestClasses = getFile(workingdir, "target", "test-classes");
-//        final String junit = new File(testResources.getAbsolutePath(), "junit.jar").getAbsolutePath();
-//        final String commons = new File(testResources.getAbsolutePath(), "commons.jar").getAbsolutePath();
-//        String tools = getFile(System.getProperty("java.home")).getAbsolutePath();
-//        int lastIndexOf = StringUtils.lastIndexOf(tools, File.separator);
-//        tools = "\"" + getFile(tools.substring(0, lastIndexOf), "lib", "tools.jar").getAbsolutePath() + "\"";
-//
-//        String cp = getCp(tools, commons);
-//        String javacCmd = "javac -d " + targetClasses + " ";
-//        final String dp4jCompile = javacCmd + cp + getSrcFile(templateMethod.class) + " " + getSrcFile(DProcessor.class) + " " + getSrcFile(PrivateAccessProcessor.class);
-//
-//        System.out.println(dp4jCompile);
-//        cp = getCp(targetClasses.getAbsolutePath(), tools, commons, junit);
-//        javacCmd = "javac -d " + targetTestClasses;
-//        String testCmd = javacCmd + cp + " -processor " + PrivateAccessProcessor.class.getCanonicalName() + " " + getTestFile("Test");
-//        System.out.println(testCmd);
-//        runtime.exec(dp4jCompile, null, workingdir);
-//        runtime.exec(testCmd, null, workingdir);
-//    }
+    @org.junit.Test
+    public void mostComprehensiveTest() throws IOException {
+        final Runtime runtime = Runtime.getRuntime();
+        runtime.traceInstructions(true);
+        runtime.traceMethodCalls(true);
+        File targetClasses = getFile(workingdir, "target", "classes");
+        File targetTestClasses = getFile(workingdir, "target", "test-classes");
+        final String junit = new File(testResources.getAbsolutePath(), "junit.jar").getAbsolutePath();
+        final String commons = new File(testResources.getAbsolutePath(), "commons.jar").getAbsolutePath();
+        String tools = getFile(System.getProperty("java.home")).getAbsolutePath();
+        int lastIndexOf = StringUtils.lastIndexOf(tools, File.separator);
+        tools = "\"" + getFile(tools.substring(0, lastIndexOf), "lib", "tools.jar").getAbsolutePath() + "\"";
+
+        String cp = getCp(tools, commons);
+        String javacCmd = "javac -d " + targetClasses + " ";
+
+        final String dp4jCompile = javacCmd + cp + getClassesToCompile(templateMethod.class,DProcessor.class,ExpProcResult.class ,PrivateAccessProcessor.class);
+
+        System.out.println(dp4jCompile);
+        cp = getCp(targetClasses.getAbsolutePath(), tools, commons, junit);
+        javacCmd = "javac -d " + targetTestClasses;
+        String testCmd = javacCmd + cp + " -processor " + PrivateAccessProcessor.class.getCanonicalName() + " " + getTestFile("Test");
+        System.out.println(testCmd);
+        Process exec = runtime.exec(dp4jCompile, null, workingdir);
+
+        runtime.exec(testCmd, null, workingdir);
+    }
     private String getCp(final String... cmds) {
         String ret = " -cp ";
         for (String string : cmds) {
@@ -111,62 +114,12 @@ public class PrivateAccessProcTest extends AbstractAnnotationProcessorTest {
         return ret.substring(0, ret.length() - 1) + " ";
     }
 
-    @Test
-    public void validCompositeAnnotation() throws ClassNotFoundException {
-
-//        Class<?> loadClass = ClassLoader.getSystemClassLoader().loadClass("com.dp4j.Test");
-        assertCompilationSuccessful(compileTestCase(getTestFile("Test")));
-    }
-
-    /**
-     * Attempts to compile the given compilation units using the Java Compiler API.
-     * <p>
-     * The compilation units and all their dependencies are expected to be on the classpath.
-     *
-     * @param compilationUnitPaths
-     *            the paths of the source files to compile, as would be expected
-     *            by {@link ClassLoader#getResource(String)}
-     * @return the {@link Diagnostic diagnostics} returned by the compilation,
-     *         as demonstrated in the documentation for {@link JavaCompiler}
-     * @see #compileTestCase(Class...)
-     *
-     */
-    @Override
-    protected List<Diagnostic<? extends JavaFileObject>> compileTestCase(String... compilationUnitPaths) {
-        assert (compilationUnitPaths != null);
-
-        Collection<File> compilationUnits = new LinkedList<File>();
-        for (String cuPath : compilationUnitPaths) {
-            compilationUnits.add(new File(cuPath));
+    private String getClassesToCompile(final Class... cmds) {
+        String ret = " ";
+        for (Class string : cmds) {
+            ret += getSrcFile(string) + " ";
         }
-
-        final DiagnosticCollector<JavaFileObject> diagnosticCollector = new DiagnosticCollector<JavaFileObject>();
-        final StandardJavaFileManager fileManager = COMPILER.getStandardFileManager(diagnosticCollector, null, null);
-
-        /*
-         * Call the compiler with the "-proc:only" option. The "class names"
-         * option (which could, in principle, be used instead of compilation
-         * units for annotation processing) isn't useful in this case because
-         * only annotations on the classes being compiled are accessible.
-         *
-         * Information about the classes being compiled (such as what they are annotated
-         * with) is *not* available via the RoundEnvironment. However, if these classes
-         * are annotations, they certainly need to be validated.
-         */
-        CompilationTask task = COMPILER.getTask(null, fileManager, diagnosticCollector, Arrays.asList("-verbose"), null, fileManager.getJavaFileObjectsFromFiles(compilationUnits));
-        task.setProcessors(getProcessors());
-        task.call();
-
-        try {
-            fileManager.close();
-        } catch (IOException exception) {
-        }
-
-        return diagnosticCollector.getDiagnostics();
+        return ret;
     }
 
-    @Override
-    protected Collection<Processor> getProcessors() {
-        return Arrays.<Processor>asList(new PrivateAccessProcessor());
-    }
 }
