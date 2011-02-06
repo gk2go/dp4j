@@ -5,6 +5,7 @@ class PrivateClass {
     private int i;
     public int j;
     public static int gg;
+    private Object[] objs = new Object[4];
 }
 
 class K {
@@ -32,6 +33,9 @@ public class Test extends K {
 
         while (2 < Math.random() * 5) {
             int kk = pc.i;
+            for (Object object : pc.objs) {
+               kk = pc.i;
+            }
         }
 
         PrivateClass privateClass = new PrivateClass();

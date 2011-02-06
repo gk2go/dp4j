@@ -53,32 +53,6 @@ public class PrivateAccessProcessor extends DProcessor {
         return stats;
     }
 
-    protected com.sun.tools.javac.util.List<JCStatement> processCond(JCExpression ifExp, Map<String, JCExpression> vars, final CompilationUnitTree cut, Object packageName, JavacScope scope, com.sun.tools.javac.util.List<JCStatement> stats, JCStatement stmt) {
-        if (ifExp instanceof JCBinary) {
-            JCBinary ifB = (JCBinary) ifExp;
-
-            if (ifB.lhs instanceof JCFieldAccess) {
-                final JCFieldAccess fa = (JCFieldAccess) ifB.lhs;
-                final boolean accessible = isAccessible(fa, vars, cut, packageName, scope);
-                if (!accessible) {
-                    stats = reflectField(fa, scope, cut, packageName, vars, stats, stmt);
-                    ifB.lhs = getReflectedFieldAccess(fa, cut, packageName, vars);
-                    reflectionInjected = true;
-                }
-            }
-            if (ifB.rhs instanceof JCFieldAccess) {
-                final JCFieldAccess fa = (JCFieldAccess) ifB.rhs;
-                final boolean accessible = isAccessible(fa, vars, cut, packageName, scope);
-                if (!accessible) {
-                    stats = reflectField(fa, scope, cut, packageName, vars, stats, stmt);
-                    ifB.rhs = getReflectedFieldAccess(fa, cut, packageName, vars);
-                    reflectionInjected = true;
-                }
-            }
-        }
-        return stats;
-    }
-
     protected com.sun.tools.javac.util.List<JCStatement> processElement(com.sun.tools.javac.util.List<JCStatement> stats, final JCTree tree, final CompilationUnitTree cut, Object packageName, Map<String, JCExpression> vars) {
         JavacScope scope = getScope(cut, tree);
         for (JCStatement stmt : stats) {
@@ -128,6 +102,12 @@ public class PrivateAccessProcessor extends DProcessor {
             JCExpression expression = expStmt.getExpression();
             if (expression instanceof JCAssign) {
                 stats = handleAssign(expression, vars, cut, packageName, scope, stats, stmt);
+            } else if (expression instanceof JCMethodInvocation) {
+                JCMethodInvocation mi = (JCMethodInvocation) expression;
+                for (JCExpression arg : mi.args) {
+                    System.out.println(arg);
+                }
+                //check if method is accessible, maybe must check selector first, and possibly plugin invoke
             }
         } else if (stmt instanceof JCBlock) {
             ((JCBlock) stmt).stats = processElement(((JCBlock) stmt).stats, stmt, cut, packageName, vars);
@@ -145,8 +125,47 @@ public class PrivateAccessProcessor extends DProcessor {
             ((JCBlock) loop.body).stats = processElement(((JCBlock) loop.body).stats, stmt, cut, packageName, vars);
         } else if (stmt instanceof JCEnhancedForLoop) {
             JCEnhancedForLoop loop = (JCEnhancedForLoop) stmt;
+            stats = processCond(loop.expr, vars, cut, packageName, scope, stats, stmt);
             ((JCBlock) loop.body).stats = processElement(((JCBlock) loop.body).stats, stmt, cut, packageName, vars);
         }
+        return stats;
+    }
+
+    protected com.sun.tools.javac.util.List<JCStatement> processCond(JCExpression ifExp, Map<String, JCExpression> vars, final CompilationUnitTree cut, Object packageName, JavacScope scope, com.sun.tools.javac.util.List<JCStatement> stats, JCStatement stmt) {
+        if (ifExp instanceof JCBinary) {
+            JCBinary ifB = (JCBinary) ifExp;
+            if (ifB.lhs instanceof JCFieldAccess) {
+                final JCFieldAccess fa = (JCFieldAccess) ifB.lhs;
+                final boolean accessible = isAccessible(fa, vars, cut, packageName, scope);
+                if (!accessible) {
+                    stats = reflectField(fa, scope, cut, packageName, vars, stats, stmt);
+                    ifB.lhs = getReflectedFieldAccess(fa, cut, packageName, vars);
+                    reflectionInjected = true;
+                }
+            }
+            if (ifB.rhs instanceof JCFieldAccess) {
+                final JCFieldAccess fa = (JCFieldAccess) ifB.rhs;
+                final boolean accessible = isAccessible(fa, vars, cut, packageName, scope);
+                if (!accessible) {
+                    stats = reflectField(fa, scope, cut, packageName, vars, stats, stmt);
+                    ifB.rhs = getReflectedFieldAccess(fa, cut, packageName, vars);
+                    reflectionInjected = true;
+                }
+            }
+        }
+        else if (ifExp instanceof JCFieldAccess) {
+                final JCFieldAccess fa = (JCFieldAccess) ifExp;
+                final boolean accessible = isAccessible(fa, vars, cut, packageName, scope);
+                if (!accessible) {
+                    stats = reflectField(fa, scope, cut, packageName, vars, stats, stmt); //when ifExp
+
+                    ifExp = getReflectedFieldAccess(fa, cut, packageName, vars);
+                    if(stmt instanceof JCEnhancedForLoop){
+                        ((JCEnhancedForLoop) stmt).expr = ifExp;
+                    }
+                    reflectionInjected = true;
+                }
+            }
         return stats;
     }
 
