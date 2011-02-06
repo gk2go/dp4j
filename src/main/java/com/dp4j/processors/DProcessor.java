@@ -136,7 +136,6 @@ public abstract class DProcessor extends AbstractProcessor {
         final Context context = ((JavacProcessingEnvironment) processingEnv).getContext();
         trees = Trees.instance(processingEnv);
         elementUtils = JavacElements.instance(context);
-        Thread.currentThread().setContextClassLoader(getClass().getClassLoader());
         msgr = processingEnv.getMessager();
         tm = TreeMaker.instance(((JavacProcessingEnvironment) processingEnv).getContext());
         typeUtils = processingEnv.getTypeUtils();

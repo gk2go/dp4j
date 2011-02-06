@@ -6,11 +6,12 @@ package com.dp4j;
 
 @com.dp4j.Singleton
 public class MyBooks {
-private int year; //fields
+
+    private int year; //fields
     private String title;
     private String author;
 
-    public void hello(){
-//		      System.out.println(instance);
+    public void hello() {
+        System.out.println(instance);
     }
 }

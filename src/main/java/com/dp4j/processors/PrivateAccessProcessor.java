@@ -6,7 +6,6 @@ package com.dp4j.processors;
 
 import com.sun.source.tree.*;
 import com.sun.source.util.TreePath;
-import com.sun.tools.javac.api.JavacScope;
 import com.sun.tools.javac.code.*;
 import com.sun.tools.javac.code.Symbol.*;
 import com.sun.tools.javac.model.FilteredMemberList;
@@ -32,7 +31,7 @@ public class PrivateAccessProcessor extends DProcessor {
 
     private int refIjected = 1; //FIXME: shouldn't be instance var
 
-    protected com.sun.tools.javac.util.List<JCStatement> handleAssign(JCExpression expression, Map<String, JCExpression> vars, final CompilationUnitTree cut, Object packageName, JavacScope scope, com.sun.tools.javac.util.List<JCStatement> stats, JCStatement stmt) {
+    protected com.sun.tools.javac.util.List<JCStatement> handleAssign(JCExpression expression, Map<String, JCExpression> vars, final CompilationUnitTree cut, Object packageName, com.sun.source.tree.Scope scope, com.sun.tools.javac.util.List<JCStatement> stats, JCStatement stmt) {
         JCAssign assignExp = (JCAssign) expression;
         if (assignExp.rhs instanceof JCFieldAccess) {
             final JCFieldAccess fa = (JCFieldAccess) assignExp.rhs;
@@ -54,15 +53,11 @@ public class PrivateAccessProcessor extends DProcessor {
     }
 
     protected com.sun.tools.javac.util.List<JCStatement> processElement(com.sun.tools.javac.util.List<JCStatement> stats, final JCTree tree, final CompilationUnitTree cut, Object packageName, Map<String, JCExpression> vars) {
-        JavacScope scope = getScope(cut, tree);
-        for (JCStatement stmt : stats) {
-            scope = getScope(cut, stmt);//there's also a public API way of getting it for elements only (I cannot convert any tree into an element, only methods, classes, ..
-            stats = processStmt(stmt, vars, cut, packageName, scope, stats);
-        }
-        return stats;
+        com.sun.source.tree.Scope scope = getScope(cut, tree);
+        return processElement(stats, scope, cut, packageName, vars);
     }
 
-    protected com.sun.tools.javac.util.List<JCStatement> processStmt(JCStatement stmt, Map<String, JCExpression> vars, final CompilationUnitTree cut, Object packageName, JavacScope scope, com.sun.tools.javac.util.List<JCStatement> stats) {
+    protected com.sun.tools.javac.util.List<JCStatement> processStmt(JCStatement stmt, Map<String, JCExpression> vars, final CompilationUnitTree cut, Object packageName, com.sun.source.tree.Scope scope, com.sun.tools.javac.util.List<JCStatement> stats) {
         if (stmt instanceof JCVariableDecl) {
             JCVariableDecl varDec = (JCVariableDecl) stmt;
             if (varDec.init instanceof JCFieldAccess) {
@@ -131,7 +126,7 @@ public class PrivateAccessProcessor extends DProcessor {
         return stats;
     }
 
-    protected com.sun.tools.javac.util.List<JCStatement> processCond(JCExpression ifExp, Map<String, JCExpression> vars, final CompilationUnitTree cut, Object packageName, JavacScope scope, com.sun.tools.javac.util.List<JCStatement> stats, JCStatement stmt) {
+    protected com.sun.tools.javac.util.List<JCStatement> processCond(JCExpression ifExp, Map<String, JCExpression> vars, final CompilationUnitTree cut, Object packageName, com.sun.source.tree.Scope scope, com.sun.tools.javac.util.List<JCStatement> stats, JCStatement stmt) {
         if (ifExp instanceof JCBinary) {
             JCBinary ifB = (JCBinary) ifExp;
             if (ifB.lhs instanceof JCFieldAccess) {
@@ -152,41 +147,40 @@ public class PrivateAccessProcessor extends DProcessor {
                     reflectionInjected = true;
                 }
             }
-        }
-        else if (ifExp instanceof JCFieldAccess) {
-                final JCFieldAccess fa = (JCFieldAccess) ifExp;
-                final boolean accessible = isAccessible(fa, vars, cut, packageName, scope);
-                if (!accessible) {
-                    stats = reflectField(fa, scope, cut, packageName, vars, stats, stmt); //when ifExp
+        } else if (ifExp instanceof JCFieldAccess) {
+            final JCFieldAccess fa = (JCFieldAccess) ifExp;
+            final boolean accessible = isAccessible(fa, vars, cut, packageName, scope);
+            if (!accessible) {
+                stats = reflectField(fa, scope, cut, packageName, vars, stats, stmt); //when ifExp
 
-                    ifExp = getReflectedFieldAccess(fa, cut, packageName, vars);
-                    if(stmt instanceof JCEnhancedForLoop){
-                        ((JCEnhancedForLoop) stmt).expr = ifExp;
-                    }
-                    reflectionInjected = true;
+                ifExp = getReflectedFieldAccess(fa, cut, packageName, vars);
+                if (stmt instanceof JCEnhancedForLoop) {
+                    ((JCEnhancedForLoop) stmt).expr = ifExp;
                 }
+                reflectionInjected = true;
             }
+        }
         return stats;
     }
 
-    private boolean isAccessible(final String className, final JavacScope scope, final String idName) {
+    private boolean isAccessible(final String className, final com.sun.source.tree.Scope scope, final String idName) {
         final Symbol s = getSymbol(className, idName);
         DeclaredType declaredType = getDeclaredType(className);
         return trees.isAccessible(scope, s, declaredType);
     }
 
-    private boolean isAccessible(final JCFieldAccess fa, Map<String, JCExpression> vars, CompilationUnitTree cut, Object packageName, JavacScope scope) {
+    private boolean isAccessible(final JCFieldAccess fa, Map<String, JCExpression> vars, CompilationUnitTree cut, Object packageName, com.sun.source.tree.Scope scope) {
         String className = getClassNameOfAccessor(fa, vars, cut, packageName);
         final String idName = fa.getIdentifier().toString();
         return isAccessible(className, scope, idName);
     }
 
-    private JavacScope getScope(final CompilationUnitTree cut, JCTree tree) {
+    private com.sun.source.tree.Scope getScope(final CompilationUnitTree cut, JCTree tree) {
         if (tree == null) {
             throw new IllegalArgumentException("tree is " + tree);
         }
         final TreePath treePath = TreePath.getPath(cut, tree);
-        JavacScope scope = (JavacScope) trees.getScope(treePath);
+        com.sun.source.tree.Scope scope = trees.getScope(treePath);
         return scope;
     }
 
@@ -205,7 +199,7 @@ public class PrivateAccessProcessor extends DProcessor {
         return refVal;
     }
 
-    protected com.sun.tools.javac.util.List<JCStatement> reflectField(JCFieldAccess fa, final JavacScope scope, final CompilationUnitTree cut, Object packageName, Map<String, JCExpression> vars, com.sun.tools.javac.util.List<JCStatement> stats, JCStatement stmt) {
+    protected com.sun.tools.javac.util.List<JCStatement> reflectField(JCFieldAccess fa, final com.sun.source.tree.Scope scope, final CompilationUnitTree cut, Object packageName, Map<String, JCExpression> vars, com.sun.tools.javac.util.List<JCStatement> stats, JCStatement stmt) {
         final String className = getClassNameOfAccessor(fa, vars, cut, packageName);
         final JCVariableDecl classDecl = addClassVarIfNew(vars, className);
         final String clazz = getClassVar(className);
@@ -343,10 +337,10 @@ public class PrivateAccessProcessor extends DProcessor {
                 vars.put(varName, getId(v.type.toString()));
             }
         }
+        com.sun.source.tree.Scope scope = trees.getScope(treePath);
         final CompilationUnitTree cut = treePath.getCompilationUnit();
         ExpressionTree packageName = cut.getPackageName();
-
-        tree.body.stats = processElement(tree.body.stats, tree, cut, packageName, vars);
+        tree.body.stats = processElement(tree.body.stats, scope, cut, packageName, vars);
         if (reflectionInjected) {
             tree.thrown = tree.thrown.append(getId("java.lang.ClassNotFoundException"));
             tree.thrown = tree.thrown.append(getId("java.lang.NoSuchFieldException"));
@@ -354,6 +348,13 @@ public class PrivateAccessProcessor extends DProcessor {
             reflectionInjected = false;
         }
         System.out.println(cut);
+    }
+
+    protected com.sun.tools.javac.util.List<JCStatement> processElement(com.sun.tools.javac.util.List<JCStatement> stats, final com.sun.source.tree.Scope scope, final CompilationUnitTree cut, Object packageName, Map<String, JCExpression> vars) {
+        for (JCStatement stmt : stats) {
+            stats = processStmt(stmt, vars, cut, packageName, scope, stats);
+        }
+        return stats;
     }
 
     private String getClassNameOfAccessor(JCFieldAccess fa, Map<String, JCExpression> vars, CompilationUnitTree cut, Object packageName) {

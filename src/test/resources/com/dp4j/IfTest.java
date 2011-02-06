@@ -1,8 +1,5 @@
-/*
- * To change this template, choose Tools | Templates
- * and open the template in the editor.
- */
 /**
+ *
  *
  * @author simpatico
  */
@@ -29,7 +26,7 @@ public class IfTest extends K{
             int i = pc.i;
             int f = pc.i;
             m = pc.i;
-            pc.i = 5;
+            pc.i = 5; //should fail here, until setValue is supported
         }
     }
 }
