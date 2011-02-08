@@ -5,30 +5,12 @@
 package com.dp4j;
 
 import com.dp4j.processors.*;
-import com.qrmedia.commons.test.annotation.processing.*;
-import java.io.File;
-import java.util.*;
-import java.util.Collection;
-import javax.annotation.processing.*;
-import org.junit.*;
-import static org.junit.Assert.*;
 
 import java.io.*;
 import java.io.IOException;
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.Collection;
-import java.util.List;
 
-import javax.annotation.processing.*;
-import javax.tools.*;
-import javax.tools.DiagnosticCollector;
 import javax.tools.JavaCompiler;
-import javax.tools.JavaFileObject;
-import javax.tools.StandardJavaFileManager;
 import javax.tools.ToolProvider;
-import javax.tools.Diagnostic.Kind;
-import javax.tools.JavaCompiler.CompilationTask;
 import org.apache.commons.lang.StringUtils;
 
 /**

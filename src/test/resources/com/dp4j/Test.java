@@ -35,6 +35,7 @@ public class Test extends K {
             int kk = pc.i;
             for (Object object : pc.objs) {
                kk = pc.i;
+                System.out.println(pc.i);
             }
         }
 
