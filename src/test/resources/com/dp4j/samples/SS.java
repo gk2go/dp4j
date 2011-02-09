@@ -5,6 +5,9 @@
 
 package com.dp4j.samples;
 
+import com.dp4j.Singleton;
+import com.dp4j.instance;
+
 /**
  *
  * @author Gabriele

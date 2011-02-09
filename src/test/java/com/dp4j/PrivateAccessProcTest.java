@@ -6,23 +6,17 @@ package com.dp4j;
 
 import com.dp4j.processors.core.PrivateAccessProcessor;
 import com.dp4j.processors.*;
-import com.qrmedia.commons.test.annotation.processing.AbstractAnnotationProcessorTest;
 
 import java.io.File;
 import java.io.IOException;
 import java.util.Arrays;
 import java.util.Collection;
-import java.util.List;
 import javax.annotation.processing.Processor;
-import javax.tools.Diagnostic;
-import javax.tools.Diagnostic.Kind;
 
 import javax.tools.JavaCompiler;
-import javax.tools.JavaFileObject;
 import javax.tools.ToolProvider;
 import org.apache.commons.lang.StringUtils;
 import org.junit.Test;
-import static org.junit.Assert.*;
 /**
  *
  * @author simpatico
@@ -97,6 +91,8 @@ public class PrivateAccessProcTest extends AbstractAnnotationProcessorTest {
         Process exec = runtime.exec(dp4jCompile, null, workingdir);
 
         runtime.exec(testCmd, null, workingdir);
+
+        assertCompilationSuccessful(compileTestCase("Test"));
     }
 
 
@@ -118,33 +114,23 @@ public class PrivateAccessProcTest extends AbstractAnnotationProcessorTest {
         return ret;
     }
 
-
-    final String getTestFile(final String className){
-        return "com/dp4j/samples/"+ className + ".java";
+    @Test
+    public void testCallingPrivateMethod(){
+        asssertCompilationSuccessful(compileTestCase("CallTest"));
     }
 
     @Test
-    public void testCallingPrivateMethod(){
-        asssertCompilationSuccessful(compileTestCase(getTestFile("CallTest")));
+    public void testPrivateParams(){
+        asssertCompilationSuccessful(compileTestCase("SoutTest"));
     }
 
     @Test
     public void testSettingValues(){
-        asssertCompilationSuccessful(compileTestCase(getTestFile("IfTest")));
+        asssertCompilationSuccessful(compileTestCase("IfTest"));
     }
 
     @Override
     protected Collection<Processor> getProcessors() {
         return Arrays.<Processor>asList(new PrivateAccessProcessor());
     }
-
-
-    private void asssertCompilationSuccessful(List<Diagnostic<? extends JavaFileObject>> diagnostics) {
-        assert (diagnostics != null);
-
-        for (Diagnostic<? extends JavaFileObject> diagnostic : diagnostics) {
-            assertFalse("Expected no errors", diagnostic.getKind().equals(Kind.ERROR));
-        }
-    }
-
 }

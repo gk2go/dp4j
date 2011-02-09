@@ -6,7 +6,6 @@ public final class SingletonTest {
 
     @Test
     public void test() {
-//        SingletonImpl singletonImpl = SingletonImpl.getInstance();
     }
 }
 
