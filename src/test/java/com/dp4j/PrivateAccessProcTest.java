@@ -5,22 +5,29 @@
 package com.dp4j;
 
 import com.dp4j.processors.core.PrivateAccessProcessor;
-import com.dp4j.processors.ExpProcResult;
-import com.dp4j.processors.DProcessor;
 import com.dp4j.processors.*;
+import com.qrmedia.commons.test.annotation.processing.AbstractAnnotationProcessorTest;
 
 import java.io.File;
 import java.io.IOException;
+import java.util.Arrays;
+import java.util.Collection;
+import java.util.List;
+import javax.annotation.processing.Processor;
+import javax.tools.Diagnostic;
+import javax.tools.Diagnostic.Kind;
 
 import javax.tools.JavaCompiler;
+import javax.tools.JavaFileObject;
 import javax.tools.ToolProvider;
 import org.apache.commons.lang.StringUtils;
-
+import org.junit.Test;
+import static org.junit.Assert.*;
 /**
  *
  * @author simpatico
  */
-public class PrivateAccessProcTest {
+public class PrivateAccessProcTest extends AbstractAnnotationProcessorTest {
 
     private static final JavaCompiler COMPILER = ToolProvider.getSystemJavaCompiler();
 
@@ -56,8 +63,8 @@ public class PrivateAccessProcTest {
         return new File(src, clazz.getCanonicalName().replace(".", File.separator) + ".java").getAbsolutePath();
     }
 
-    static final String getTestFile(final String className) {
-        return getFile(testResources, "com", "dp4j", className + ".java").getAbsolutePath();
+    static String getTestFileAbsolutePath(final String className) {
+        return getFile(testResources, "com", "dp4j", "samples", className + ".java").getAbsolutePath();
     }
 
     final String getClassPath(final File dir, final Class clazz) {
@@ -85,12 +92,16 @@ public class PrivateAccessProcTest {
         System.out.println(dp4jCompile);
         cp = getCp(targetClasses.getAbsolutePath(), tools, commons, junit);
         javacCmd = "javac -d " + targetTestClasses;
-        String testCmd = javacCmd + cp + " -processor " + PrivateAccessProcessor.class.getCanonicalName() + " " + getTestFile("Test");
+        String testCmd = javacCmd + cp + " -processor " + PrivateAccessProcessor.class.getCanonicalName() + " " + getTestFileAbsolutePath("Test");
         System.out.println(testCmd);
         Process exec = runtime.exec(dp4jCompile, null, workingdir);
 
         runtime.exec(testCmd, null, workingdir);
     }
+
+
+
+
     private String getCp(final String... cmds) {
         String ret = " -cp ";
         for (String string : cmds) {
@@ -105,6 +116,35 @@ public class PrivateAccessProcTest {
             ret += getSrcFile(string) + " ";
         }
         return ret;
+    }
+
+
+    final String getTestFile(final String className){
+        return "com/dp4j/samples/"+ className + ".java";
+    }
+
+    @Test
+    public void testCallingPrivateMethod(){
+        asssertCompilationSuccessful(compileTestCase(getTestFile("CallTest")));
+    }
+
+    @Test
+    public void testSettingValues(){
+        asssertCompilationSuccessful(compileTestCase(getTestFile("IfTest")));
+    }
+
+    @Override
+    protected Collection<Processor> getProcessors() {
+        return Arrays.<Processor>asList(new PrivateAccessProcessor());
+    }
+
+
+    private void asssertCompilationSuccessful(List<Diagnostic<? extends JavaFileObject>> diagnostics) {
+        assert (diagnostics != null);
+
+        for (Diagnostic<? extends JavaFileObject> diagnostic : diagnostics) {
+            assertFalse("Expected no errors", diagnostic.getKind().equals(Kind.ERROR));
+        }
     }
 
 }

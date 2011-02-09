@@ -152,7 +152,10 @@ public class PrivateAccessProcessor extends DProcessor {
                 final JCFieldAccess fa = (JCFieldAccess) assignExp.lhs;
                 final boolean accessible = isAccessible(fa, vars, cut, packageName, scope);
                 if (!accessible) {
-                    //TODO: set field field.set(), also handle like if statement
+                    stats = reflect(fa, scope, cut, packageName, vars, stats, stmt);
+                    JCMethodInvocation reflectedFieldSetter = getReflectedFieldSetter(fa,assignExp.rhs, cut, packageName, vars);
+                    JCExpressionStatement expStmt = (JCExpressionStatement) stmt;
+                    expStmt.expr = reflectedFieldSetter;
                 }
             }
         } else if (ifExp instanceof JCMethodInvocation) {
@@ -183,7 +186,7 @@ public class PrivateAccessProcessor extends DProcessor {
         return trees.isAccessible(scope, s, declaredType);
     }
 
-    private boolean isAccessible(String className,final com.sun.source.tree.Scope scope, final CompilationUnitTree cut, final Object packageName){
+    private boolean isAccessible(String className, final com.sun.source.tree.Scope scope, final CompilationUnitTree cut, final Object packageName) {
         className = getQualifiedClassName(className, cut, packageName);
         DeclaredType declaredType = getDeclaredType(className);
         return trees.isAccessible(scope, (TypeElement) declaredType.asElement());
@@ -240,6 +243,13 @@ public class PrivateAccessProcessor extends DProcessor {
 
         JCTypeCast refVal = tm.TypeCast(type, get);
         return refVal;
+    }
+
+    JCMethodInvocation getReflectedFieldSetter(JCFieldAccess fa, final JCExpression value,final CompilationUnitTree cut, Object packageName, Map<String, JCExpression> vars) {
+        final String fieldAccessedName = fa.name.toString();
+        final String field = getFieldVar(fieldAccessedName);
+        JCMethodInvocation set = getMethodInvoc(field + ".set", fa.selected,value); //TODO: would be better to use setInt, setDouble, etc.. based on type to compile-time check more
+        return set;
     }
 
     protected com.sun.tools.javac.util.List<JCStatement> reflect(JCFieldAccess fa, final com.sun.source.tree.Scope scope, final CompilationUnitTree cut, Object packageName, Map<String, JCExpression> vars, com.sun.tools.javac.util.List<JCStatement> stats, JCStatement stmt) {

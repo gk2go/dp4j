@@ -85,17 +85,10 @@ public abstract class DProcessor extends AbstractProcessor {
         return paramsList;
     }
 
-    private List<JCExpression> getParamsList(final JCExpression... params) {
+    private List<JCExpression> toList(final JCExpression... params) {
         final ListBuffer<JCExpression> lb = ListBuffer.lb();
         for (JCExpression param : params) {
-            if (param instanceof JCNewClass || param instanceof JCNewArray) {
-                lb.append(tm.Exec(param).getExpression());
-            } else if (param instanceof JCIdent) {
-                JCIdent id = (JCIdent) param;
-                lb.append(tm.Ident(id.name));
-            } else {
-                throw new RuntimeException();
-            }
+            lb.append(param);
         }
         final List<JCExpression> paramsList = lb.toList();
         return paramsList;
@@ -103,7 +96,7 @@ public abstract class DProcessor extends AbstractProcessor {
 
     public JCMethodInvocation getMethodInvoc(final String methodName, final JCExpression... exps) {
         final JCExpression methodN = getIdAfterImporting(methodName);
-        final List<JCExpression> paramsList = getParamsList(exps);
+        final List<JCExpression> paramsList = toList(exps);
         final JCMethodInvocation mInvoc = tm.Apply(List.<JCExpression>nil(), methodN, paramsList);
         return mInvoc;
     }
@@ -111,7 +104,7 @@ public abstract class DProcessor extends AbstractProcessor {
     public JCMethodInvocation getMethodInvoc(final String methodName, final Name stringParam, final JCExpression... exps) {
         final JCExpression methodN = getIdAfterImporting(methodName);
         final JCExpression lit = tm.Ident(stringParam);
-        final List<JCExpression> paramsList = injectBefore(exps[0], getParamsList(exps), lit);
+        final List<JCExpression> paramsList = injectBefore(exps[0], toList(exps), lit);
         final JCMethodInvocation mInvoc = tm.Apply(List.<JCExpression>nil(), methodN, paramsList);
         return mInvoc;
     }
@@ -207,9 +200,13 @@ public abstract class DProcessor extends AbstractProcessor {
     }
 
     protected static <T> com.sun.tools.javac.util.List<T> injectBefore(T stmt, final com.sun.tools.javac.util.List<T> stats, T... newStmts) {
+        return injectBefore(stmt, stats, false, newStmts);
+    }
+
+    protected static <T> com.sun.tools.javac.util.List<T> injectBefore(T stmt, final com.sun.tools.javac.util.List<T> stats,final boolean skipStmt, T... newStmts) {
         final ListBuffer<T> lb = ListBuffer.lb();
         int i = 0;
-        final int index = stats.indexOf(stmt);
+        final int index = skipStmt? stats.indexOf(stmt)+1:stats.indexOf(stmt);
         for (; i < index; i++) {
             lb.append(stats.get(i));
         }
