@@ -18,7 +18,7 @@ class PrivateClass{
 public class CallTest {
 
     @org.junit.Test
-            public void callTest(){
+            public void callTest() throws Exception{
                 Object[] testArray = new Object[4];
                 new PrivateClass().aPrivateMethod(5);
             }

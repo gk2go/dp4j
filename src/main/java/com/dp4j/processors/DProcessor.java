@@ -38,9 +38,9 @@ public abstract class DProcessor extends AbstractProcessor {
     protected Messager msgr;
     protected Types typeUtils;
 
-    protected void printMsg(final String msg, final Element e,final boolean warningsOnly){
-       final Kind kind = (warningsOnly)? Kind.WARNING: Kind.ERROR;
-       msgr.printMessage(kind, msg, e);
+    protected void printMsg(final String msg, final Element e, final boolean warningsOnly) {
+        final Kind kind = (warningsOnly) ? Kind.WARNING : Kind.ERROR;
+        msgr.printMessage(kind, msg, e);
     }
 
     public JCVariableDecl getVarDecl(JCModifiers mods, final String varName, final String idName, final String methodName, final String... params) {
@@ -52,10 +52,16 @@ public abstract class DProcessor extends AbstractProcessor {
         return getVarDecl(tm.Modifiers(Flags.FINAL), varName, idName, methodName, params);
     }
 
-    public JCVariableDecl getVarDecl(final String varName, final String idName, final String methodName, final Name stingParam, final JCExpression... params) {
-        final JCMethodInvocation valueSetter = (methodName != null) ? getMethodInvoc(methodName, stingParam, params) : null;
+    public JCVariableDecl getVarDecl(final String varName, final String idName, final String methodName, final Name stringParam, final JCExpression... params) {
+        final JCMethodInvocation valueSetter = (methodName != null) ? getMethodInvoc(methodName, stringParam, params) : null;
         return tm.VarDef(tm.Modifiers(Flags.FINAL), elementUtils.getName(varName), getId(idName), valueSetter);
     }
+
+    public JCVariableDecl getVarDecl(String varName, String idName, String methodName, String stringParam, JCExpression[] params) {
+        final JCMethodInvocation valueSetter = (methodName != null) ? getMethodInvoc(methodName, stringParam, toList(params)) : null;
+        return tm.VarDef(tm.Modifiers(Flags.FINAL), elementUtils.getName(varName), getId(idName), valueSetter);
+    }
+
 
     public JCVariableDecl getArrayDecl(JCModifiers mods, final String varName, final String idName, final JCNewArray array) {
         return tm.VarDef(mods, elementUtils.getName(varName), getId(idName), array);
@@ -85,7 +91,7 @@ public abstract class DProcessor extends AbstractProcessor {
         return paramsList;
     }
 
-    private List<JCExpression> toList(final JCExpression... params) {
+    public List<JCExpression> toList(final JCExpression... params) {
         final ListBuffer<JCExpression> lb = ListBuffer.lb();
         for (JCExpression param : params) {
             lb.append(param);
@@ -94,14 +100,41 @@ public abstract class DProcessor extends AbstractProcessor {
         return paramsList;
     }
 
-    public JCMethodInvocation getMethodInvoc(final String methodName, final JCExpression... exps) {
+    public JCMethodInvocation getMethodInvoc(final String methodName, final JCExpression param, final List<JCExpression> otherParams) {
         final JCExpression methodN = getIdAfterImporting(methodName);
-        final List<JCExpression> paramsList = toList(exps);
+        final List<JCExpression> paramsList = injectBefore(otherParams.head, otherParams, param);
         final JCMethodInvocation mInvoc = tm.Apply(List.<JCExpression>nil(), methodN, paramsList);
         return mInvoc;
     }
 
-    public JCMethodInvocation getMethodInvoc(final String methodName, final Name stringParam, final JCExpression... exps) {
+    public JCMethodInvocation getRefMethodInvoc(final String methodName, final Object param, final com.sun.tools.javac.util.List<JCExpression> otherParams) {
+        if (param instanceof JCExpression) {
+            return getMethodInvoc(methodName, (JCExpression) param, otherParams);
+        } else {
+            return getMethodInvoc(methodName, (String) param, otherParams);
+        }
+    }
+
+    public JCMethodInvocation getMethodInvoc(String methodName, String param, final com.sun.tools.javac.util.List<JCExpression> otherParams) {
+        return getMethodInvoc(methodName, tm.Literal(param), otherParams);
+    }
+
+    public JCMethodInvocation getRefMethodInvoc(final String methodName, final Object param) {
+        if (param instanceof JCExpression) {
+            return getMethodInvoc(methodName, (JCExpression) param);
+        } else {
+            return getMethodInvoc(methodName, (String) param);
+        }
+    }
+
+    public JCMethodInvocation getMethodInvoc(final String methodName, final JCExpression... params) {
+        final JCExpression methodN = getIdAfterImporting(methodName);
+        final List<JCExpression> paramsList = toList(params);
+        final JCMethodInvocation mInvoc = tm.Apply(List.<JCExpression>nil(), methodN, paramsList);
+        return mInvoc;
+    }
+
+    public JCMethodInvocation getMethodInvoc(final String methodName, final Name stringParam, final JCExpression[] exps) {
         final JCExpression methodN = getIdAfterImporting(methodName);
         final JCExpression lit = tm.Ident(stringParam);
         final List<JCExpression> paramsList = injectBefore(exps[0], toList(exps), lit);
@@ -166,7 +199,7 @@ public abstract class DProcessor extends AbstractProcessor {
 
     @templateMethod
     @Override
-    public boolean process(Set<? extends TypeElement> annotations, RoundEnvironment roundEnv){
+    public boolean process(Set<? extends TypeElement> annotations, RoundEnvironment roundEnv) {
         final Map<Element, TypeElement> elementsAnnotated = getElementsAnnotated(roundEnv, annotations);
         final Set<Entry<Element, TypeElement>> entrySet = elementsAnnotated.entrySet();
         for (Entry<? extends Element, ? extends TypeElement> entry : entrySet) {
@@ -175,7 +208,7 @@ public abstract class DProcessor extends AbstractProcessor {
         return onlyHandler(annotations);
     }
 
-    protected boolean onlyHandler(Set<? extends TypeElement> annotations){
+    protected boolean onlyHandler(Set<? extends TypeElement> annotations) {
         return true;
     }
 
@@ -203,10 +236,10 @@ public abstract class DProcessor extends AbstractProcessor {
         return injectBefore(stmt, stats, false, newStmts);
     }
 
-    protected static <T> com.sun.tools.javac.util.List<T> injectBefore(T stmt, final com.sun.tools.javac.util.List<T> stats,final boolean skipStmt, T... newStmts) {
+    protected static <T> com.sun.tools.javac.util.List<T> injectBefore(T stmt, final com.sun.tools.javac.util.List<T> stats, final boolean skipStmt, T... newStmts) {
         final ListBuffer<T> lb = ListBuffer.lb();
         int i = 0;
-        final int index = skipStmt? stats.indexOf(stmt)+1:stats.indexOf(stmt);
+        final int index = skipStmt ? stats.indexOf(stmt) + 1 : stats.indexOf(stmt);
         for (; i < index; i++) {
             lb.append(stats.get(i));
         }

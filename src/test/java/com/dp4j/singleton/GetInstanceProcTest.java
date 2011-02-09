@@ -18,7 +18,6 @@ public class GetInstanceProcTest extends AbstractSingletonProcTest {
         asssertCompilationSuccessful(compileTestCase("S"));
         asssertCompilationSuccessful(compileTestCase("SS"));
         asssertCompilationSuccessful(compileTestCase("SingletonImpl"));
-
         asssertCompilationSuccessful(compileTestCase(getProcessors(new PrivateAccessProcessor()),"SingletonTest"));
     }
 }

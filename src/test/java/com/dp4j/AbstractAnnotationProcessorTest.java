@@ -129,7 +129,7 @@ public abstract class AbstractAnnotationProcessorTest {
         CompilationTask task = compiler.getTask(null, fileManager, diagnosticCollector, procOnly ? Arrays.asList("-proc:only") : null, null,
                 fileManager.getJavaFileObjectsFromFiles(compilationUnits));
         task.setProcessors(procs);
-        task.call();
+        Boolean call = task.call();
 
         try {
             fileManager.close();
@@ -158,14 +158,11 @@ public abstract class AbstractAnnotationProcessorTest {
      * @see #assertCompilationReturned(Kind, long, List)
      * @see #assertCompilationReturned(Kind[], long[], List)
      */
-    protected static void assertCompilationSuccessful(
-            List<Diagnostic<? extends JavaFileObject>> diagnostics) {
+    protected static void assertCompilationSuccessful(List<Diagnostic<? extends JavaFileObject>> diagnostics) {
         assert (diagnostics != null);
-
         for (Diagnostic<? extends JavaFileObject> diagnostic : diagnostics) {
             assertFalse("Expected no errors", diagnostic.getKind().equals(Kind.ERROR));
         }
-
     }
 
     /**
