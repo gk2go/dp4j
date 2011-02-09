@@ -1,4 +1,2 @@
-com.dp4j.processors.SingletonProcessor
-com.dp4j.processors.InstanceProcessor
-com.dp4j.processors.GetInstanceProcessor
-com.dp4j.processors.PrivateAccessProcessor
+com.dp4j.processors.core.PrivateAccessProcessor
+com.dp4j.processors.core.TemplateMethodProcessor

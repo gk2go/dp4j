@@ -8,22 +8,22 @@ import com.sun.source.util.Trees;
 import com.sun.tools.javac.model.JavacElements;
 import com.sun.tools.javac.processing.JavacProcessingEnvironment;
 import com.sun.tools.javac.tree.JCTree.*;
-import java.util.Set;
+import java.util.Map.Entry;
 import javax.annotation.processing.*;
 import javax.lang.model.*;
 import javax.lang.model.element.*;
 import com.sun.tools.javac.tree.TreeMaker;
 import com.sun.tools.javac.util.Context;
-import java.util.HashSet;
+import java.util.*;
 import com.dp4j.templateMethod;
-import com.sun.tools.javac.code.Flags;
-import com.sun.tools.javac.code.Symbol;
 import com.sun.tools.javac.code.*;
 import com.sun.tools.javac.code.TypeTags;
 import com.sun.tools.javac.util.List;
 import com.sun.tools.javac.util.ListBuffer;
 import com.sun.tools.javac.util.Name;
+import java.util.Map;
 import javax.lang.model.util.Types;
+import javax.tools.Diagnostic.Kind;
 
 /**
  *
@@ -37,6 +37,11 @@ public abstract class DProcessor extends AbstractProcessor {
     protected static JavacElements elementUtils;
     protected Messager msgr;
     protected Types typeUtils;
+
+    protected void printMsg(final String msg, final Element e,final boolean warningsOnly){
+       final Kind kind = (warningsOnly)? Kind.WARNING: Kind.ERROR;
+       msgr.printMessage(kind, msg, e);
+    }
 
     public JCVariableDecl getVarDecl(JCModifiers mods, final String varName, final String idName, final String methodName, final String... params) {
         JCMethodInvocation valueSetter = (methodName != null) ? getMethodInvoc(methodName, params) : null;
@@ -155,21 +160,24 @@ public abstract class DProcessor extends AbstractProcessor {
         typeUtils = processingEnv.getTypeUtils();
     }
 
-    protected Set<? extends Element> getElementsAnnotated(final RoundEnvironment roundEnv, Set<? extends TypeElement> annotations) {
-        final Set<Element> annotatatedElements = new HashSet<Element>();
+    protected Map<Element, TypeElement> getElementsAnnotated(final RoundEnvironment roundEnv, Set<? extends TypeElement> annotations) {
+        final Map<Element, TypeElement> annotatatedElements = new HashMap<Element, TypeElement>();
         for (TypeElement ann : annotations) {
             final Set<? extends Element> annElements = roundEnv.getElementsAnnotatedWith(ann);
-            annotatatedElements.addAll(annElements);
+            for (Element element : annElements) {
+                annotatatedElements.put(element, ann);
+            }
         }
         return annotatatedElements;
     }
 
     @templateMethod
     @Override
-    public boolean process(Set<? extends TypeElement> annotations, RoundEnvironment roundEnv) {
-
-        for (final Element e : getElementsAnnotated(roundEnv, annotations)) {
-            processElement(e);
+    public boolean process(Set<? extends TypeElement> annotations, RoundEnvironment roundEnv){
+        final Map<Element, TypeElement> elementsAnnotated = getElementsAnnotated(roundEnv, annotations);
+        final Set<Entry<Element, TypeElement>> entrySet = elementsAnnotated.entrySet();
+        for (Entry<? extends Element, ? extends TypeElement> entry : entrySet) {
+            processElement(entry.getKey(), entry.getValue(), false);
         }
         return onlyHandler(annotations);
     }
@@ -216,5 +224,5 @@ public abstract class DProcessor extends AbstractProcessor {
         return lb.toList();
     }
 
-    protected abstract void processElement(final Element e);
+    protected abstract void processElement(final Element e, TypeElement ann, boolean warningsOnly);
 }

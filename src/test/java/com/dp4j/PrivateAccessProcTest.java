@@ -4,9 +4,12 @@
  */
 package com.dp4j;
 
+import com.dp4j.processors.core.PrivateAccessProcessor;
+import com.dp4j.processors.ExpProcResult;
+import com.dp4j.processors.DProcessor;
 import com.dp4j.processors.*;
 
-import java.io.*;
+import java.io.File;
 import java.io.IOException;
 
 import javax.tools.JavaCompiler;
@@ -33,7 +36,7 @@ public class PrivateAccessProcTest {
         return ret;
     }
 
-    File getFile(final File dir, final String... dirs) {
+    static File getFile(final File dir, final String... dirs) {
         File ret = dir;
         for (String dir1 : dirs) {
             if (ret == null) {
@@ -46,14 +49,14 @@ public class PrivateAccessProcTest {
     }
     File src = getFile(System.getProperty("user.dir"), "src", "main", "java");
     final String procSrc = getFile(src.getAbsolutePath(), "com", "dp4j", "processors").getAbsolutePath();
-    final File workingdir = new File(System.getProperty("user.dir"));
-    final File testResources = getFile(workingdir, "src", "test", "resources");
+    static final File workingdir = new File(System.getProperty("user.dir"));
+    static final File testResources = getFile(workingdir, "src", "test", "resources");
 
     final String getSrcFile(final Class clazz) {
         return new File(src, clazz.getCanonicalName().replace(".", File.separator) + ".java").getAbsolutePath();
     }
 
-    final String getTestFile(final String className) {
+    static final String getTestFile(final String className) {
         return getFile(testResources, "com", "dp4j", className + ".java").getAbsolutePath();
     }
 

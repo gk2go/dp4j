@@ -29,20 +29,38 @@
         <connection>scm:hg:https://dp4j.googlecode.com/hg/</connection>
     </scm>
     <build>
-         <testResources>
-    <testResource>
-      <directory>${basedir}/src/test/resources</directory>
-    </testResource>
-    <!-- Add a directory of source files which need to be compiled during a test. Unfortunately, this
+        <testResources><!--
+            <testResource>
+                <directory>${basedir}/src/test/resources</directory>
+                <targetPath>com/dp4j</targetPath>
+            </testResource>
+     Add a directory of source files which need to be compiled during a test. Unfortunately, this
         confuses mvn eclipse:m2eclipse, which generates an extra entry on the build path for this resource.
         This needs to be removed in Eclipse (Build Path -> Remove from Build Path) for the project to build
-        correctly. -->
-      <testResource>
-        <directory>${project.build.testSourceDirectory}/com/dp4j</directory>
-        <targetPath>com/dp4j</targetPath>
-      </testResource>
-  </testResources>
+        correctly.
+-->
+            <testResource>
+                <directory>${project.build.testSourceDirectory}/com/dp4j</directory>
+                <targetPath>com/dp4j</targetPath>
+            </testResource><!--
+-->
+        </testResources>
         <plugins>
+            <plugin>
+                <groupId>org.codehaus.mojo</groupId>
+                <artifactId>findbugs-maven-plugin</artifactId>
+                <version>2.3.2-SNAPSHOT</version>
+                <configuration>
+                    <threshold>High</threshold>
+                </configuration>
+                <executions>
+                    <execution>
+                        <goals>
+                            <goal>check</goal>
+                        </goals>
+                    </execution>
+                </executions>
+            </plugin>
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-release-plugin</artifactId>
@@ -54,21 +72,27 @@
                 <configuration>
                     <source>1.6</source>
                     <target>1.6</target>
-                    <compilerArgument>-proc:none</compilerArgument>
                     <encoding>${project.build.sourceEncoding}</encoding>
                 </configuration>
                 <executions>
                     <execution>
-                        <id>run-annotation-processor-only</id>
-                        <phase>process-test-resources</phase>
-                        <goals>
-                            <goal>testCompile</goal>
-                        </goals>
+                        <id>default-compile</id>
                         <configuration>
-                            <compilerArgument>-proc:only</compilerArgument>
+                            <compilerArgument>-proc:none</compilerArgument>
+                            <includes>
+                                <include>com/dp4j/processors/core/**</include>
+                            </includes>
                         </configuration>
                     </execution>
+                    <execution>
+                        <id>compile-everything-else</id>
+                        <phase>compile</phase>
+                        <goals>
+                            <goal>compile</goal>
+                        </goals>
+                    </execution>
                 </executions>
+<!--http://cdivilly.wordpress.com/2010/03/16/maven-and-jsr-269-annotation-processors/-->
             </plugin>
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
@@ -163,4 +187,20 @@
             <url>http://aphillips.googlecode.com/svn/maven-repository/snapshots</url>
         </repository>
     </repositories>
+    <pluginRepositories>
+        <pluginRepository>
+            <id>codehaus.snapshots</id>
+            <url>http://snapshots.repository.codehaus.org</url>
+        </pluginRepository>
+    </pluginRepositories>
+    <reporting>
+        <plugins>
+            <plugin>
+                <groupId>org.codehaus.mojo</groupId>
+                <artifactId>findbugs-maven-plugin</artifactId>
+                <version>2.3.2-SNAPSHOT</version>
+            </plugin>
+        </plugins>
+    </reporting>
+
 </project>

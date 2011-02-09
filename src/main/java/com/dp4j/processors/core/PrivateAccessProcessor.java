@@ -2,8 +2,10 @@
  * To change this template, choose Tools | Templates
  * and open the template in the editor.
  */
-package com.dp4j.processors;
+package com.dp4j.processors.core;
 
+import com.dp4j.processors.DProcessor;
+import com.dp4j.processors.ExpProcResult;
 import com.sun.source.tree.*;
 import com.sun.source.util.TreePath;
 import com.sun.tools.javac.code.*;
@@ -375,7 +377,7 @@ public class PrivateAccessProcessor extends DProcessor {
     TypeElement encClass;
 
     @Override
-    protected void processElement(Element e) {
+    protected void processElement(Element e, TypeElement ann, boolean warningsOnly) {
         final JCMethodDecl tree = (JCMethodDecl) elementUtils.getTree(e);
         final TreePath treePath = trees.getPath(e);
 

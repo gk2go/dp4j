@@ -18,7 +18,7 @@ import javax.lang.model.element.*;
 public class BuilderProcessor extends DProcessor{
 
     @Override
-    protected void processElement(Element e) {
+    protected void processElement(Element e, TypeElement ann, boolean warningsOnly) {
         //TODO: make sure @product, @getResult are present
     }
 

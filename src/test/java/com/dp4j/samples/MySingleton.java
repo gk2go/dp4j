@@ -1,7 +1,9 @@
-package com.dp4j;
+package com.dp4j.samples;
+
+import com.dp4j.Singleton;
 
 @Singleton
-class MySingleton{
+public class MySingleton{
 
     private MySingleton(){
 
@@ -10,6 +12,4 @@ class MySingleton{
     private MySingleton(int a, Object b, double d){
 
     }
-
 }
-

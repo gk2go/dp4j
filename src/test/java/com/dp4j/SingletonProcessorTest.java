@@ -4,6 +4,10 @@
  */
 package com.dp4j;
 
+import com.dp4j.samples.SingletonWithPublicConstructor;
+import com.dp4j.samples.SingletonWithOnlyOneConstructor;
+import com.dp4j.samples.MySingleton;
+import com.dp4j.samples.ExtendingSingleton;
 import javax.tools.Diagnostic.Kind;
 import com.dp4j.processors.*;
 import java.util.Arrays;
@@ -13,8 +17,6 @@ import java.util.List;
 import javax.annotation.processing.Processor;
 import javax.tools.Diagnostic;
 import javax.tools.JavaFileObject;
-import org.junit.AfterClass;
-import org.junit.BeforeClass;
 import org.junit.Test;
 import static org.junit.Assert.*;
 
@@ -32,6 +34,10 @@ public class SingletonProcessorTest extends AbstractAnnotationProcessorTest {
     @Test
     public void testAllPrivateConstructors() {
         asssertCompilationSuccessful(compileTestCase(MySingleton.class));
+        assertCompilationReturned(Kind.ERROR, -1, compileTestCase(SingletonWithPublicConstructor.class));
+        //FIXME: -1? How to figure out
+        assertCompilationReturned(Kind.ERROR, -1, compileTestCase(ExtendingSingleton.class));
+        assertCompilationReturned(Kind.ERROR, -1, compileTestCase(SingletonWithOnlyOneConstructor.class));
     }
 
     private void asssertCompilationSuccessful(List<Diagnostic<? extends JavaFileObject>> diagnostics) {

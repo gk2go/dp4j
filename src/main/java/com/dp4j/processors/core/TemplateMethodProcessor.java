@@ -3,8 +3,9 @@
  * and open the template in the editor.
  */
 
-package com.dp4j.processors;
+package com.dp4j.processors.core;
 
+import com.dp4j.processors.DProcessor;
 import java.util.*;
 import javax.annotation.processing.*;
 import javax.lang.model.*;
@@ -20,7 +21,7 @@ import javax.tools.Diagnostic.Kind;
 public class TemplateMethodProcessor extends DProcessor{
 
     @Override
-    protected void processElement(Element e) {
+    protected void processElement(Element e, TypeElement ann, boolean warningsOnly) {
        Set<Modifier> modifiers = e.getModifiers();
             if(modifiers.contains(Modifier.STATIC)){
                msgr.printMessage(Kind.ERROR, "template method must not be static", e);
