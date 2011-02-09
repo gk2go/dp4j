@@ -4,10 +4,6 @@
  */
 package com.dp4j;
 
-import com.dp4j.samples.SingletonWithPublicConstructor;
-import com.dp4j.samples.SingletonWithOnlyOneConstructor;
-import com.dp4j.samples.MySingleton;
-import com.dp4j.samples.ExtendingSingleton;
 import javax.tools.Diagnostic.Kind;
 import com.dp4j.processors.*;
 import java.util.Arrays;
@@ -31,13 +27,16 @@ public class SingletonProcessorTest extends AbstractAnnotationProcessorTest {
         return Arrays.<Processor>asList(new SingletonProcessor());
     }
 
+    final String getTestFile(final String className){
+        return "com/dp4j/samples/"+ className + ".java";
+    }
     @Test
     public void testAllPrivateConstructors() {
-        asssertCompilationSuccessful(compileTestCase(MySingleton.class));
-        assertCompilationReturned(Kind.ERROR, -1, compileTestCase(SingletonWithPublicConstructor.class));
+//        asssertCompilationSuccessful(compileTestCase(MySingleton.class));
+        assertCompilationReturned(Kind.ERROR, -1, compileTestCase(getTestFile("SingletonWithPublicConstructor")));
         //FIXME: -1? How to figure out
-        assertCompilationReturned(Kind.ERROR, -1, compileTestCase(ExtendingSingleton.class));
-        assertCompilationReturned(Kind.ERROR, -1, compileTestCase(SingletonWithOnlyOneConstructor.class));
+        assertCompilationReturned(Kind.ERROR, -1, compileTestCase(getTestFile("ExtendingSingleton")));
+        assertCompilationReturned(Kind.ERROR, -1, compileTestCase(getTestFile("SingletonWithOnlyOneConstructor")));
     }
 
     private void asssertCompilationSuccessful(List<Diagnostic<? extends JavaFileObject>> diagnostics) {

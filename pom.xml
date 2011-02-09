@@ -29,21 +29,11 @@
         <connection>scm:hg:https://dp4j.googlecode.com/hg/</connection>
     </scm>
     <build>
-        <testResources><!--
+        <testResources>
             <testResource>
-                <directory>${basedir}/src/test/resources</directory>
-                <targetPath>com/dp4j</targetPath>
+                <directory>${basedir}/src/test/resources/com/dp4j/samples</directory>
+                <targetPath>com/dp4j/samples</targetPath>
             </testResource>
-     Add a directory of source files which need to be compiled during a test. Unfortunately, this
-        confuses mvn eclipse:m2eclipse, which generates an extra entry on the build path for this resource.
-        This needs to be removed in Eclipse (Build Path -> Remove from Build Path) for the project to build
-        correctly.
--->
-            <testResource>
-                <directory>${project.build.testSourceDirectory}/com/dp4j</directory>
-                <targetPath>com/dp4j</targetPath>
-            </testResource><!--
--->
         </testResources>
         <plugins>
             <plugin>

@@ -1,5 +1,5 @@
 
-package com.dp4j;
+package com.dp4j.samples;
 
 import org.junit.Test;
 public final class SingletonTest {

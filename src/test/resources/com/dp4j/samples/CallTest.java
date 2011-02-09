@@ -3,7 +3,7 @@
  * and open the template in the editor.
  */
 
-package com.dp4j;
+package com.dp4j.samples;
 
 class PrivateClass{
     private void aPrivateMethod(int i){

@@ -1,4 +1,4 @@
-package com.dp4j;
+package com.dp4j.samples;
 
 class PrivateClass {
 
