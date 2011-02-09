@@ -4,6 +4,13 @@
  */
 package com.dp4j.singleton;
 
+import com.dp4j.AbstractAnnotationProcessorTest;
+import com.dp4j.processors.GetInstanceProcessor;
+import com.dp4j.processors.InstanceProcessor;
+import com.dp4j.processors.SingletonProcessor;
+import java.util.Arrays;
+import java.util.Collection;
+import javax.annotation.processing.Processor;
 import org.junit.Test;
 
 
@@ -13,7 +20,7 @@ import javax.tools.Diagnostic.Kind;
  *
  * @author simpatico
  */
-public class SingletonProcessorTest extends AbstractSingletonProcTest {
+public class SingletonProcessorTest extends AbstractAnnotationProcessorTest {
 
     @Test
     public void testAllPrivateConstructors() {
@@ -26,7 +33,12 @@ public class SingletonProcessorTest extends AbstractSingletonProcTest {
     }
 
     @Test
-    public void testAccessInjectedInstance(){
+    public void testAccessInjectedInstance() {
         assertCompilationSuccessful(compileTestCase(("MyBooks")));
+    }
+
+    @Override
+    protected Collection<Processor> getProcessors() {
+        return Arrays.<Processor>asList(new SingletonProcessor(), new InstanceProcessor(), new GetInstanceProcessor());
     }
 }

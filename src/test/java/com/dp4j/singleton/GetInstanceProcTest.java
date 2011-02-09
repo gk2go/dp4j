@@ -11,7 +11,7 @@ import org.junit.Test;
  *
  * @author simpatico
  */
-public class GetInstanceProcTest extends AbstractSingletonProcTest {
+public class GetInstanceProcTest extends SingletonProcessorTest {
 
     @Test
     public void testGetInstanceValidation() {
