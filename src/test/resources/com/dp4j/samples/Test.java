@@ -1,6 +1,6 @@
 package com.dp4j.samples;
 
-class PrivateClass {
+class PriClass {
 
     private int i;
     public int j;
@@ -11,7 +11,7 @@ class PrivateClass {
 class K {
 
     protected int m;
-    PrivateClass pc = new PrivateClass();
+    PriClass pc = new PriClass();
 }
 
 public class Test extends K {
@@ -39,15 +39,15 @@ public class Test extends K {
             }
         }
 
-        PrivateClass privateClass = new PrivateClass();
+        PriClass privateClass = new PriClass();
         int ff = privateClass.i;
-        pi = new PrivateClass().i;
-        int i = new PrivateClass().j;
+        pi = new PriClass().i;
+        int i = new PriClass().j;
 
         try {
-            int kk = new PrivateClass().i;
+            int kk = new PriClass().i;
         } catch (Exception e) {
-            int kk = new PrivateClass().i;
+            int kk = new PriClass().i;
         }
     }
 }

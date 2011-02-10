@@ -5,7 +5,7 @@
 
 package com.dp4j.samples;
 
-class PrivateClass{
+class PrivateClazz{
     private void aPrivateMethod(int i){
 
     }
@@ -20,6 +20,6 @@ public class CallTest {
     @org.junit.Test
             public void callTest() throws Exception{
                 Object[] testArray = new Object[4];
-                new PrivateClass().aPrivateMethod(5);
+                new PrivateClazz().aPrivateMethod(5);
             }
 }

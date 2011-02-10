@@ -13,12 +13,12 @@ class PrivateClass {
     public static int gg;
 }
 
-class K{
+class K1{
     protected int m;
     PrivateClass pc = new PrivateClass();
 }
 
-public class IfTest extends K{
+public class IfTest extends K1{
 
     @org.junit.Test
     public void t() {

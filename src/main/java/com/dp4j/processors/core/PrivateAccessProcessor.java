@@ -162,8 +162,7 @@ public class PrivateAccessProcessor extends DProcessor {
                 if (!accessible) {
                     stats = reflect(fa, scope, cut, packageName, vars, stats, stmt);
                     JCMethodInvocation reflectedFieldSetter = getReflectedFieldSetter(fa, assignExp.rhs, cut, packageName, vars);
-                    JCExpressionStatement expStmt = (JCExpressionStatement) stmt;
-                    expStmt.expr = reflectedFieldSetter;
+                    ifExp = reflectedFieldSetter;
                 }
             }
         } else if (ifExp instanceof JCMethodInvocation) {
