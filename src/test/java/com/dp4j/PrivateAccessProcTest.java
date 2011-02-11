@@ -71,7 +71,7 @@ public class PrivateAccessProcTest extends AbstractAnnotationProcessorTest {
     }
     static File targetTestClasses = getFile(workingdir, "target", "test-classes");
 
-    @org.junit.Test()
+    @Test()
     public void mostComprehensiveTest() throws IOException {
         final Runtime runtime = Runtime.getRuntime();
         runtime.traceInstructions(true);
