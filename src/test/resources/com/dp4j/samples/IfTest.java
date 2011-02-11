@@ -26,7 +26,7 @@ public class IfTest extends K1{
             int i = pc.i;
             int f = pc.i;
             m = pc.i;
-            pc.i = 5; //should fail here, until setValue is supported
+            pc.i = 5;
         }
     }
 }

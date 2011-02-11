@@ -140,7 +140,7 @@ public class PrivateAccessProcTest extends AbstractAnnotationProcessorTest {
     }
     final static String tests[] = {
 //        "Test",
-//        "CallTest",
+        "CallTest",
 //        "IfTest",
         "MultipleCallsTest"
     };
