@@ -130,7 +130,7 @@ public class PrivateAccessProcessor extends DProcessor {
                 final boolean accessible = isAccessible(fa, vars, cut, packageName, scope);
                 if (!accessible) {
                     stats = reflect(fa, scope, cut, packageName, vars, stats, stmt);
-                    ifB.lhs = getReflectedAccess(fa, cut, packageName, vars, stmt).exp;
+                    ifB.lhs = cast(getReflectedAccess(fa, cut, packageName, vars, stmt));
                     reflectionInjected = true;
                 }
             }
