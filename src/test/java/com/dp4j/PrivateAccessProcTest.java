@@ -4,24 +4,18 @@
  */
 package com.dp4j;
 
-import java.io.InputStream;
 import java.io.FilenameFilter;
 import com.dp4j.processors.core.PrivateAccessProcessor;
 import com.dp4j.processors.*;
-import com.sun.source.tree.AssertTree;
-import java.io.BufferedReader;
 
 import java.io.File;
 import java.io.IOException;
-import java.io.InputStreamReader;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 import javax.annotation.processing.Processor;
 
-import javax.tools.JavaCompiler;
-import javax.tools.ToolProvider;
 import org.apache.commons.lang.StringUtils;
 import org.junit.Test;
 import static org.junit.Assert.*;
@@ -91,13 +85,13 @@ public class PrivateAccessProcTest extends AbstractAnnotationProcessorTest {
         tools = "\"" + getFile(tools.substring(0, lastIndexOf), "lib", "tools.jar").getAbsolutePath() + "\"";
 
         String cp = getCp(tools, commons);
-        String javacCmd = "javac -d " + targetClasses + " ";
+        String javacCmd = "javac -Xlint -d " + targetClasses + " ";
 
         final String dp4jCompile = javacCmd + cp + getClassesToCompile(templateMethod.class, DProcessor.class, ExpProcResult.class, PrivateAccessProcessor.class);
 
         System.out.println(dp4jCompile);
         cp = getCp(targetClasses.getAbsolutePath(), tools, commons, junit);
-        javacCmd = "javac -g -d " + targetTestClasses;
+        javacCmd = "javac -Xlint -d " + targetTestClasses;
         String testCmd = javacCmd + cp + " -processor " + PrivateAccessProcessor.class.getCanonicalName() + " " + getTestSources();
         System.out.println(testCmd);
         cleanClasses(tests);
@@ -144,7 +138,12 @@ public class PrivateAccessProcTest extends AbstractAnnotationProcessorTest {
             }
         }
     }
-    final static String tests[] = {"Test", "CallTest", "IfTest"};
+    final static String tests[] = {
+//        "Test",
+//        "CallTest",
+//        "IfTest",
+        "MultipleCallsTest"
+    };
 
     static String getTestSources() {
         String ret = "";
@@ -169,16 +168,16 @@ public class PrivateAccessProcTest extends AbstractAnnotationProcessorTest {
         }
         return ret;
     }
-
-    @Test
-    public void testCallingPrivateMethod() {
-        asssertCompilationSuccessful(compileTestCase("CallTest"));
-    }
-
-    @Test
-    public void testSettingValues() {
-        asssertCompilationSuccessful(compileTestCase("IfTest"));
-    }
+//
+//    @Test
+//    public void testCallingPrivateMethod() {
+//        asssertCompilationSuccessful(compileTestCase("CallTest"));
+//    }
+//
+//    @Test
+//    public void testSettingValues() {
+//        asssertCompilationSuccessful(compileTestCase("IfTest"));
+//    }
 
     @Override
     protected Collection<Processor> getProcessors() {

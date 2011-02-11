@@ -62,7 +62,6 @@ public abstract class DProcessor extends AbstractProcessor {
         return tm.VarDef(tm.Modifiers(Flags.FINAL), elementUtils.getName(varName), getId(idName), valueSetter);
     }
 
-
     public JCVariableDecl getArrayDecl(JCModifiers mods, final String varName, final String idName, final JCNewArray array) {
         return tm.VarDef(mods, elementUtils.getName(varName), getId(idName), array);
     }
@@ -248,8 +247,40 @@ public abstract class DProcessor extends AbstractProcessor {
                 lb.append(newStmt);
             }
         }
-        for (i = index; i < stats.size(); i++) {
-            lb.append(stats.get(i));
+        if (index > -1) {
+            for (i = index; i < stats.size(); i++) {
+                lb.append(stats.get(i));
+            }
+        }
+        return lb.toList();
+    }
+
+    protected static <T> com.sun.tools.javac.util.List<T> merge(final Collection<T> stats, Collection<T> newStmts) {
+        final ListBuffer<T> lb = ListBuffer.lb();
+        for (T stat : stats) {
+            lb.append(stat);
+        }
+        for (T newStmt : newStmts) {
+            if (newStmt != null && !lb.contains(newStmt)) {
+                lb.append(newStmt);
+            }
+        }
+        return lb.toList();
+    }
+//
+//    public static <T, V> List<T> castList(final List<V> params) {
+//        final ListBuffer<T> lb = ListBuffer.lb();
+//        for (V param : params) {
+//            lb.append((T) param);
+//        }
+//        final List<T> paramsList = lb.toList();
+//        return paramsList;
+//    }
+
+    public<T> List<String> toString(final java.util.List<T> params){
+        final ListBuffer<String> lb = ListBuffer.lb();
+        for (T param : params) {
+            lb.append(param.toString());
         }
         return lb.toList();
     }

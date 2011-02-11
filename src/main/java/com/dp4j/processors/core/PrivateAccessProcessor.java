@@ -6,6 +6,7 @@ package com.dp4j.processors.core;
 
 import com.dp4j.processors.DProcessor;
 import com.dp4j.processors.ExpProcResult;
+import com.dp4j.processors.ReflectedAccessResult;
 import com.sun.source.tree.*;
 import com.sun.source.util.TreePath;
 import com.sun.tools.javac.code.*;
@@ -18,7 +19,6 @@ import javax.lang.model.*;
 import javax.lang.model.element.*;
 import com.sun.tools.javac.tree.JCTree.*;
 import com.sun.tools.javac.util.ListBuffer;
-import com.sun.tools.javac.util.Name;
 import java.util.*;
 import javax.lang.model.type.*;
 import javax.tools.Diagnostic.Kind.*;
@@ -43,6 +43,20 @@ public class PrivateAccessProcessor extends DProcessor {
         return type;
     }
 
+    public Symbol getSymbol(final ClassSymbol typ, final String objName) {
+        FilteredMemberList allMembers = elementUtils.getAllMembers(typ);
+        List<Symbol> subList = allMembers.subList(0, allMembers.size());
+        final List<Symbol> allElements = merge(typ.getEnclosedElements(), subList);
+
+        for (Symbol symbol : allElements) { //
+            String qualifiedName = symbol.getQualifiedName().toString();
+            if (objName.equals(qualifiedName)) { //TODO: will it confuse with method names too?
+                return symbol;
+            }
+        }
+        return null;
+    }
+
     protected com.sun.tools.javac.util.List<JCStatement> processElement(com.sun.tools.javac.util.List<JCStatement> stats, final JCTree tree, final CompilationUnitTree cut, Object packageName, Map<String, JCExpression> vars) {
         com.sun.source.tree.Scope scope = getScope(cut, tree);
         return processElement(stats, scope, cut, packageName, vars);
@@ -52,8 +66,8 @@ public class PrivateAccessProcessor extends DProcessor {
         if (stmt instanceof JCVariableDecl) {
             JCVariableDecl varDec = (JCVariableDecl) stmt;
             ExpProcResult processCond = processCond(varDec.init, vars, cut, packageName, scope, stats, stmt);
-            stats = processCond.getStats();
-            varDec.init = processCond.getExp();
+            stats = processCond.stats;
+            varDec.init = processCond.exp;
             addVar(vars, varDec);
         } else if (stmt instanceof JCTry) {
             JCTry tryStmt = (JCTry) stmt;
@@ -73,35 +87,39 @@ public class PrivateAccessProcessor extends DProcessor {
             }
         } else if (stmt instanceof JCIf) {
             JCIf ifStmt = (JCIf) stmt;
-            stats = processCond(ifStmt.cond, vars, cut, packageName, scope, stats, stmt).getStats();
+            stats = processCond(ifStmt.cond, vars, cut, packageName, scope, stats, stmt).stats;
             if (ifStmt.thenpart instanceof JCBlock) {
                 ((JCBlock) ifStmt.thenpart).stats = processElement(((JCBlock) ifStmt.thenpart).stats, ifStmt, cut, packageName, vars);
             }
         } else if (stmt instanceof JCExpressionStatement) {
             JCExpressionStatement expStmt = (JCExpressionStatement) stmt;
             ExpProcResult result = processCond(expStmt.expr, vars, cut, packageName, scope, stats, stmt);
-            stats = result.getStats();
-            expStmt.expr = result.getExp();
+            stats = result.stats;
+            expStmt.expr = result.exp;
         } else if (stmt instanceof JCBlock) {
             ((JCBlock) stmt).stats = processElement(((JCBlock) stmt).stats, stmt, cut, packageName, vars);
         } else if (stmt instanceof JCWhileLoop) {
             JCWhileLoop loop = (JCWhileLoop) stmt;
-            stats = processCond(loop.cond, vars, cut, packageName, scope, stats, stmt).getStats();
+            stats = processCond(loop.cond, vars, cut, packageName, scope, stats, stmt).stats;
             ((JCBlock) loop.body).stats = processElement(((JCBlock) loop.body).stats, stmt, cut, packageName, vars);
         } else if (stmt instanceof JCForLoop) {
             JCForLoop loop = (JCForLoop) stmt;
-            stats = processCond(loop.cond, vars, cut, packageName, scope, stats, stmt).getStats();
+            stats = processCond(loop.cond, vars, cut, packageName, scope, stats, stmt).stats;
             ((JCBlock) loop.body).stats = processElement(((JCBlock) loop.body).stats, stmt, cut, packageName, vars);
         } else if (stmt instanceof JCDoWhileLoop) {
             JCDoWhileLoop loop = (JCDoWhileLoop) stmt;
-            stats = processCond(loop.cond, vars, cut, packageName, scope, stats, stmt).getStats();
+            stats = processCond(loop.cond, vars, cut, packageName, scope, stats, stmt).stats;
             ((JCBlock) loop.body).stats = processElement(((JCBlock) loop.body).stats, stmt, cut, packageName, vars);
         } else if (stmt instanceof JCEnhancedForLoop) {
             JCEnhancedForLoop loop = (JCEnhancedForLoop) stmt;
-            stats = processCond(loop.expr, vars, cut, packageName, scope, stats, stmt).getStats();
+            stats = processCond(loop.expr, vars, cut, packageName, scope, stats, stmt).stats;
             ((JCBlock) loop.body).stats = processElement(((JCBlock) loop.body).stats, stmt, cut, packageName, vars);
         }
         return stats;
+    }
+
+    JCParens cast(ReflectedAccessResult reflectedAccess) {
+        return tm.Parens(tm.TypeCast(reflectedAccess.expType, reflectedAccess.exp));
     }
 
     protected ExpProcResult processCond(JCExpression ifExp, Map<String, JCExpression> vars, final CompilationUnitTree cut, Object packageName, com.sun.source.tree.Scope scope, com.sun.tools.javac.util.List<JCStatement> stats, JCStatement stmt) {
@@ -112,7 +130,7 @@ public class PrivateAccessProcessor extends DProcessor {
                 final boolean accessible = isAccessible(fa, vars, cut, packageName, scope);
                 if (!accessible) {
                     stats = reflect(fa, scope, cut, packageName, vars, stats, stmt);
-                    ifB.lhs = getReflectedAccess(fa, cut, packageName, vars, stmt);
+                    ifB.lhs = getReflectedAccess(fa, cut, packageName, vars, stmt).exp;
                     reflectionInjected = true;
                 }
             }
@@ -121,7 +139,7 @@ public class PrivateAccessProcessor extends DProcessor {
                 final boolean accessible = isAccessible(fa, vars, cut, packageName, scope);
                 if (!accessible) {
                     stats = reflect(fa, scope, cut, packageName, vars, stats, stmt);
-                    ifB.rhs = getReflectedAccess(fa, cut, packageName, vars, stmt);
+                    ifB.rhs = cast(getReflectedAccess(fa, cut, packageName, vars, stmt));
                     reflectionInjected = true;
                 }
             }
@@ -129,17 +147,21 @@ public class PrivateAccessProcessor extends DProcessor {
             final JCFieldAccess fa = (JCFieldAccess) ifExp;
             //            FIXME: recursively process fa.getExpression()
             final boolean accessible;
-            if (!fa.name.contentEquals("class")) {
-                ExpProcResult processCond = processCond(fa.selected, vars, cut, packageName, scope, stats, stmt);
-                stats = processCond.getStats();
-                fa.selected = processCond.getExp();
+            if (fa.selected instanceof JCMethodInvocation || !fa.selected.toString().contains(".class")) {
                 accessible = isAccessible(fa, vars, cut, packageName, scope);
+                //FIXME: for accessibility must also check method parameters
             } else {
                 accessible = isAccessible(fa.selected.toString(), scope, cut, packageName);
             }
             if (!accessible) {
                 stats = reflect(fa, scope, cut, packageName, vars, stats, stmt); //when ifExp
-                ifExp = getReflectedAccess(fa, cut, packageName, vars, stmt);
+                final ReflectedAccessResult reflectedAccess = getReflectedAccess(fa, cut, packageName, vars, stmt);
+
+                if (stmt instanceof JCExpressionStatement && ((JCExpressionStatement) stmt).expr instanceof JCMethodInvocation) { //just method call
+                    ifExp = reflectedAccess.exp;
+                } else {
+                    ifExp = cast(reflectedAccess);
+                }
                 if (stmt instanceof JCEnhancedForLoop) {
                     ((JCEnhancedForLoop) stmt).expr = ifExp;
                 }
@@ -152,7 +174,7 @@ public class PrivateAccessProcessor extends DProcessor {
                 final boolean accessible = isAccessible(fa, vars, cut, packageName, scope);
                 if (!accessible) {
                     stats = reflect(fa, scope, cut, packageName, vars, stats, stmt);
-                    assignExp.rhs = getReflectedAccess(fa, cut, packageName, vars, stmt);
+                    assignExp.rhs = cast(getReflectedAccess(fa, cut, packageName, vars, stmt));
                     reflectionInjected = true;
                 }
             }
@@ -171,28 +193,32 @@ public class PrivateAccessProcessor extends DProcessor {
             if (!mi.args.isEmpty()) {
                 for (JCExpression arg : mi.args) {
                     ExpProcResult result = processCond(arg, vars, cut, packageName, scope, stats, stmt);
-                    stats = result.getStats();
-                    lb.append(result.getExp());
+                    stats = result.stats;
+                    lb.append(result.exp);
                 }
                 mi.args = lb.toList();
             }
             final ExpProcResult result = processCond(mi.meth, vars, cut, packageName, scope, stats, stmt);
-            if (result.getExp() instanceof JCMethodInvocation) {
-                ifExp = result.getExp();
+            if (result.exp instanceof JCParens || result.exp instanceof JCMethodInvocation) {
+                final JCMethodInvocation resMi;
+                if (result.exp instanceof JCParens) {
+                   resMi = (JCMethodInvocation)((JCTypeCast)((JCParens) result.exp).expr).expr;
+                } else {
+                    resMi = (JCMethodInvocation) result.exp;
+                }
+                resMi.args = merge(resMi.args, mi.args);
+                ifExp = result.exp;
             } else {
-                mi.meth = result.getExp();
+                mi.meth = result.exp;
             }
-            stats = result.getStats();
+            //FIXME: merge args here
+            stats = result.stats;
         } else if (ifExp instanceof JCNewClass) {
             //TODO: it's a method too! handle similarly
+        } else if (ifExp instanceof JCTypeCast) {
+            return processCond(((JCTypeCast) ifExp).expr, vars, cut, packageName, scope, stats, stmt);
         }
         return new ExpProcResult(stats, ifExp);
-    }
-
-    private boolean isAccessible(final String className, final com.sun.source.tree.Scope scope, final String idName) {
-        final Symbol s = getSymbol(className, idName);
-        DeclaredType declaredType = getDeclaredType(className);
-        return trees.isAccessible(scope, s, declaredType);
     }
 
     private boolean isAccessible(String className, final com.sun.source.tree.Scope scope, final CompilationUnitTree cut, final Object packageName) {
@@ -202,9 +228,62 @@ public class PrivateAccessProcessor extends DProcessor {
     }
 
     private boolean isAccessible(final JCFieldAccess fa, Map<String, JCExpression> vars, CompilationUnitTree cut, Object packageName, com.sun.source.tree.Scope scope) {
-        String className = getClassNameOfAccessor(fa, vars, cut, packageName);
         final String idName = fa.getIdentifier().toString();
-        return isAccessible(className, scope, idName);
+        String className;
+        try {
+            className = fa.getExpression().toString();
+            return isAccessible(className, scope, idName);
+        } catch (Exception e) {
+            final JCExpression exp = fa.getExpression();
+            className = exp.toString();
+            if (exp instanceof JCFieldAccess && !fa.toString().endsWith(".class")) {
+                className = getType((JCFieldAccess) exp, vars, cut, packageName, scope);
+                return isAccessible(className, scope, idName) && isAccessible((JCFieldAccess) exp, vars, cut, packageName, scope);
+            } else {
+                className = getClassNameOfAccessor(fa, vars, cut, packageName);
+            }
+        }
+        return isAccessible(getQualifiedClassName(className, cut, packageName), scope, idName);
+    }
+
+    public String getType(JCFieldAccess fa, Map<String, JCExpression> vars, CompilationUnitTree cut, Object packageName, com.sun.source.tree.Scope scope) {
+        final String className = getClassNameOfAccessor(fa, vars, cut, packageName);
+        final String fieldAccessedName = fa.name.toString();
+        final Symbol s = getSymbol(className, fieldAccessedName);
+        return s.type.toString();
+    }
+
+    private boolean isAccessible(final String className, final com.sun.source.tree.Scope scope, final String idName) {
+        final Symbol s = getSymbol(className, idName);
+        DeclaredType declaredType = getDeclaredType(className); //ordr matters to logic!
+        if (idName.equals("class") && declaredType != null) {
+            return true;
+        }
+        return trees.isAccessible(scope, s, declaredType);
+    }
+
+    private String getClassNameOfAccessor(JCFieldAccess fa, Map<String, JCExpression> vars, CompilationUnitTree cut, Object packageName) {
+        final JCExpression exp = fa.getExpression();
+        String className = exp.toString();
+        if (exp instanceof JCNewClass) { //constructed instance on the fly
+            final JCNewClass nc = (JCNewClass) exp;
+            final JCExpression clas = nc.clazz;
+            if (clas != null) {
+                className = clas.toString();
+            }
+        } else if (exp instanceof JCIdent) { //is an instance or static
+            final JCIdent id = (JCIdent) exp;
+            className = id.name.toString();
+            final JCExpression get = vars.get(className);
+            if (get != null) { //is instance
+                className = get.toString();
+            }//else is static
+        } else if (exp instanceof JCMethodInvocation) {
+            JCMethodInvocation mi = (JCMethodInvocation) exp;
+            className = getReturnType(mi, cut, packageName);
+            //FIXME: what about chains and args of the method?
+        }
+        return getQualifiedClassName(className, cut, packageName);
     }
 
     private com.sun.source.tree.Scope getScope(final CompilationUnitTree cut, JCTree tree) {
@@ -216,33 +295,33 @@ public class PrivateAccessProcessor extends DProcessor {
         return scope;
     }
 
-    JCExpression getReflectedAccess(JCFieldAccess fa, final CompilationUnitTree cut, Object packageName, Map<String, JCExpression> vars, JCStatement stmt) {
+    ReflectedAccessResult getReflectedAccess(JCFieldAccess fa, final CompilationUnitTree cut, Object packageName, Map<String, JCExpression> vars, JCStatement stmt) {
         final String fieldAccessedName = fa.name.toString();
         final String className = getClassNameOfAccessor(fa, vars, cut, packageName);
         final Symbol s = getSymbol(className, fieldAccessedName);
         final String field;
         final boolean isMethod = s instanceof MethodSymbol;
         final Object param;
+        Type type;
         if (s.isStatic()) {
             param = "";
         } else {
             param = fa.selected;
         }
 
-        final JCMethodInvocation get;
+        final String methodCall;
         if (isMethod) {
             field = getMethodVar(fieldAccessedName);
-            JCMethodInvocation mi = (JCMethodInvocation) ((JCExpressionStatement) stmt).expr;
-            get = getRefMethodInvoc(field + ".invoke", param, mi.args);
+            methodCall = field + ".invoke";
             methodInjected = true; //could be a source of bugs here. Not injected yet!
-            return get;
+            type = ((MethodSymbol) s).getReturnType();
         } else {
-            Type type = getBoxedType(s);
+            type = getBoxedType(s);
             field = getFieldVar(fieldAccessedName);
-            get = getRefMethodInvoc(field + ".get", param);
-            JCTypeCast refVal = tm.TypeCast(type, get);
-            return refVal;
+            methodCall = field + ".get";
         }
+        final JCExpression get = getRefMethodInvoc(methodCall, param);
+        return new ReflectedAccessResult(get, type);
     }
 
     JCMethodInvocation getReflectedFieldSetter(JCFieldAccess fa, final JCExpression value, final CompilationUnitTree cut, Object packageName, Map<String, JCExpression> vars) {
@@ -287,14 +366,7 @@ public class PrivateAccessProcessor extends DProcessor {
 
     private Symbol getSymbol(final String className, final String objName) {
         final ClassSymbol typ = elementUtils.getTypeElement(className);
-        final List<Symbol> enclosedElements = typ.getEnclosedElements();
-        for (Symbol symbol : enclosedElements) { //
-            String qualifiedName = symbol.getQualifiedName().toString();
-            if (objName.equals(qualifiedName)) { //TODO: will it confuse with method names too?
-                return symbol;
-            }
-        }
-        return null;
+        return getSymbol(typ, objName);
     }
 
     private DeclaredType getDeclaredType(final String className) {
@@ -306,7 +378,7 @@ public class PrivateAccessProcessor extends DProcessor {
         JCVariableDecl classDecl = null;
         final String clazz = getClassVar(className);
         if (!vars.containsKey(clazz)) {
-            classDecl = getVarDecl(clazz, "java.lang.Class", "java.lang.Class.forName", className);
+            classDecl = getVarDecl(clazz, javalangClass, javalangClass + ".forName", className);
             addVar(vars, classDecl);
         }
         return classDecl;
@@ -349,8 +421,10 @@ public class PrivateAccessProcessor extends DProcessor {
     private void addVar(Map<String, JCExpression> vars, JCVariableDecl varDec) {
         vars.put(varDec.name.toString(), varDec.vartype);
     }
+    final static String javalangClass = "java.lang.Class";
 
     private String getQualifiedClassName(String className, final CompilationUnitTree cut, Object packageName) {
+
         if (!className.contains(".")) {
             List<? extends ImportTree> imports = cut.getImports();
             boolean imported = false;
@@ -366,10 +440,13 @@ public class PrivateAccessProcessor extends DProcessor {
                 String tmp = className;
                 className = packageName.toString() + "." + className;
                 ClassSymbol te = elementUtils.getTypeElement(className);
-                if (te == null) { //must be java.lang
+                if (te == null) { //must be java.lang,
+                    //FIXME: or some .* .. this is a good moment to try-catch
                     return getQualifiedClassName("java.lang." + tmp, cut, packageName);
                 }
             }
+        } else if (className.endsWith(".class")) {
+            className = javalangClass;
         }
         return className;
     }
@@ -408,6 +485,7 @@ public class PrivateAccessProcessor extends DProcessor {
             if (methodInjected) {
                 tree.thrown = tree.thrown.append(getId("java.lang.reflect.InvocationTargetException"));
                 tree.thrown = tree.thrown.append(getId("java.lang.IllegalArgumentException"));
+                tree.thrown = tree.thrown.append(getId("java.lang.NoSuchMethodException"));
                 methodInjected = false;
             }
             reflectionInjected = false;
@@ -423,39 +501,19 @@ public class PrivateAccessProcessor extends DProcessor {
         return stats;
     }
 
-    private String getClassNameOfAccessor(JCFieldAccess fa, Map<String, JCExpression> vars, CompilationUnitTree cut, Object packageName) {
-        String className = null;
-        final JCExpression exp = fa.getExpression();
-        if (exp instanceof JCNewClass) { //constructed instance on the fly
-            final JCNewClass nc = (JCNewClass) exp;
-            final JCExpression clas = nc.clazz;
-            if (clas != null) {
-                className = clas.toString();
-            }
-        } else if (exp instanceof JCIdent) { //is an instance or static
-            final JCIdent id = (JCIdent) exp;
-            className = id.name.toString();
-            final JCExpression get = vars.get(className);
-            if (get != null) { //is instance
-                className = get.toString();
-            }//else is static
-        } else if (exp instanceof JCMethodInvocation) {
-            JCMethodInvocation mi = (JCMethodInvocation) exp;
-            className = getReturnType(mi, cut);
-            //FIXME: what about chains and args of the method?
-        } else if (exp instanceof JCFieldAccess) {
-            JCFieldAccess fa1 = (JCFieldAccess) exp;
-            String classNameOfAccessor = getClassNameOfAccessor(fa1, vars, cut, packageName);
-            final String fieldAccessedName = fa1.name.toString();
-            Symbol symbol = getSymbol(classNameOfAccessor, fieldAccessedName);
-            className = symbol.type.toString();
-        }
-        return getQualifiedClassName(className, cut, packageName);
-    }
+    private String getReturnType(JCMethodInvocation mi, CompilationUnitTree cut, Object packageName) {
 
-    private String getReturnType(JCMethodInvocation mi, CompilationUnitTree cut) {
-        String mName = mi.meth.toString();
-        String className = encClass.getQualifiedName().toString();
+        String className = null, mName = mi.meth.toString();
+
+        if (mName.contains(".")) {
+            final int methodAccessDot = StringUtils.lastIndexOf(mName, ".");
+            mName = mName.substring(methodAccessDot + 1);
+            className = mi.meth.toString().substring(0, methodAccessDot);
+            className = getQualifiedClassName(className, cut, packageName);
+        }
+        if (className == null) {
+            className = encClass.getQualifiedName().toString();
+        }
         MethodSymbol symbol = (MethodSymbol) getSymbol(className, mName);
         Type.MethodType mt = (MethodType) symbol.type;
         return mt.restype.toString();
@@ -475,11 +533,25 @@ public class PrivateAccessProcessor extends DProcessor {
     }
 
     public JCExpression[] getTypes(List<VarSymbol> params) {
-        JCExpression[] exps = new JCExpression[params.size()];
+        int length = 0;
+        if (params != null) {
+            length = params.size();
+        }
+
+        JCExpression[] exps = new JCExpression[length];
         int i = 0;
         for (VarSymbol param : params) {
-            Type type = getBoxedType(param);
-            exps[i] = getId(type.toString() + ".class");
+            final String clazz;
+            final String typeName = getBoxedType(param).toString();
+            if (param.type.isPrimitive()) {
+                Symbol symbol = getSymbol(typeName, "TYPE");
+                JCExpression primitiveClass = tm.QualIdent(symbol);
+                exps[i] = primitiveClass;
+            } else {
+                clazz = typeName + ".class";
+                exps[i] = getIdAfterImporting(clazz);
+            }
+            i++;
         }
         return exps;
     }
