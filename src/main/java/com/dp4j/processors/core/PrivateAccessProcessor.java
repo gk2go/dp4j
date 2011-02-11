@@ -202,7 +202,7 @@ public class PrivateAccessProcessor extends DProcessor {
             if (result.exp instanceof JCParens || result.exp instanceof JCMethodInvocation) {
                 final JCMethodInvocation resMi;
                 if (result.exp instanceof JCParens) {
-                   resMi = (JCMethodInvocation)((JCTypeCast)((JCParens) result.exp).expr).expr;
+                    resMi = (JCMethodInvocation) ((JCTypeCast) ((JCParens) result.exp).expr).expr;
                 } else {
                     resMi = (JCMethodInvocation) result.exp;
                 }
@@ -211,12 +211,19 @@ public class PrivateAccessProcessor extends DProcessor {
             } else {
                 mi.meth = result.exp;
             }
-            //FIXME: merge args here
             stats = result.stats;
         } else if (ifExp instanceof JCNewClass) {
             //TODO: it's a method too! handle similarly
         } else if (ifExp instanceof JCTypeCast) {
-            return processCond(((JCTypeCast) ifExp).expr, vars, cut, packageName, scope, stats, stmt);
+            JCTypeCast cast = (JCTypeCast) ifExp;
+            ExpProcResult result = processCond(cast.expr, vars, cut, packageName, scope, stats, stmt);
+            cast.expr = result.exp;
+            stats = result.stats;
+        } else if (ifExp instanceof JCParens) {
+            JCParens parensExp = (JCParens) ifExp;
+            ExpProcResult result = processCond(parensExp.expr, vars, cut, packageName, scope, stats, stmt);
+            parensExp.expr = result.exp;
+            stats = result.stats;
         }
         return new ExpProcResult(stats, ifExp);
     }
@@ -231,7 +238,7 @@ public class PrivateAccessProcessor extends DProcessor {
         final String idName = fa.getIdentifier().toString();
         String className;
         try {
-            className = fa.getExpression().toString();
+            className = fa.getExpression().toString().replace("[]", "");
             return isAccessible(className, scope, idName);
         } catch (Exception e) {
             final JCExpression exp = fa.getExpression();
@@ -436,9 +443,11 @@ public class PrivateAccessProcessor extends DProcessor {
                     break;
                 }
             }
-            if (packageName != null && !imported) {
+            if (!imported) {
                 String tmp = className;
-                className = packageName.toString() + "." + className;
+                if (packageName != null) {
+                    className = packageName.toString() + "." + className;
+                }
                 ClassSymbol te = elementUtils.getTypeElement(className);
                 if (te == null) { //must be java.lang,
                     //FIXME: or some .* .. this is a good moment to try-catch

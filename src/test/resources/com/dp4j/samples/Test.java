@@ -6,12 +6,21 @@ class PriClass {
     public int j;
     public static int gg;
     private Object[] objs = new Object[4];
+
+
+    private void aPrivateMethod(int i, Double b, String... strings) {
+
+    }
 }
 
 class K {
 
     protected int m;
     PriClass pc = new PriClass();
+
+    private String getClassName() {
+        return this.getClass().getCanonicalName();
+    }
 }
 
 public class Test extends K {
@@ -46,6 +55,7 @@ public class Test extends K {
 
         try {
             int kk = new PriClass().i;
+            privateClass.aPrivateMethod(kk, new Double(5), "hello", "injected", "reflection");
         } catch (Exception e) {
             int kk = new PriClass().i;
         }
