@@ -486,8 +486,27 @@ public class PrivateAccessProcessor extends DProcessor {
             addVar(symbol, vars, varSyms);
 //            }
         }
+
         com.sun.source.tree.Scope scope = trees.getScope(treePath);
         final CompilationUnitTree cut = treePath.getCompilationUnit();
+        List<? extends ImportTree> imports = cut.getImports();
+        for (ImportTree importTree : imports) {
+            if(importTree.isStatic()){
+                Tree qualifiedIdentifier = importTree.getQualifiedIdentifier();
+                String imported = qualifiedIdentifier.toString();
+                String importedClassName;
+                if(imported.contains("*")){
+                    importedClassName = imported.replace(".*", StringUtils.EMPTY);
+                }else{
+                    importedClassName = imported.substring(0, imported.lastIndexOf("."));
+                }
+                ClassSymbol cs = elementUtils.getTypeElement(importedClassName);
+                List<Symbol> enclosedElements = cs.getEnclosedElements();
+                for (Element element1 : enclosedElements) {
+                    addVar((Symbol) element1, vars, varSyms);
+                }
+            }
+        }
         ExpressionTree packageName = cut.getPackageName();
         tree.body.stats = processElement(tree.body.stats, scope, cut, packageName, vars, varSyms);
         if (reflectionInjected) {
