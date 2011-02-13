@@ -151,7 +151,7 @@ public class PrivateAccessProcessor extends DProcessor {
                 final boolean accessible = isAccessible(fa, vars, cut, packageName, scope, stmt, args, varSyms);
                 if (!accessible) {
                     stats = reflect(fa, scope, cut, packageName, vars, stats, stmt, args, varSyms);
-                    ifB.lhs = cast(getReflectedAccess(fa, cut, packageName, vars, scope, stmt, args));
+                    ifB.lhs = cast(getReflectedAccess(fa, cut, packageName, vars, scope, stmt, args, varSyms));
                     reflectionInjected = true;
                 }
             }
@@ -160,7 +160,7 @@ public class PrivateAccessProcessor extends DProcessor {
                 final boolean accessible = isAccessible(fa, vars, cut, packageName, scope, stmt, args, varSyms);
                 if (!accessible) {
                     stats = reflect(fa, scope, cut, packageName, vars, stats, stmt, args, varSyms);
-                    ifB.rhs = cast(getReflectedAccess(fa, cut, packageName, vars, scope, stmt, args));
+                    ifB.rhs = cast(getReflectedAccess(fa, cut, packageName, vars, scope, stmt, args, varSyms));
                     reflectionInjected = true;
                 }
             }
@@ -190,7 +190,7 @@ public class PrivateAccessProcessor extends DProcessor {
                     ifExp = reflectedAccess.exp;
                 } else {
                     stats = reflect(fa, scope, cut, packageName, vars, stats, stmt, args, varSyms); //when ifExp
-                    reflectedAccess = getReflectedAccess(fa, cut, packageName, vars, scope, stmt, args);
+                    reflectedAccess = getReflectedAccess(fa, cut, packageName, vars, scope, stmt, args, varSyms);
                     ifExp = cast(reflectedAccess);
                 }
                 if (stmt instanceof JCEnhancedForLoop) {
@@ -205,7 +205,7 @@ public class PrivateAccessProcessor extends DProcessor {
                 final boolean accessible = isAccessible(fa, vars, cut, packageName, scope, stmt, args, varSyms);
                 if (!accessible) {
                     stats = reflect(fa, scope, cut, packageName, vars, stats, stmt, args, varSyms);
-                    assignExp.rhs = cast(getReflectedAccess(fa, cut, packageName, vars, scope, stmt, args));
+                    assignExp.rhs = cast(getReflectedAccess(fa, cut, packageName, vars, scope, stmt, args, varSyms));
                     reflectionInjected = true;
                 }
             }
@@ -291,9 +291,9 @@ public class PrivateAccessProcessor extends DProcessor {
         return trees.isAccessible(scope, (TypeElement) declaredType.asElement());
     }
 
-    Symbol getSymbol(JCFieldAccess fa, final CompilationUnitTree cut, Object packageName, Map<String, JCExpression> vars, com.sun.source.tree.Scope scope, JCStatement stmt, List<Type> args) {
+    Symbol getSymbol(JCFieldAccess fa, final CompilationUnitTree cut, Object packageName, Map<String, JCExpression> vars, com.sun.source.tree.Scope scope, JCStatement stmt, List<Type> args, Collection<Symbol> varSyms) {
         final String objName = fa.getIdentifier().toString();
-        final String className = getClassNameOfAccessor(fa, vars, cut, packageName, scope, stmt, args);
+        final String className = getClassNameOfAccessor(fa, vars, cut, packageName, scope, stmt, args, varSyms);
         return getSymbol(className, objName);
     }
 
@@ -316,7 +316,7 @@ public class PrivateAccessProcessor extends DProcessor {
                 className = getType((JCFieldAccess) exp, vars, cut, packageName, scope, stmt, args, varSyms).toString();
                 return isAccessible(className, scope, idName) && isAccessible((JCFieldAccess) exp, vars, cut, packageName, scope, stmt, args, varSyms);
             } else {
-                className = getClassNameOfAccessor(fa, vars, cut, packageName, scope, stmt, args);
+                className = getClassNameOfAccessor(fa, vars, cut, packageName, scope, stmt, args, varSyms);
             }
         }
         return isAccessible(getQualifiedClassName(className, cut, packageName), scope, idName);
@@ -346,9 +346,9 @@ public class PrivateAccessProcessor extends DProcessor {
         return scope;
     }
 
-    ReflectedAccessResult getReflectedAccess(JCFieldAccess fa, final CompilationUnitTree cut, Object packageName, Map<String, JCExpression> vars, com.sun.source.tree.Scope scope, JCStatement stmt, List<Type> args) {
+    ReflectedAccessResult getReflectedAccess(JCFieldAccess fa, final CompilationUnitTree cut, Object packageName, Map<String, JCExpression> vars, com.sun.source.tree.Scope scope, JCStatement stmt, List<Type> args, Collection<Symbol> varSyms) {
         final String fieldAccessedName = fa.name.toString();
-        final String className = getClassNameOfAccessor(fa, vars, cut, packageName, scope, stmt, args);
+        final String className = getClassNameOfAccessor(fa, vars, cut, packageName, scope, stmt, args, varSyms);
 
         final Symbol s = getSymbol(className, fieldAccessedName);
         return getReflectedAccess(s, fa.selected, cut, packageName, vars, stmt);
@@ -395,7 +395,7 @@ public class PrivateAccessProcessor extends DProcessor {
             mi = (JCMethodInvocation) ((JCExpressionStatement) stmt).expr;
             symbol = getSymbol(mi, args, vars, cut, packageName, scope, stmt, varSyms);
         } catch (ClassCastException ce) {
-            symbol = getSymbol(fa, cut, packageName, vars, scope, stmt, args);
+            symbol = getSymbol(fa, cut, packageName, vars, scope, stmt, args, varSyms);
         }
         return reflect(symbol, vars, cut, packageName, scope, stmt, stats, varSyms);
     }

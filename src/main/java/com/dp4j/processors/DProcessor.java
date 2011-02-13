@@ -4,6 +4,7 @@
  */
 package com.dp4j.processors;
 
+import com.sun.source.util.TreePath;
 import com.sun.source.util.Trees;
 import com.sun.tools.javac.code.Symbol.TypeSymbol;
 import com.sun.tools.javac.model.JavacElements;
@@ -191,21 +192,9 @@ public abstract class DProcessor extends AbstractProcessor {
         return className;
     }
 
-    public Type getReturnType(JCMethodInvocation mi, CompilationUnitTree cut, Object packageName, java.util.List<Type> args) {
-
-        String className = null, mName = mi.meth.toString();
-        if (mName.contains(".")) {
-            final int methodAccessDot = StringUtils.lastIndexOf(mName, ".");
-            mName = mName.substring(methodAccessDot + 1);
-            className = mi.meth.toString().substring(0, methodAccessDot);
-            className = getQualifiedClassName(className, cut, packageName);
-        }
-        if (className == null) {
-            className = encClass.getQualifiedName().toString();
-        }
-        MethodSymbol symbol = getMSymbol(className, mName, args, cut, packageName);
-        Type.MethodType mt = (MethodType) symbol.type;
-        return mt.restype;
+    public Type getReturnType(JCMethodInvocation mi,  Map<String,JCExpression> vars, CompilationUnitTree cut, Object packageName, java.util.List<Type> args, com.sun.source.tree.Scope scope, JCStatement stmt, Collection<Symbol> varSyms) {
+        MethodSymbol symbol = (MethodSymbol) getSymbol(mi, args, vars, cut, packageName, scope, stmt, varSyms);
+        return symbol.getReturnType();
     }
 
     public MethodSymbol getMSymbol(Symbol className, String mName, java.util.List<Type> args, CompilationUnitTree cut, Object packageName) {
@@ -316,7 +305,7 @@ public abstract class DProcessor extends AbstractProcessor {
         final List<JCExpression> paramsList = injectBefore(otherParams.head, otherParams, param);
         final JCMethodInvocation mi = tm.Apply(List.<JCExpression>nil(), methodN, paramsList);
         java.util.List<Type> args = getArgs(mi, vars, cut, packageName, scope, stmt, varSyms);
-        mi.type = getReturnType(mi, cut, packageName, args);
+        mi.type = getReturnType(mi, vars, cut, packageName, args, scope, stmt, varSyms);
         return mi;
     }
 
@@ -571,7 +560,7 @@ public abstract class DProcessor extends AbstractProcessor {
         return types;
     }
 
-    public String getClassNameOfAccessor(JCFieldAccess fa, Map<String, JCExpression> vars, CompilationUnitTree cut, Object packageName, com.sun.source.tree.Scope scope, JCStatement stmt, java.util.List<Type> args) {
+    public String getClassNameOfAccessor(JCFieldAccess fa, Map<String, JCExpression> vars, CompilationUnitTree cut, Object packageName, com.sun.source.tree.Scope scope, JCStatement stmt, java.util.List<Type> args, Collection<Symbol> varSyms) {
         final JCExpression exp = fa.getExpression();
         String className = exp.toString();
         if (exp instanceof JCNewClass) {
@@ -598,7 +587,7 @@ public abstract class DProcessor extends AbstractProcessor {
         } else if (exp instanceof JCMethodInvocation) {
             JCMethodInvocation mi = (JCMethodInvocation) exp;
 
-            className = getReturnType(mi, cut, packageName, args).toString();
+            className = getReturnType(mi, vars, cut, packageName, args, scope, stmt, varSyms).toString();
             //FIXME: what about chains and args of the method?
         }
         return getQualifiedClassName(className, cut, packageName);
@@ -639,7 +628,7 @@ public abstract class DProcessor extends AbstractProcessor {
         } else if (exp instanceof JCMethodInvocation) {
             JCMethodInvocation mi = (JCMethodInvocation) exp;
             args = getArgs(mi, vars, cut, packageName, scope, stmt, varSyms);
-            className = getReturnType(mi, cut, packageName, args).toString();
+            className = getReturnType(mi, vars, cut, packageName, args, scope, stmt, varSyms).toString();
             //FIXME: what about chains and args of the method?
         } else if (exp instanceof JCFieldAccess) {
             Type type = getType((JCFieldAccess) exp, vars, cut, packageName, scope, stmt, args, varSyms);
@@ -659,7 +648,9 @@ public abstract class DProcessor extends AbstractProcessor {
     }
 
     public Symbol getSymbol(JCFieldAccess fa, Map<String, JCExpression> vars, CompilationUnitTree cut, Object packageName, com.sun.source.tree.Scope scope, java.util.List<Type> args, JCStatement stmt, Collection<Symbol> varSyms) {
-        ClassSymbol typ = elementUtils.getTypeElement(fa.toString());
+        String className = fa.toString();
+        if(className.startsWith(".")) className = className.substring(1);
+        ClassSymbol typ = elementUtils.getTypeElement(className);
         if (typ != null) {
             return typ;
         }
