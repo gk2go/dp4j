@@ -4,42 +4,20 @@
  */
 package com.dp4j.samples;
 
-import com.dp4j.InjectReflection;
 import org.junit.Test;
 
 /**
  *
  * @author simpatico
  */
-class PriClazzz {
-
-    PriClazzz() {
-        super();
-    }
-
-    private void aPrivateMethod(int i, String b) {
-    }
-
-    private String getClassName() {
-        return (String)this.getClass().getCanonicalName();
-    }
-
-    public void hello(){
-
-    }
-}
 public class MultipleCallsReflectedTest {
-
-    public MultipleCallsReflectedTest() {
-        super();
-    }
 
     @Test() //some issues actually finding the class. Maybe because in same package?
     public void getPrivateReturn() throws java.lang.ClassNotFoundException, java.lang.NoSuchFieldException, java.lang.IllegalAccessException, java.lang.reflect.
 InvocationTargetException, java.lang.IllegalArgumentException, NoSuchMethodException {
-        PriClazzz privateClazzz = new PriClazzz();
-        System.out.println(PriClazzz.class.getCanonicalName());
-        final java.lang.Class privateClazzzClass = java.lang.Class.forName("com.dp4j.samples.PriClazzz");
+        PrivateMethods privateClazzz = new PrivateMethods();
+        System.out.println(PrivateMethods.class.getCanonicalName());
+        final java.lang.Class privateClazzzClass = java.lang.Class.forName("com.dp4j.samples.PrivateMethods");
         final java.lang.reflect.Method getClassNameMethod = privateClazzzClass.getDeclaredMethod("getClassName");
         getClassNameMethod.setAccessible(true);
         String className = ((java.lang.String) getClassNameMethod.invoke(privateClazzz));

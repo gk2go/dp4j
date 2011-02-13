@@ -5,28 +5,11 @@
  */
 package com.dp4j.samples;
 
-class PrivateClass {
-
-    private int i;
-    public int j;
-    public static int gg;
-}
-
-class K1 {
-
-    protected int m;
-    PrivateClass pc = new PrivateClass();
-
-    private String getClassName() {
-        return this.getClass().getCanonicalName();
-    }
-}
-
-public class IfReflectedTest extends K1 {
+public class IfReflectedTest extends WithAccessibilePrivateDataInstance {
 
     @org.junit.Test
     public void t() throws java.lang.ClassNotFoundException, java.lang.NoSuchFieldException, java.lang.IllegalAccessException {
-        final java.lang.Class privateClassClass = java.lang.Class.forName("com.dp4j.samples.PrivateClass");
+        final java.lang.Class privateClassClass = java.lang.Class.forName("com.dp4j.samples.PrivateData");
         final java.lang.reflect.Field iField = privateClassClass.getDeclaredField("i");
         iField.setAccessible(true);
         if ((Integer) iField.get(pc) > 0) {

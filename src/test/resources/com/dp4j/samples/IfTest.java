@@ -5,20 +5,7 @@
  */
 package com.dp4j.samples;
 
-
-class PrivateClass {
-
-    private int i;
-    public int j;
-    public static int gg;
-}
-
-class K1{
-    protected int m;
-    PrivateClass pc = new PrivateClass();
-}
-
-public class IfTest extends K1{
+public class IfTest extends WithAccessibilePrivateDataInstance{
 
     @org.junit.Test
     public void t() {
