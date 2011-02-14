@@ -10,14 +10,13 @@ import com.sun.tools.javac.code.Type;
  *
  * @author simpatico
  */
-public class ReflectedAccessResult{
+public class ReflectedAccessResult {
     public final JCExpression exp;
     public final Type expType;
 
     public ReflectedAccessResult(JCExpression exp, Type expType){
         this.exp = exp;
         this.expType = expType;
-
     }
 
 }

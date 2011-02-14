@@ -20,8 +20,8 @@ class PrivateArrayMethod {
 public class ArrayCallTest {
 
     @org.junit.Test
-    public void varArgsTest(){
-        new PrivateArrayMethod().aPrivateMethod("hello", "injected", "reflection");
+    public void arrayTest(){
+        new PrivateArrayMethod().aPrivateMethod(new String[]{"hello", "injected", "reflection"});
     }
 }
 

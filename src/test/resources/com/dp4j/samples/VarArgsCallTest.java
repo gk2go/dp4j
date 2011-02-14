@@ -14,6 +14,6 @@ public class VarArgsCallTest {
 
     @org.junit.Test
     public void varArgsTest(){
-        new PrivateVarArgs().aPrivateMethod(4,3d, "hello", "injected", "reflection");
+        new PrivateVarArgs().aPrivateMethod(4,new Double(3d), "hello", "injected", "reflection");
     }
 }

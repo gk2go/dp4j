@@ -4,7 +4,6 @@
  */
 package com.dp4j.processors;
 
-import com.sun.source.util.TreePath;
 import com.sun.source.util.Trees;
 import com.sun.tools.javac.code.Symbol.TypeSymbol;
 import com.sun.tools.javac.model.JavacElements;
@@ -32,11 +31,9 @@ import com.sun.tools.javac.util.Name;
 import java.util.Map;
 import javax.lang.model.type.DeclaredType;
 import javax.lang.model.type.TypeKind;
-import javax.lang.model.type.TypeMirror;
 import javax.lang.model.util.Types;
 import javax.tools.Diagnostic.Kind;
 import com.sun.tools.javac.code.Symtab;
-import com.sun.tools.javac.code.Type.MethodType;
 import com.sun.tools.javac.model.FilteredMemberList;
 import javax.lang.model.type.ArrayType;
 import org.apache.commons.lang.StringUtils;
@@ -56,6 +53,19 @@ public abstract class DProcessor extends AbstractProcessor {
     protected Types typeUtils;
     protected Symtab symTable;
     protected TypeElement encClass;
+
+   public JCNewArray getArray(Type t, java.util.List<JCExpression> args) {
+        JCExpression[] toArray = args.toArray(new JCExpression[0]);
+        List<JCExpression> toList = toList(toArray);
+        JCExpression tExp = tm.Type(t);
+        final JCExpression dim = tm.Literal(args.size());
+        com.sun.tools.javac.util.List<JCExpression> dims = com.sun.tools.javac.util.List.of(dim);
+        return tm.NewArray(tExp, dims, toList);
+    }
+
+   public JCNewArray getArray(String t, java.util.List<JCExpression> args, CompilationUnitTree cut) {
+        return getArray(getType(t,cut, args), args);
+    }
 
     protected void printMsg(final String msg, final Element e, final boolean warningsOnly) {
         final Kind kind = (warningsOnly) ? Kind.WARNING : Kind.ERROR;
@@ -180,7 +190,7 @@ public abstract class DProcessor extends AbstractProcessor {
                 if (packageName != null) {
                     className = packageName.toString() + "." + className;
                 }
-                ClassSymbol te = elementUtils.getTypeElement(className);
+                ClassSymbol te = getTypeElement(className);
                 if (te == null) { //must be java.lang,
                     //FIXME: or some .* .. this is a good moment to try-catch
                     return getQualifiedClassName("java.lang." + tmp, cut, packageName);
@@ -192,7 +202,7 @@ public abstract class DProcessor extends AbstractProcessor {
         return className;
     }
 
-    public Type getReturnType(JCMethodInvocation mi,  Map<String,JCExpression> vars, CompilationUnitTree cut, Object packageName, java.util.List<Type> args, com.sun.source.tree.Scope scope, JCStatement stmt, Collection<Symbol> varSyms) {
+    public Type getReturnType(JCMethodInvocation mi, Map<String, JCExpression> vars, CompilationUnitTree cut, Object packageName, java.util.List<Type> args, com.sun.source.tree.Scope scope, JCStatement stmt, Collection<Symbol> varSyms) {
         MethodSymbol symbol = (MethodSymbol) getSymbol(mi, args, vars, cut, packageName, scope, stmt, varSyms);
         return symbol.getReturnType();
     }
@@ -208,7 +218,7 @@ public abstract class DProcessor extends AbstractProcessor {
     }
 
     public MethodSymbol getMSymbol(String className, String mName, java.util.List<Type> args, CompilationUnitTree cut, Object packageName) {
-        final ClassSymbol typ = elementUtils.getTypeElement(className);
+        final ClassSymbol typ = getTypeElement(className);
         return getMSymbol(typ, mName, args, cut, packageName);
     }
 
@@ -256,6 +266,7 @@ public abstract class DProcessor extends AbstractProcessor {
                     }
                     Type arg = args.get(i);
                     if (differentArg(arg, varSymbol)) { //FIXME: choose method with closest subtype and cast only if necessary
+//                        Tip: Always pass the upper bound of the parameterized type when searching for a method.
                         Type boxedType = getBoxedType(arg.asElement());
                         if (arg.isPrimitive()) {
                             Collection<Symbol> tmp = getSmallerList(methodsWithSameName, ms);
@@ -499,13 +510,13 @@ public abstract class DProcessor extends AbstractProcessor {
         if (type.equals(StringUtils.EMPTY)) {
             return Type.noType;
         }
-        ClassSymbol typeElement = elementUtils.getTypeElement(type);
+        ClassSymbol typeElement = getTypeElement(type);
         final Type t;
-        typeElement = elementUtils.getTypeElement(getQualifiedClassName(type, cut, packageName));
+        typeElement = getTypeElement(getQualifiedClassName(type, cut, packageName));
 
         if (typeElement == null) {
 
-            if (type.contains(com.dp4j.processors.DProcessor.varArgsDots) || type.contains("[]")) {
+            if (type.contains(com.dp4j.processors.DProcessor.varArgsDots) || type.contains("[]")) { //FIXME: should be ends with
                 if (type.contains(com.dp4j.processors.DProcessor.varArgsDots)) {
                     type = type.replace(com.dp4j.processors.DProcessor.varArgsDots, StringUtils.EMPTY);
                     Type com = getType(type, cut, packageName);
@@ -541,6 +552,9 @@ public abstract class DProcessor extends AbstractProcessor {
                 //FIXME: do the same for super
                 //FIXME: do the same for super
             }
+            if (type.equals("T")) {
+                return getType("?", cut, packageName);
+            }
             t = (Type) typeUtils.getPrimitiveType(TypeKind.valueOf(type.toUpperCase()));
         } else {
             t = typeElement.type;
@@ -560,6 +574,19 @@ public abstract class DProcessor extends AbstractProcessor {
         return types;
     }
 
+    public DeclaredType getDeclaredType(String className) {
+        ClassSymbol typ = getTypeElement(className);
+        return typeUtils.getDeclaredType(typ);
+    }
+
+    public ClassSymbol getTypeElement(String className) {
+        if (className.startsWith(".")) {
+            className = className.substring(1);
+        }
+        final ClassSymbol typ = elementUtils.getTypeElement(className);
+        return typ;
+    }
+
     public String getClassNameOfAccessor(JCFieldAccess fa, Map<String, JCExpression> vars, CompilationUnitTree cut, Object packageName, com.sun.source.tree.Scope scope, JCStatement stmt, java.util.List<Type> args, Collection<Symbol> varSyms) {
         final JCExpression exp = fa.getExpression();
         String className = exp.toString();
@@ -574,7 +601,7 @@ public abstract class DProcessor extends AbstractProcessor {
             //is an instance or static
             final JCIdent id = (JCIdent) exp;
             className = id.name.toString();
-            final ClassSymbol typ = com.dp4j.processors.DProcessor.elementUtils.getTypeElement(className);
+            final ClassSymbol typ = getTypeElement(className);
             if (typ == null) {
                 final JCExpression get = vars.get(className);
                 if (get != null) {
@@ -606,16 +633,21 @@ public abstract class DProcessor extends AbstractProcessor {
             //is an instance or static
             final JCIdent id = (JCIdent) exp;
             className = id.name.toString();
-            ClassSymbol typ = com.dp4j.processors.DProcessor.elementUtils.getTypeElement(className);
+            ClassSymbol typ = getTypeElement(className);
             if (typ == null) {
-                typ = elementUtils.getTypeElement(getQualifiedClassName(className, cut, packageName));
-                if( typ != null) return typ;
+                typ = getTypeElement(getQualifiedClassName(className, cut, packageName));
+                if (typ != null) {
+                    return typ;
+                }
 
                 Symbol s = contains(varSyms, className, Collections.EMPTY_LIST, cut, packageName);
                 if (s == null) {
                     final JCExpression get = vars.get(className);
                     if (get != null) {
                         //is instance
+                        if (get.type != null && get.type != null && get.type.tsym != null) {
+                            return (ClassSymbol) get.type.tsym;
+                        }
                         className = get.toString();
                     } //else is static
                 } else {
@@ -634,7 +666,7 @@ public abstract class DProcessor extends AbstractProcessor {
             Type type = getType((JCFieldAccess) exp, vars, cut, packageName, scope, stmt, args, varSyms);
             return (ClassSymbol) type.tsym;
         }
-        return com.dp4j.processors.DProcessor.elementUtils.getTypeElement(getQualifiedClassName(className, cut, packageName));
+        return (ClassSymbol) getType(getQualifiedClassName(className, cut, packageName), cut, packageName).tsym;
     }
 
     public ClassSymbol getAccessorClassSymbol(JCFieldAccess fa, Map<String, JCExpression> vars, CompilationUnitTree cut, Object packageName, com.sun.source.tree.Scope scope, JCStatement stmt, java.util.List<Type> args, Collection<Symbol> varSyms) {
@@ -648,9 +680,7 @@ public abstract class DProcessor extends AbstractProcessor {
     }
 
     public Symbol getSymbol(JCFieldAccess fa, Map<String, JCExpression> vars, CompilationUnitTree cut, Object packageName, com.sun.source.tree.Scope scope, java.util.List<Type> args, JCStatement stmt, Collection<Symbol> varSyms) {
-        String className = fa.toString();
-        if(className.startsWith(".")) className = className.substring(1);
-        ClassSymbol typ = elementUtils.getTypeElement(className);
+        ClassSymbol typ = getTypeElement(fa.toString());
         if (typ != null) {
             return typ;
         }
@@ -662,7 +692,7 @@ public abstract class DProcessor extends AbstractProcessor {
 
     public Symbol getSymbol(final ClassSymbol typ, final String objName) {
         if (objName.equals(com.dp4j.processors.DProcessor.clazz)) {
-            return com.dp4j.processors.DProcessor.elementUtils.getTypeElement(com.dp4j.processors.DProcessor.javaLangClass);
+            return getTypeElement(com.dp4j.processors.DProcessor.javaLangClass);
         }
         FilteredMemberList allMembers = com.dp4j.processors.DProcessor.elementUtils.getAllMembers(typ);
         Symbol ret = contains(allMembers, objName);
@@ -673,20 +703,27 @@ public abstract class DProcessor extends AbstractProcessor {
     }
 
     public Symbol getSymbol(final String className, final String objName) {
-        final ClassSymbol typ = com.dp4j.processors.DProcessor.elementUtils.getTypeElement(className);
+        final ClassSymbol typ = getTypeElement(className);
         return getSymbol(typ, objName);
     }
 
-    public boolean differentArg(Type arg, Type varSymbol) {
+    public boolean sameArg(Type arg, Type varSymbol) {
         final Type erArg = (Type) typeUtils.erasure(arg);
         final Type erVar = (Type) typeUtils.erasure(varSymbol);
         if (varSymbol instanceof VarArgType) {
-            if(arg instanceof ArrayType){
+            if (arg instanceof ArrayType) {
                 arg = (Type) ((ArrayType) arg).getComponentType();
             }
-            return differentArg(arg, ((VarArgType) varSymbol).t);
+            return sameArg(arg, ((VarArgType) varSymbol).t);
         }
-        return !typeUtils.isSubtype(arg, varSymbol) || ((!erArg.equals(arg) || !erVar.equals(erVar)) && differentArg(erArg, erVar));
+        boolean subs = typeUtils.isSubtype(arg, varSymbol);
+        boolean sameVar = erVar.equals(varSymbol);
+        boolean sameErArg = erArg.equals(arg);
+        return subs || ((!sameErArg || !sameVar) && sameArg(erArg, erVar));
+    }
+
+    public boolean differentArg(Type arg, Type varSymbol) {
+        return !sameArg(arg, varSymbol);
     }
 
     public Collection<Symbol> getSmallerList(Collection<Symbol> methodsWithSameName, Symbol ms) {
@@ -749,6 +786,10 @@ public abstract class DProcessor extends AbstractProcessor {
             final Symbol sym = contains(varSyms, exp, args, cut, packageName);
             if (sym == null) {
                 JCExpression get = vars.get(exp);
+                if (get == null) {
+                    Type type = getType(exp.toString(), cut, packageName);
+                    return type;
+                }
                 ifExp.type = get.type;
                 if (ifExp.type == null) {
                     String type = get.toString();
@@ -757,6 +798,13 @@ public abstract class DProcessor extends AbstractProcessor {
             } else {
                 ifExp.type = sym.type;
             }
+        } else if (ifExp instanceof JCPrimitiveTypeTree) {
+            return getType(ifExp.toString(), cut, packageName);
+        } else if (ifExp instanceof JCBinary) {
+            return getType(((JCBinary) ifExp).lhs, vars, cut, packageName, scope, stmt, args, varSyms);
+        } else if (ifExp instanceof JCNewArray) {
+            Type eType = getType(((JCNewArray) ifExp).elemtype, vars, cut, packageName, scope, stmt, args, varSyms);
+            return (Type) typeUtils.getArrayType(eType);
         }
         return ifExp.type;
     }
@@ -764,7 +812,7 @@ public abstract class DProcessor extends AbstractProcessor {
     public Type getType(JCLiteral ifExp) {
         final int typetag = (ifExp).typetag;
         final Object value = (ifExp).value;
-        if(value == null){
+        if (value == null) {
             return (Type) typeUtils.getNullType();
         }
         final JCLiteral Literal = tm.Literal(value);

@@ -15,9 +15,9 @@ public class PrivateMethods {
     }
 
     private String getClassName() {
-        return (String)this.getClass().getCanonicalName();
+        return this.getClass().getCanonicalName();
     }
-    
+
     private void aPrivateMethod(int i){
 
     }
