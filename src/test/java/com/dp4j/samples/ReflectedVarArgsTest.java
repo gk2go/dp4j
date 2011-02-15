@@ -11,7 +11,7 @@ package com.dp4j.samples;
  */
 public class ReflectedVarArgsTest {
 
-    @org.junit.Test()
+//    @org.junit.Test()
     public void varArgsTest() throws java.lang.ClassNotFoundException, java.lang.NoSuchFieldException, java.lang.IllegalAccessException, java.lang.reflect.InvocationTargetException, java.lang.IllegalArgumentException, java.lang.NoSuchMethodException {
         final java.lang.Class privateVarArgsClass = java.lang.Class.forName("com.dp4j.samples.PrivateVarArgs");
         final java.lang.reflect.Method aPrivateMethodMethod = privateVarArgsClass.getDeclaredMethod("aPrivateMethod", java.lang.Integer.TYPE, java.lang.Double.class, java.lang.String[].class);

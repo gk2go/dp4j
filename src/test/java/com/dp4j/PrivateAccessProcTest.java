@@ -71,7 +71,7 @@ public class PrivateAccessProcTest extends AbstractAnnotationProcessorTest {
     }
     static File targetTestClasses = getFile(workingdir, "target", "test-classes");
 
-    @Test()
+//    @Test()
     public void mostComprehensiveTest() throws IOException {
         final Runtime runtime = Runtime.getRuntime();
         runtime.traceInstructions(true);
@@ -139,17 +139,17 @@ public class PrivateAccessProcTest extends AbstractAnnotationProcessorTest {
         }
     }
     final static String tests[] = {
-        "PrivateData",
-        "PrivateMethods",
-        "PrivateVarArgs",
-        "WithAccessibilePrivateDataInstance",
-        "WithAccessibleVarArgsInstance",
+//        "PrivateData",
+//        "PrivateMethods",
+//        "PrivateVarArgs",
+//        "WithAccessibilePrivateDataInstance",
+//        "WithAccessibleVarArgsInstance",
 //        "Test",
-        "VarArgsCallTest",
+//        "VarArgsCallTest",
 //        "CallTest",
-        "IfTest",
-        "MultipleCallsTest",
-        "ArrayCallTest"
+//        "IfTest",
+//        "MultipleCallsTest",
+//        "ArrayCallTest"
     };
 
     static String getTestSources() {

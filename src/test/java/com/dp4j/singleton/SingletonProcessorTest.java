@@ -22,7 +22,7 @@ import javax.tools.Diagnostic.Kind;
  */
 public class SingletonProcessorTest extends AbstractAnnotationProcessorTest {
 
-    @Test
+//    @Test
     public void testAllPrivateConstructors() {
         asssertCompilationSuccessful(compileTestCase("MySingleton"));
 
@@ -32,7 +32,7 @@ public class SingletonProcessorTest extends AbstractAnnotationProcessorTest {
         assertCompilationReturned(Kind.ERROR, -1, compileTestCase("SingletonWithOnlyOneConstructor"));
     }
 
-    @Test
+//    @Test
     public void testAccessInjectedInstance() {
         assertCompilationSuccessful(compileTestCase(("MyBooks")));
     }

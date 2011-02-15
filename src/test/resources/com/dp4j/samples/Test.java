@@ -21,6 +21,10 @@ class K {
     private String getClassName() {
         return this.getClass().getCanonicalName();
     }
+
+    private int get(int i){
+        return i;
+    }
 }
 
 public class Test extends K {
@@ -44,7 +48,8 @@ public class Test extends K {
             int kk = pc.i;
             for (Object object : pc.objs) {
                kk = pc.i;
-                System.out.println(pc.i);
+                System.out.println(get(3));
+                System.out.println(get(2) + pc.i);
             }
         }
 
