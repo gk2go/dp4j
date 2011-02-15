@@ -15,5 +15,6 @@ public class InvokeTest {
     @Test
     public void test() {
         System.console();
+        System.out.println();
     }
 }

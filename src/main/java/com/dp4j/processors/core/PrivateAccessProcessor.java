@@ -30,6 +30,7 @@ import com.sun.source.tree.Scope;
 @SupportedAnnotationTypes(value = {"org.junit.Test", "com.dp4j.InjectReflection"})
 @SupportedSourceVersion(SourceVersion.RELEASE_6)
 public class PrivateAccessProcessor extends DProcessor {
+
     Resolver rs;
 
     public void addAll(Map<String, JCExpression> vars, Set<Symbol> varSyms, final TypeElement encClass) {
@@ -464,8 +465,28 @@ public class PrivateAccessProcessor extends DProcessor {
         if (fa.selected instanceof JCFieldAccess) {
             Symbol accessor = getAccessor((JCFieldAccess) fa.selected, scope);
             TreePath path = trees.getPath(accessor);
-            Scope scope1 = trees.getScope(path);
-            return rs.getSymbol(scope1,fa.name);
+            if (path != null) {
+                Scope scope1 = trees.getScope(path);
+                return rs.getSymbol(scope1, fa.name);
+            }else{
+                return getSymbol(fa, accessor, scope);
+            }
+        }
+        throw new NoSuchElementException(fa.toString());
+    }
+
+     private Symbol getSymbol(JCFieldAccess fa, Symbol accessor, Scope scope) {
+        if (fa.selected instanceof JCIdent) {
+            List<Symbol> enclosedElements = accessor.getEnclosedElements();
+                for (Symbol symbol : enclosedElements) {
+                    if(symbol.getQualifiedName().equals(fa.name)){
+                        return symbol;
+                    }
+                }
+        }
+        if (fa.selected instanceof JCFieldAccess) {
+            Symbol acc = getAccessor((JCFieldAccess) fa.selected, scope);
+            return getSymbol((JCFieldAccess) fa.selected, acc, scope);
         }
         throw new NoSuchElementException(fa.toString());
     }
@@ -479,11 +500,11 @@ public class PrivateAccessProcessor extends DProcessor {
         }
         if (mi.meth instanceof JCFieldAccess) {
             return (Symbol) getAccessor((JCFieldAccess) mi.meth, scope);
-        }else if (mi.meth instanceof JCNewClass) {
+        } else if (mi.meth instanceof JCNewClass) {
             final JCNewClass nc = (JCNewClass) mi.meth;
             final JCExpression clas = nc.clazz;
             rs.getType(scope, clas.toString());
-        } else if(mi.meth instanceof JCMethodInvocation){
+        } else if (mi.meth instanceof JCMethodInvocation) {
             // return mi symbol
         }
         throw new NoSuchElementException(mi.toString());

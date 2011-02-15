@@ -88,11 +88,11 @@ public class Resolver {
         return t;
     }
 
-    public TypeElement getType(Scope scope, Name varName) {
+    public TypeElement getType(Scope scope, Name varName){
         TypeElement t = contains(scope, varName).enclClass(); //first lookup scope for all public identifiers
         TypeElement cl = scope.getEnclosingClass();
         while (t == null && cl != null) { //lookup hierarchy for inacessible identifiers too
-            t = (TypeElement) contains(elementUtils.getAllMembers(cl), varName).asType();
+            t = (TypeElement) contains(cl.getEnclosedElements(), varName).asType();
             final TypeMirror superclass = cl.getSuperclass();
             if (superclass != null) {
                 cl = (TypeElement) superclass;
