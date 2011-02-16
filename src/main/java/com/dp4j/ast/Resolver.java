@@ -17,6 +17,7 @@ import javax.lang.model.element.*;
 import com.sun.tools.javac.tree.TreeMaker;
 import java.util.*;
 import com.sun.source.util.Trees;
+import com.sun.tools.javac.api.JavacScope;
 import com.sun.tools.javac.code.*;
 import com.sun.tools.javac.code.Symbol.ClassSymbol;
 import com.sun.tools.javac.code.Symbol.MethodSymbol;
@@ -44,14 +45,15 @@ public class Resolver {
         this.encClass = encClass;
         this.typeUtils = typeUtils;
         this.symTable = symTable;
-
     }
 
-    public Symbol getSymbol(Scope scope, java.util.List<Symbol> typeParams, Name varName, java.util.List<Symbol> args) {
-        Symbol t = contains(scope, typeParams, varName, args); //first lookup scope for all public identifiers
+    public Symbol getSymbol(Scope scope, List<JCExpression> typeParams, Name varName, List<JCExpression> args) {
+        java.util.List<Symbol> typeSyms = getArgs(typeParams, scope);
+        java.util.List<Symbol> argsSyms = getArgs(args, scope);
+        Symbol t = contains(scope, typeSyms, varName, argsSyms); //first lookup scope for all public identifiers
         TypeElement cl = scope.getEnclosingClass();
-        while (t == null && cl != null) { //lookup hierarchy for inacessible identifiers too
-            t = contains(elementUtils.getAllMembers(cl), typeParams, varName, args);
+        while (t == null && cl != null){ //lookup hierarchy for inacessible identifiers too
+            t = contains(elementUtils.getAllMembers(cl), typeSyms, varName, argsSyms);
             final TypeMirror superclass = cl.getSuperclass();
             if (superclass != null) {
                 cl = (TypeElement) ((Type) superclass).asElement();
@@ -106,7 +108,12 @@ public class Resolver {
             return getSymbol(((JCFieldAccess) exp).name, acc, scope);
         } else if (exp instanceof JCNewClass) {
             final JCNewClass nc = (JCNewClass) exp;
-            System.out.println(exp);
+            final Name name = getName(nc.clazz);
+            TypeElement cl =  (TypeElement) getSymbol(scope, null, name, null);
+            java.util.List<Symbol> args = getArgs(nc.typeargs, scope);
+            java.util.List<Symbol> typeParams = getArgs(nc.args, scope);
+            Symbol s = contains(cl.getEnclosedElements(), typeParams, elementUtils.getName("<init>"), args);
+            return s;
         } else if (exp instanceof JCMethodInvocation) {
             return getSymbol((JCMethodInvocation) exp, scope);
         } else if (exp instanceof JCLiteral) {
@@ -118,10 +125,10 @@ public class Resolver {
         } else if (exp instanceof JCArrayTypeTree) {
             JCArrayTypeTree arr = (JCArrayTypeTree) exp;
             return getSymbol(arr.elemtype, scope);
-        } else if (exp instanceof JCParens){
-            return getSymbol(((JCParens)exp).expr, scope);
-        } else if (exp instanceof JCTypeCast){
-            return getSymbol(((JCTypeCast)exp).expr, scope);
+        } else if (exp instanceof JCParens) {
+            return getSymbol(((JCParens) exp).expr, scope);
+        } else if (exp instanceof JCTypeCast) {
+            return getSymbol(((JCTypeCast) exp).expr, scope);
         }
         throw new RuntimeException(exp.toString());
     }
@@ -164,7 +171,9 @@ public class Resolver {
         }
         if (fa.selected instanceof JCFieldAccess) {
             Symbol accessor = getSymbol(scope, null, elementUtils.getName(fa.selected.toString()), null);
-            if(accessor != null) return accessor;
+            if (accessor != null) {
+                return accessor;
+            }
             accessor = getAccessor((JCFieldAccess) fa.selected, scope);
             return getSymbol(((JCFieldAccess) fa.selected).name, accessor, scope);
         }
@@ -208,7 +217,7 @@ public class Resolver {
         } else if (mi.meth instanceof JCNewClass) {
             final JCNewClass nc = (JCNewClass) mi.meth;
             final JCExpression clas = nc.clazz;
-            Symbol symbol = getSymbol(scope, null, getName(clas), null);
+            Symbol symbol = getSymbol(scope, mi.typeargs, getName(clas), mi.args);
             return symbol;
         } else if (mi.meth instanceof JCMethodInvocation) {
             MethodSymbol symbol = getSymbol(mi, scope);
@@ -224,7 +233,17 @@ public class Resolver {
         return primitive;
     }
 
-    private Symbol contains(Scope scope, java.util.List<Symbol> typeParams, Name varName, java.util.List<Symbol> args) {
+    public boolean sameMethod(final List<? extends Symbol> formalArgs, java.util.List<? extends Symbol> args,final List<? extends Symbol> formalTypeParams, java.util.List<? extends Symbol> typeParams, final boolean varArgs) {
+        if (!sameArgs(formalArgs, args,varArgs)) {
+            return false;
+        }
+        if (!sameArgs(formalTypeParams, typeParams, varArgs)) {
+            return false;
+        }
+        return true;
+    }
+
+    private Symbol contains(Scope scope, java.util.List<? extends Symbol> typeParams, Name varName, java.util.List<Symbol> args) {
         Symbol t = null;
         while (t == null && scope != null) {
             Iterable<? extends Element> localElements = scope.getLocalElements();
@@ -234,7 +253,7 @@ public class Resolver {
         return t;
     }
 
-    public Symbol contains(Iterable<? extends Element> list, java.util.List<Symbol> typeParams, Name varName, java.util.List<Symbol> args) {
+    public Symbol contains(Iterable<? extends Element> list, java.util.List<? extends Symbol> typeParams, Name varName, java.util.List<? extends Symbol> args) {
         for (Element e : list) {
             final Name elName;
             if (e instanceof ClassSymbol) {
@@ -244,14 +263,22 @@ public class Resolver {
                 elName = (Name) e.getSimpleName();
             }
             if (elName.equals(varName) || e.getSimpleName().equals(varName)) {
-                if (e.getKind().equals(ElementKind.METHOD)) {
-                    MethodSymbol me = (MethodSymbol) e;
-                    if (!sameArgs(me.getParameters(), args, me.isVarArgs())) {
-                        continue;
+                if (args != null) { //isEmpty means empty-args method
+                    final List<VarSymbol> formalArgs;
+                    final List<TypeSymbol> formalTypeParams;
+                    final boolean varArgs;
+                    if (e.getKind().equals(ElementKind.METHOD) || e.getKind().equals(ElementKind.CONSTRUCTOR)) {
+                        MethodSymbol me = (MethodSymbol) e;
+                        formalArgs = me.getParameters();
+                        formalTypeParams = me.getTypeParameters();
+                        varArgs = me.isVarArgs();
+                    }else{
+                        formalArgs = null;
+                        formalTypeParams = null;
+                        varArgs = false;
                     }
-                    if (!sameArgs(me.getTypeParameters(), typeParams, me.isVarArgs())) {
+                    if (!sameMethod(formalArgs, args,formalTypeParams, typeParams, varArgs))
                         continue;
-                    }
                 }
                 return (Symbol) e;
             }
@@ -260,6 +287,7 @@ public class Resolver {
     }
 
     public java.util.List<Symbol> getArgs(List<JCExpression> args, Scope scope) {
+        if(args == null) return null;
         java.util.List<Symbol> syms = new ArrayList<Symbol>();
         for (JCExpression arg : args) {
             Symbol s = getSymbol(arg, scope);
@@ -268,7 +296,7 @@ public class Resolver {
         return syms;
     }
 
-    private boolean sameArgs(List<? extends Symbol> formal, java.util.List<Symbol> actual, final boolean varArgs) {
+    private boolean sameArgs(List<? extends Symbol> formal, java.util.List<? extends Symbol> actual, final boolean varArgs) {
         if (formal == null || actual == null) {
             if (formal == null && actual == null) {
                 return true;
@@ -285,12 +313,11 @@ public class Resolver {
         if (formal.size() == actual.size() || varArgs && ((formal.size() == actual.size() + 1) || actual.size() > formal.size())) {
             int i = 0;
             for (Symbol symbol : actual) {
-                if (actual.size() > i) {
+                if (formal.size() > i) {
                     Symbol ts = formal.get(i++);
 
                     //subclass stuff
-                }else{
-
+                } else {
                 }
             }
             return true;

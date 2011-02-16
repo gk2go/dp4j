@@ -339,7 +339,7 @@ public class PrivateAccessProcessor extends DProcessor {
 
     public boolean isAccessible(JCExpression exp, final Scope scope) {
         Symbol s = rs.getSymbol(exp, scope);
-        Symbol accessor;
+        Symbol accessor = null;
         if (exp instanceof JCFieldAccess) {
             accessor = rs.getAccessor((JCFieldAccess) exp, scope);
         } else if (exp instanceof JCMethodInvocation) {
@@ -349,18 +349,23 @@ public class PrivateAccessProcessor extends DProcessor {
         } else if (exp instanceof JCNewArray) {
             JCNewArray arr = (JCNewArray) exp;
             boolean accessible = true;
-            for (JCExpression el : arr.elems){
+            for (JCExpression el : arr.elems) {
                 accessible &= isAccessible(el, scope);
-                if(!accessible) break;
+                if (!accessible) {
+                    break;
+                }
             }
             return accessible;
         } else if (exp instanceof JCLiteral) {
             return true;
-        } else if(exp instanceof JCParens){
-            return isAccessible(((JCParens)exp).expr, scope);
-        } else if (exp instanceof JCTypeCast){
-            return isAccessible(((JCTypeCast)exp).expr, scope);
-        }else {
+        } else if (exp instanceof JCParens) {
+            return isAccessible(((JCParens) exp).expr, scope);
+        } else if (exp instanceof JCTypeCast) {
+            return isAccessible(((JCTypeCast) exp).expr, scope);
+        } else if (exp instanceof JCNewClass) {
+            accessor = rs.getSymbol(((JCNewClass)exp).clazz, scope); //retrieve the class symbol, as it's considered to be the accessor of the constructor
+        }
+        if (accessor == null || s == null) {
             throw new RuntimeException("is this accessible " + exp);
         }
         return isAccessible(s, scope, accessor);
