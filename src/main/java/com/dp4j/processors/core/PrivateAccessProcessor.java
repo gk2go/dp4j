@@ -31,8 +31,6 @@ import com.sun.source.tree.Scope;
 @SupportedSourceVersion(SourceVersion.RELEASE_6)
 public class PrivateAccessProcessor extends DProcessor {
 
-
-
     public void addAll(Map<String, JCExpression> vars, Set<Symbol> varSyms, final TypeElement encClass) {
         FilteredMemberList allMembers = elementUtils.getAllMembers(encClass);
         for (Symbol symbol : allMembers) {
@@ -132,8 +130,9 @@ public class PrivateAccessProcessor extends DProcessor {
         return processElement(stats, scope, cut, packageName, vars, varSyms);
     }
 
-    protected com.sun.tools.javac.util.List<JCStatement> processElement(com.sun.tools.javac.util.List<JCStatement> stats, final com.sun.source.tree.Scope scope, final CompilationUnitTree cut, Object packageName, Map<String, JCExpression> vars, Collection<Symbol> varSyms) {
+    protected com.sun.tools.javac.util.List<JCStatement> processElement(com.sun.tools.javac.util.List<JCStatement> stats, Scope scope, final CompilationUnitTree cut, Object packageName, Map<String, JCExpression> vars, Collection<Symbol> varSyms) {
         for (JCStatement stmt : stats) {
+            scope = getScope(cut, stmt);
             stats = processStmt(stmt, vars, cut, packageName, scope, stats, varSyms);
         }
         return stats;
@@ -152,11 +151,11 @@ public class PrivateAccessProcessor extends DProcessor {
     protected com.sun.tools.javac.util.List<JCStatement> processStmt(JCStatement stmt, Map<String, JCExpression> vars, final CompilationUnitTree cut, Object packageName, Scope scope, com.sun.tools.javac.util.List<JCStatement> stats, Collection<Symbol> varSyms) {
         if (stmt instanceof JCVariableDecl) {
             JCVariableDecl varDec = (JCVariableDecl) stmt;
-
+            varDec.sym = (VarSymbol) rs.getSymbol(scope, null, varDec.name, null);
             boolean accessible = isAccessible(varDec.init, scope);
             if (!accessible) {
                 ExpProcResult processCond = processCond(varDec.init, vars, cut, packageName, scope, stats, stmt, null, varSyms);
-                varDec.type = varDec.sym.asType();
+//                varDec.type = varDec.sym.asType();
                 addVar(vars, varDec, varSyms);
 
                 Symbol s = rs.getSymbol(varDec.init, scope);
@@ -343,8 +342,22 @@ public class PrivateAccessProcessor extends DProcessor {
         Symbol accessor;
         if (exp instanceof JCFieldAccess) {
             accessor = rs.getAccessor((JCFieldAccess) exp, scope);
-        } else {
+        } else if (exp instanceof JCMethodInvocation) {
             accessor = rs.getInvokationTarget((JCMethodInvocation) exp, scope);
+        } else if (exp instanceof JCPrimitiveTypeTree) {
+            return true;
+        } else if (exp instanceof JCNewArray) {
+            JCNewArray arr = (JCNewArray) exp;
+            boolean accessible = true;
+            for (JCExpression el : arr.elems){
+                accessible &= isAccessible(el, scope);
+                if(!accessible) break;
+            }
+            return accessible;
+        } else if (exp instanceof JCLiteral) {
+            return true;
+        } else {
+            throw new RuntimeException("is this accessible " + exp);
         }
         return isAccessible(s, scope, accessor);
     }

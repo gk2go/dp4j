@@ -138,7 +138,7 @@ public abstract class DProcessor extends AbstractProcessor {
         JCExpression[] exps = new JCExpression[length];
         int i = 0;
         for (VarSymbol param : params) {
-            Symbol boxedS = getBoxedSymbol(param);
+            Symbol boxedS = rs.getBoxedSymbol(param);
             final Type type = param.type;
             JCExpression classExp;
             if (type.isPrimitive()) {
@@ -181,13 +181,6 @@ public abstract class DProcessor extends AbstractProcessor {
             type = (Type) boxedClass.asType();
         }
         return type;
-    }
-
-    public Symbol getBoxedSymbol(Symbol primitive){
-        if(primitive.type.isPrimitive()){
-            primitive = (Symbol) typeUtils.boxedClass(primitive.type);
-        }
-        return primitive;
     }
 
 //    public JCMethodInvocation getMethodInvoc(final String methodName, final JCExpression param, final List<JCExpression> otherParams, Map<String, JCExpression> vars, CompilationUnitTree cut, Object packageName, com.sun.source.tree.Scope scope, JCStatement stmt, Collection<Symbol> varSyms) {
