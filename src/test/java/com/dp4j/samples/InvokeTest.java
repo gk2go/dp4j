@@ -19,6 +19,7 @@ public class InvokeTest {
         System.out.getClass().getClassLoader().toString().contentEquals("cs");
         System.class.toString().contentEquals("cds");
         int[] ints = {4,32,34};
+        int a = 5;
         System.out.println(ints);
     }
 }

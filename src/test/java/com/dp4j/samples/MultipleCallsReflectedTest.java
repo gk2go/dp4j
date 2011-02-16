@@ -11,7 +11,7 @@ import org.junit.Test;
  */
 public class MultipleCallsReflectedTest {
 
-    @Test() //some issues actually finding the class. Maybe because in same package?
+    @Test()
     public void getPrivateReturn() throws java.lang.ClassNotFoundException, java.lang.NoSuchFieldException, java.lang.IllegalAccessException, java.lang.reflect.InvocationTargetException, java.lang.IllegalArgumentException, NoSuchMethodException {
         PrivateMethods privateClazzz = new PrivateMethods();
         System.out.println(PrivateMethods.class.getCanonicalName());

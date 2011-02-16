@@ -4,6 +4,8 @@
  */
 package com.dp4j.samples;
 
+import com.dp4j.AbstractAccessibleTest;
+
 /**
  *
  * @author simpatico

@@ -99,6 +99,7 @@ public class Resolver {
             throw new NoSuchElementException(mi.toString());
         }
         return ms;
+
     }
 
     public Symbol getSymbol(JCExpression exp, Scope scope) {
@@ -123,11 +124,8 @@ public class Resolver {
             return getType((JCLiteral) exp).tsym;
         } else if (exp instanceof JCNewArray) {
             JCNewArray arr = (JCNewArray) exp;
-            if(arr.elemtype == null){
-                arr = getTypedArray(arr);
-            }
-            Symbol symbol = getSymbol(arr.elemtype, scope);
-            return symbol;
+            arr = getTypedArray(arr);
+            return arr.type.tsym;
         } else if (exp instanceof JCArrayTypeTree) {
             JCArrayTypeTree arr = (JCArrayTypeTree) exp;
             return getSymbol(arr.elemtype, scope);
@@ -135,41 +133,11 @@ public class Resolver {
             return getSymbol(((JCParens) exp).expr, scope);
         } else if (exp instanceof JCTypeCast) {
             return getSymbol(((JCTypeCast) exp).expr, scope);
-       }
-//        else if (exp instanceof JCPrimitiveTypeTree){
-//            Element asElement = typeUtils.asElement(exp.type);
-//            return asElement.
-//        }
+        }
         throw new RuntimeException(exp.toString());
     }
 
-    public Symbol getAccessor(JCFieldAccess fa, Scope scope) {
-
-        if (fa.selected instanceof JCIdent) {
-            Symbol accessor = getSymbol(scope, null, ((JCIdent) fa.selected).name, null);
-            return accessor;
-        }
-        if (fa.selected instanceof JCFieldAccess) {
-            Symbol accessor = getSymbol(scope, null, elementUtils.getName(fa.selected.toString()), null);
-            if (accessor != null) {
-                return accessor;
-            }
-            accessor = getAccessor((JCFieldAccess) fa.selected, scope);
-            return getSymbol(((JCFieldAccess) fa.selected).name, accessor, scope);
-        }
-        if (fa.selected instanceof JCMethodInvocation) {
-            MethodSymbol s = getSymbol((JCMethodInvocation) fa.selected, scope);
-            Type returnType = s.getReturnType();
-            return returnType.asElement();
-        }else if (fa.selected  instanceof JCArrayTypeTree) {
-            JCArrayTypeTree arr = (JCArrayTypeTree) fa.selected;
-//            getSymbol(scope, null, elementUtils.getName(fa.selected.toString()), null);
-            return getSymbol(arr.elemtype, scope);
-        }
-        throw new NoSuchElementException(fa.toString());
-    }
-
-        public Type getType(JCLiteral ifExp) {
+    public Type getType(JCLiteral ifExp) {
         final int typetag = (ifExp).typetag;
         final Object value = (ifExp).value;
         if (value == null) {
@@ -193,11 +161,32 @@ public class Resolver {
         if (arr.elemtype == null) {
             JCExpression get = arr.elems.get(0); //FIXME: int[] f = {};
             arr.elemtype = tm.Type(getType(get));
+            arr.type = arr.elemtype.type;
             assert (arr.type != null);
         }
-        arr.type = arr.elemtype.type;
         assert (arr.type != null);
         return arr;
+    }
+
+    public Symbol getAccessor(JCFieldAccess fa, Scope scope) {
+        if (fa.selected instanceof JCIdent) {
+            Symbol accessor = getSymbol(scope, null, ((JCIdent) fa.selected).name, null);
+            return accessor;
+        }
+        if (fa.selected instanceof JCFieldAccess) {
+            Symbol accessor = getSymbol(scope, null, elementUtils.getName(fa.selected.toString()), null);
+            if (accessor != null) {
+                return accessor;
+            }
+            accessor = getAccessor((JCFieldAccess) fa.selected, scope);
+            return getSymbol(((JCFieldAccess) fa.selected).name, accessor, scope);
+        }
+        if (fa.selected instanceof JCMethodInvocation) {
+            MethodSymbol s = getSymbol((JCMethodInvocation) fa.selected, scope);
+            Type returnType = s.getReturnType();
+            return returnType.asElement();
+        }
+        throw new NoSuchElementException(fa.toString());
     }
 
     public Name getName(final JCMethodInvocation mi) {
