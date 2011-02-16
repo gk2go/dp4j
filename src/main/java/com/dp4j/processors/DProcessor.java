@@ -37,7 +37,7 @@ import com.sun.tools.javac.code.Symtab;
 import com.sun.tools.javac.model.FilteredMemberList;
 import javax.lang.model.type.ArrayType;
 import org.apache.commons.lang.StringUtils;
-import com.dp4j.ast.Resolver;
+
 /**
  *
  * @author simpatico
@@ -55,7 +55,7 @@ public abstract class DProcessor extends AbstractProcessor {
     protected Types typeUtils;
     protected Symtab symTable;
     protected TypeElement encClass;
-    protected Resolver rs;
+
 
     public JCNewArray getArray(Type t, java.util.List<JCExpression> args) {
         JCExpression[] toArray = args.toArray(new JCExpression[0]);
@@ -64,7 +64,10 @@ public abstract class DProcessor extends AbstractProcessor {
         final JCExpression dim = tm.Literal(args.size());
         com.sun.tools.javac.util.List<JCExpression> dims = com.sun.tools.javac.util.List.of(dim);
         return tm.NewArray(tExp, dims, toList);
+    }
 
+    public JCNewArray getArray(String t, java.util.List<JCExpression> args, CompilationUnitTree cut) {
+        return getArray(getType(t, cut, args), args);
     }
 
     protected void printMsg(final String msg, final Element e, final boolean warningsOnly) {
@@ -87,10 +90,10 @@ public abstract class DProcessor extends AbstractProcessor {
         return tm.VarDef(tm.Modifiers(Flags.FINAL), elementUtils.getName(varName), getId(idName), valueSetter);
     }
 
-//    public JCVariableDecl getVarDecl(String varName, String idName, String methodName, String stringParam, JCExpression[] params, Map<String, JCExpression> vars, CompilationUnitTree cut, Object packageName, com.sun.source.tree.Scope scope, JCStatement stmt, Collection<Symbol> varSyms) {
-//        final JCMethodInvocation valueSetter = (methodName != null) ? getMethodInvoc(methodName, stringParam, toList(params), vars, cut, packageName, scope, stmt, varSyms) : null;
-//        return tm.VarDef(tm.Modifiers(Flags.FINAL), elementUtils.getName(varName), getId(idName), valueSetter);
-//    }
+    public JCVariableDecl getVarDecl(String varName, String idName, String methodName, String stringParam, JCExpression[] params, Map<String, JCExpression> vars, CompilationUnitTree cut, Object packageName, com.sun.source.tree.Scope scope, JCStatement stmt, Collection<Symbol> varSyms) {
+        final JCMethodInvocation valueSetter = (methodName != null) ? getMethodInvoc(methodName, stringParam, toList(params), vars, cut, packageName, scope, stmt, varSyms) : null;
+        return tm.VarDef(tm.Modifiers(Flags.FINAL), elementUtils.getName(varName), getId(idName), valueSetter);
+    }
 
     public JCVariableDecl getArrayDecl(JCModifiers mods, final String varName, final String idName, final JCNewArray array) {
         return tm.VarDef(mods, elementUtils.getName(varName), getId(idName), array);
@@ -130,6 +133,28 @@ public abstract class DProcessor extends AbstractProcessor {
     }
     public final static String javaLangClass = "java.lang.Class";
 
+    public Symbol getSymbol(JCMethodInvocation mi, java.util.List<Type> args, Map<String, JCExpression> vars, CompilationUnitTree cut, Object packageName, com.sun.source.tree.Scope scope, JCStatement stmt, Collection<Symbol> varSyms) {
+        if (args == null) { //why args are passed as an arg in the first place? Posterity?
+            args = getArgs(mi, vars, cut, packageName, scope, stmt, varSyms);
+        }
+        final String meth = mi.meth.toString();
+        int dotI = meth.lastIndexOf(dot) + 1;
+        if (dotI < 1) {
+            dotI = 0;
+        }
+        String mName = meth.substring(dotI) + "(";
+        Symbol ms = contains(varSyms, mName, args, cut, packageName);
+        if (ms != null) {
+            return ms;
+        }
+        boolean a = mi.meth instanceof JCFieldAccess;
+        final JCFieldAccess fa = (JCFieldAccess) mi.meth;
+        mName = fa.getIdentifier().toString() + "(";
+        ClassSymbol cs = getAccessorClassSymbol(fa, vars, cut, packageName, scope, stmt, args, varSyms);
+        args = getArgs(mi, vars, cut, packageName, scope, stmt, varSyms);
+        return getMSymbol(cs, mName, args, cut, packageName);
+    }
+
     public JCExpression[] getTypes(java.util.List<VarSymbol> params) {
         int length = 0;
         if (params != null) {
@@ -138,12 +163,11 @@ public abstract class DProcessor extends AbstractProcessor {
         JCExpression[] exps = new JCExpression[length];
         int i = 0;
         for (VarSymbol param : params) {
-            Symbol boxedS = getBoxedSymbol(param);
+            String typeName = getBoxedType(param).toString();
             final Type type = param.type;
             JCExpression classExp;
             if (type.isPrimitive()) {
-                java.util.List<Symbol> enclosedElements = boxedS.getEnclosedElements();
-                Symbol symbol = rs.contains(enclosedElements, null, elementUtils.getName("TYPE"), null);
+                Symbol symbol = getSymbol(typeName, "TYPE");
                 JCExpression primitiveClass = tm.QualIdent(symbol);
                 classExp = primitiveClass;
             } else {
@@ -155,6 +179,74 @@ public abstract class DProcessor extends AbstractProcessor {
             exps[i++] = classExp;
         }
         return exps;
+    }
+
+    public String getQualifiedClassName(String className, final CompilationUnitTree cut, Object packageName) {
+        if (!className.contains(dot)) {
+            java.util.List<? extends ImportTree> imports = cut.getImports();
+            boolean imported = false;
+            for (ImportTree importTree : imports) {
+                if (importTree.toString().contains(dot + className + ";")) {
+                    Tree qualifiedIdentifier = importTree.getQualifiedIdentifier();
+                    className = qualifiedIdentifier.toString();
+                    imported = true;
+                    break;
+                }
+            }
+            if (!imported) {
+                String tmp = className;
+                if (packageName != null) {
+                    className = packageName.toString() + dot + className;
+                }
+                ClassSymbol te = getTypeElement(className);
+                if (te == null) { //must be java.lang,
+                    //FIXME: or some .* .. this is a good moment to try-catch
+                    return getQualifiedClassName("java.lang." + tmp, cut, packageName);
+                }
+            }
+        } else if (className.endsWith(".class")) {
+            className = javaLangClass;
+        }
+        return className;
+    }
+
+    public Type getReturnType(JCMethodInvocation mi, Map<String, JCExpression> vars, CompilationUnitTree cut, Object packageName, java.util.List<Type> args, com.sun.source.tree.Scope scope, JCStatement stmt, Collection<Symbol> varSyms) {
+        MethodSymbol symbol = (MethodSymbol) getSymbol(mi, args, vars, cut, packageName, scope, stmt, varSyms);
+        return symbol.getReturnType();
+    }
+
+    public MethodSymbol getMSymbol(Symbol className, String mName, java.util.List<Type> args, CompilationUnitTree cut, Object packageName) {
+        final ClassSymbol typ = (ClassSymbol) className;
+        FilteredMemberList allMembers = elementUtils.getAllMembers(typ);
+        Symbol ret = contains(allMembers, mName, args, cut, packageName);
+        if (ret == null) {
+            ret = contains(typ.getEnclosedElements(), mName, args, cut, packageName);
+        }
+        return (MethodSymbol) ret;
+    }
+
+    public MethodSymbol getMSymbol(String className, String mName, java.util.List<Type> args, CompilationUnitTree cut, Object packageName) {
+        final ClassSymbol typ = getTypeElement(className);
+        return getMSymbol(typ, mName, args, cut, packageName);
+    }
+
+    public Symbol contains(final Collection<Symbol> list, final String objName) {
+        for (Symbol symbol : list) {
+            String qualifiedName = symbol.toString();
+            if (objName.equals(qualifiedName)) {
+                return symbol;
+            }
+        }
+        return null;
+    }
+
+    public Symbol contains(final Collection<Symbol> list, final Name objName) {
+        for (Symbol symbol : list) {
+            if (objName.equals(symbol.name)) {
+                return symbol;
+            }
+        }
+        return null;
     }
     public final static String varArgsDots = "...";
 
@@ -174,6 +266,70 @@ public abstract class DProcessor extends AbstractProcessor {
         return ret;
     }
 
+    //Template method?
+    public Symbol contains(final Collection<Symbol> list, String mName, java.util.List<Type> args, CompilationUnitTree cut, Object packageName) {
+        Collection<Symbol> methodsWithSameName = getMethodsWithSameName(mName, list); //FIXME: either this method is used only with methods or methods are ended with (
+        for (Symbol ms : methodsWithSameName) {
+            final String qualifiedName = ms.toString();
+            int args1 = qualifiedName.indexOf("(") + 1;
+            if (args1 < 1) { //this is a field
+                assert (methodsWithSameName.size() == 1);
+                return ms;
+            }
+            int argsEnd = qualifiedName.indexOf(")");
+            final String typesLine = qualifiedName.substring(args1, argsEnd);
+            java.util.List<Type> types = getTypes(typesLine, cut, packageName);
+            if (args == null) {
+                args = Collections.EMPTY_LIST;
+            }
+            final boolean varArgs = typesLine.contains(varArgsDots);
+            if (types.size() == args.size() || varArgs && ((types.size() == args.size() + 1) || args.size() > types.size())) {
+                int i = 0;
+
+                boolean sameArgs = true;
+                for (Type varSymbol : types) {
+                    final boolean varArg = varSymbol instanceof VarArgType || varSymbol.toString().contains(varArgsDots);
+                    if (i >= args.size() && varArg) {
+                        break;
+                    }
+                    Type arg = args.get(i);
+                    if (differentArg(arg, varSymbol)) { //FIXME: choose method with closest subtype and cast only if necessary
+//                        Tip: Always pass the upper bound of the parameterized type when searching for a method.
+                        Type boxedType = getBoxedType(arg.asElement());
+                        if (arg.isPrimitive()) {
+                            Collection<Symbol> tmp = getSmallerList(methodsWithSameName, ms);
+                            Symbol s = contains(tmp, mName, args, cut, packageName);
+                            if (s != null) { //there's a method with the primitive signature. Return that.
+                                return s;
+                            }
+                            java.util.List<Type> boxedArgs = new ArrayList<Type>(args);
+                            boxedArgs.remove(i);
+                            boxedArgs.add(i, boxedType);
+                            s = contains(list, mName, boxedArgs, cut, packageName);
+                            if (s != null) {
+                                return s;
+                            }
+                        }
+                        if (varArg) {
+                            Type t = ((VarArgType) varSymbol).t;
+                            typeUtils.erasure(t);
+                            if (!differentArg(arg, t)) {
+                                continue;
+                            }
+                        }
+                        sameArgs = false;
+                        break;
+                    }
+                    i++;
+                }
+                if (sameArgs) {
+                    return ms;
+                }
+            }
+        }
+        return null;
+    }
+
     public Type getBoxedType(final Symbol s) {
         Type type = s.type;
         if (s.type.isPrimitive()) {
@@ -183,33 +339,27 @@ public abstract class DProcessor extends AbstractProcessor {
         return type;
     }
 
-    public Symbol getBoxedSymbol(Symbol primitive){
-        if(primitive.type.isPrimitive()){
-            primitive = (Symbol) typeUtils.boxedClass(primitive.type);
-        }
-        return primitive;
+    public JCMethodInvocation getMethodInvoc(final String methodName, final JCExpression param, final List<JCExpression> otherParams, Map<String, JCExpression> vars, CompilationUnitTree cut, Object packageName, com.sun.source.tree.Scope scope, JCStatement stmt, Collection<Symbol> varSyms) {
+        final JCExpression methodN = getIdAfterImporting(methodName);
+        final List<JCExpression> paramsList = injectBefore(otherParams.head, otherParams, param);
+        final JCMethodInvocation mi = tm.Apply(List.<JCExpression>nil(), methodN, paramsList);
+        java.util.List<Type> args = getArgs(mi, vars, cut, packageName, scope, stmt, varSyms);
+        mi.type = getReturnType(mi, vars, cut, packageName, args, scope, stmt, varSyms);
+        return mi;
     }
 
-//    public JCMethodInvocation getMethodInvoc(final String methodName, final JCExpression param, final List<JCExpression> otherParams, Map<String, JCExpression> vars, CompilationUnitTree cut, Object packageName, com.sun.source.tree.Scope scope, JCStatement stmt, Collection<Symbol> varSyms) {
-//        final JCExpression methodN = getIdAfterImporting(methodName);
-//        final List<JCExpression> paramsList = injectBefore(otherParams.head, otherParams, param);
-//        final JCMethodInvocation mi = tm.Apply(List.<JCExpression>nil(), methodN, paramsList);
-//        java.util.List<Type> args = getArgs(mi, vars, cut, packageName, scope, stmt, varSyms);
-//        //FIXME: set type
-//        return mi;
-//    }
-//
-//    public JCMethodInvocation getRefMethodInvoc(final String methodName, final Object param, final com.sun.tools.javac.util.List<JCExpression> otherParams, Map<String, JCExpression> vars, CompilationUnitTree cut, Object packageName, com.sun.source.tree.Scope scope, JCStatement stmt, Collection<Symbol> varSyms) {
-//        if (param instanceof JCExpression) {
-//            return getMethodInvoc(methodName, (JCExpression) param, otherParams, vars, cut, packageName, scope, stmt, varSyms);
-//        } else {
-//            return getMethodInvoc(methodName, (String) param, otherParams, vars, cut, packageName, scope, stmt, varSyms);
-//        }
-//    }
+    public JCMethodInvocation getRefMethodInvoc(final String methodName, final Object param, final com.sun.tools.javac.util.List<JCExpression> otherParams, Map<String, JCExpression> vars, CompilationUnitTree cut, Object packageName, com.sun.source.tree.Scope scope, JCStatement stmt, Collection<Symbol> varSyms) {
+        if (param instanceof JCExpression) {
+            return getMethodInvoc(methodName, (JCExpression) param, otherParams, vars, cut, packageName, scope, stmt, varSyms);
+        } else {
+            return getMethodInvoc(methodName, (String) param, otherParams, vars, cut, packageName, scope, stmt, varSyms);
+        }
+    }
 
-//    public JCMethodInvocation getMethodInvoc(String methodName, String param, final com.sun.tools.javac.util.List<JCExpression> otherParams, Map<String, JCExpression> vars, CompilationUnitTree cut, Object packageName, com.sun.source.tree.Scope scope, JCStatement stmt, Collection<Symbol> varSyms) {
-//        return getMethodInvoc(methodName, tm.Literal(param), otherParams, vars, cut, packageName, scope, stmt, varSyms);
-//    }
+    public JCMethodInvocation getMethodInvoc(String methodName, String param, final com.sun.tools.javac.util.List<JCExpression> otherParams, Map<String, JCExpression> vars, CompilationUnitTree cut, Object packageName, com.sun.source.tree.Scope scope, JCStatement stmt, Collection<Symbol> varSyms) {
+        return getMethodInvoc(methodName, tm.Literal(param), otherParams, vars, cut, packageName, scope, stmt, varSyms);
+    }
+
     public JCMethodInvocation getRefMethodInvoc(final String methodName, final Object param) {
         if (param instanceof JCExpression) {
             return getMethodInvoc(methodName, (JCExpression) param);
@@ -265,6 +415,7 @@ public abstract class DProcessor extends AbstractProcessor {
     public JCExpression getId(final Name typeName) {
         return getId(typeName.toString());
     }
+
     protected JCExpression thisExp;
 
     @Override
@@ -365,6 +516,15 @@ public abstract class DProcessor extends AbstractProcessor {
         }
         return lb.toList();
     }
+//
+//    public static <T, V> List<T> castList(final List<V> params) {
+//        final ListBuffer<T> lb = ListBuffer.lb();
+//        for (V param : params) {
+//            lb.append((T) param);
+//        }
+//        final List<T> paramsList = lb.toList();
+//        return paramsList;
+//    }
 
     public <T> List<String> toString(final java.util.List<T> params) {
         final ListBuffer<String> lb = ListBuffer.lb();
@@ -375,6 +535,73 @@ public abstract class DProcessor extends AbstractProcessor {
     }
 
     protected abstract void processElement(final Element e, TypeElement ann, boolean warningsOnly);
+
+    public Type getType(String type, CompilationUnitTree cut, Object packageName) {
+        if (type.equals(StringUtils.EMPTY)) {
+            return Type.noType;
+        }
+        ClassSymbol typeElement = getTypeElement(type);
+        final Type t;
+        typeElement = getTypeElement(getQualifiedClassName(type, cut, packageName));
+
+        if (typeElement == null) {
+            if (type.endsWith(varArgsDots) || type.endsWith(arrayBrac)) {
+                if (type.contains(varArgsDots)) {
+                    type = type.replace(varArgsDots, StringUtils.EMPTY);
+                    Type com = getType(type, cut, packageName);
+                    return new VarArgType(typeUtils.getArrayType(com));
+                }
+                if (type.contains(arrayBrac)) {
+                    type = type.replace(arrayBrac, StringUtils.EMPTY);
+                }
+                Type com = getType(type, cut, packageName);
+                return (Type) typeUtils.getArrayType(com);
+            }
+            int typeParamIndex = type.indexOf("<") + 1;
+            if (typeParamIndex > 0) {
+                final int paramsEnd = type.lastIndexOf(">");
+                final String typeParamsLine = type.substring(typeParamIndex, paramsEnd);
+                final java.util.List<Type> typeParams = getTypes(typeParamsLine, cut, packageName);
+                String paramsLess = type.replace("<" + typeParamsLine + ">", StringUtils.EMPTY);
+                TypeSymbol paramsLessType = getType(paramsLess, cut, packageName).asElement();
+                DeclaredType declaredType = typeUtils.getDeclaredType((TypeElement) paramsLessType, typeParams.toArray(new Type[0]));
+                return (Type) declaredType;
+            }
+            if (type.contains("?")) {
+                if (type.equals("?")) {
+                    return (Type) typeUtils.getWildcardType(null, null);
+                }
+                int extendsIndex = type.indexOf(" extends ") + 9;
+                if (extendsIndex > 8) {
+                    String ext = type.substring(extendsIndex);
+                    Type extType = getType(ext, cut, packageName);
+                    return (Type) typeUtils.getWildcardType(extType, null);
+                } //FIXME: do the same for super
+                //FIXME: do the same for super
+                //FIXME: do the same for super
+                //FIXME: do the same for super
+            }
+            if (type.equals("T")) {
+                return getType("?", cut, packageName);
+            }
+            t = (Type) typeUtils.getPrimitiveType(TypeKind.valueOf(type.toUpperCase()));
+        } else {
+            t = typeElement.type;
+        }
+        return t;
+    }
+
+    public java.util.List<Type> getTypes(final String argsLine, CompilationUnitTree cut, Object packageName) {
+        String[] args = argsLine.split(",");
+        java.util.List<Type> types = new ArrayList<Type>();
+        for (String type : args) {
+            Type t = getType(type, cut, packageName);
+            if (!t.equals(Type.noType)) {
+                types.add(t);
+            }
+        }
+        return types;
+    }
 
     public DeclaredType getDeclaredType(String className) {
         ClassSymbol typ = getTypeElement(className);
@@ -387,6 +614,126 @@ public abstract class DProcessor extends AbstractProcessor {
         }
         final ClassSymbol typ = elementUtils.getTypeElement(className);
         return typ;
+    }
+
+    public String getClassNameOfAccessor(JCFieldAccess fa, Map<String, JCExpression> vars, CompilationUnitTree cut, Object packageName, com.sun.source.tree.Scope scope, JCStatement stmt, java.util.List<Type> args, Collection<Symbol> varSyms) {
+        final JCExpression exp = fa.getExpression();
+        String className = exp.toString();
+        if (exp instanceof JCNewClass) {//constructed instance on the fly
+            final JCNewClass nc = (JCNewClass) exp;
+            final JCExpression clas = nc.clazz;
+            if (clas != null) {
+                className = clas.toString();
+            }
+        } else if (exp instanceof JCIdent) {
+            //is an instance or static
+            final JCIdent id = (JCIdent) exp;
+            className = id.name.toString();
+            final ClassSymbol typ = getTypeElement(className);
+            if (typ == null) {
+                final JCExpression get = vars.get(className);
+                if (get != null) {
+                    //is instance
+                    className = get.toString();
+                } //else is static
+            } else {
+                className = typ.fullname.toString();
+            }
+        } else if (exp instanceof JCMethodInvocation) {
+            JCMethodInvocation mi = (JCMethodInvocation) exp;
+
+            className = getReturnType(mi, vars, cut, packageName, args, scope, stmt, varSyms).toString();
+            //FIXME: what about chains and args of the method?
+        }
+        return getQualifiedClassName(className, cut, packageName);
+    }
+
+    public ClassSymbol getClassSymbol(JCExpression exp, Map<String, JCExpression> vars, CompilationUnitTree cut, Object packageName, com.sun.source.tree.Scope scope, JCStatement stmt, java.util.List<Type> args, Collection<Symbol> varSyms) {
+        String className = exp.toString().toString().replace(arrayBrac, StringUtils.EMPTY);
+        if (exp instanceof JCNewClass) { //constructed instance on the fly
+            final JCNewClass nc = (JCNewClass) exp;
+            final JCExpression clas = nc.clazz;
+            className = clas.toString();
+        } else if (exp instanceof JCIdent) {
+            //is an instance or static
+            final JCIdent id = (JCIdent) exp;
+            className = id.name.toString();
+            ClassSymbol typ = getTypeElement(className);
+            if (typ == null) {
+                typ = getTypeElement(getQualifiedClassName(className, cut, packageName));
+                if (typ != null) {
+                    return typ;
+                }
+
+                Symbol s = contains(varSyms, className, Collections.EMPTY_LIST, cut, packageName);
+                if (s == null) {
+                    final JCExpression get = vars.get(className);
+                    if (get != null) {
+                        //is instance
+                        if (get.type != null && get.type != null && get.type.tsym != null) {
+                            return (ClassSymbol) get.type.tsym;
+                        }
+                        className = get.toString();
+                    } //else is static
+                } else {
+                    boolean f = s instanceof ClassSymbol;
+                    if (f) {
+                        return (ClassSymbol) s;
+                    } else {
+                        return getTypeElement(s.type.toString());
+                    }
+                }
+            } else {
+                return typ;
+            }
+        } else if (exp instanceof JCMethodInvocation) {
+            JCMethodInvocation mi = (JCMethodInvocation) exp;
+            args = getArgs(mi, vars, cut, packageName, scope, stmt, varSyms);
+            className = getReturnType(mi, vars, cut, packageName, args, scope, stmt, varSyms).toString();
+            //FIXME: what about chains and args of the method?
+        } else if (exp instanceof JCFieldAccess) {
+            Type type = getType((JCFieldAccess) exp, vars, cut, packageName, scope, stmt, args, varSyms);
+            return (ClassSymbol) type.tsym;
+        }
+        return (ClassSymbol) getType(getQualifiedClassName(className, cut, packageName), cut, packageName).tsym;
+    }
+
+    public ClassSymbol getAccessorClassSymbol(JCFieldAccess fa, Map<String, JCExpression> vars, CompilationUnitTree cut, Object packageName, com.sun.source.tree.Scope scope, JCStatement stmt, java.util.List<Type> args, Collection<Symbol> varSyms) {
+        final JCExpression exp = fa.getExpression();
+        return getClassSymbol(exp, vars, cut, packageName, scope, stmt, args, varSyms);
+    }
+
+    public Type getType(JCFieldAccess fa, Map<String, JCExpression> vars, CompilationUnitTree cut, Object packageName, com.sun.source.tree.Scope scope, JCStatement stmt, java.util.List<Type> args, Collection<Symbol> varSyms) {
+        final Symbol s = getSymbol(fa, vars, cut, packageName, scope, args, stmt, varSyms);
+        return s.type;
+    }
+
+    public Symbol getSymbol(JCFieldAccess fa, Map<String, JCExpression> vars, CompilationUnitTree cut, Object packageName, com.sun.source.tree.Scope scope, java.util.List<Type> args, JCStatement stmt, Collection<Symbol> varSyms) {
+        ClassSymbol typ = getTypeElement(fa.toString());
+        if (typ != null) {
+            return typ;
+        }
+
+        ClassSymbol cs = getAccessorClassSymbol(fa, vars, cut, packageName, scope, stmt, args, varSyms);
+        final String objName = fa.name.toString();
+        return getSymbol(cs, objName);
+    }
+
+    public Symbol getSymbol(final ClassSymbol typ, final String objName) {
+        if (objName.equals(com.dp4j.processors.DProcessor.clazz)) {
+            return getTypeElement(com.dp4j.processors.DProcessor.javaLangClass);
+        }
+        FilteredMemberList allMembers = elementUtils.getAllMembers(typ);
+        Symbol ret = contains(allMembers, objName);
+        if (ret == null) {
+            ret = contains(typ.getEnclosedElements(), objName);
+        }
+        return ret;
+    }
+
+    public Symbol getSymbol(final String className, final String objName) {
+        final ClassSymbol typ = getTypeElement(className);
+        return getSymbol(typ, objName);
     }
 
     public boolean sameArg(Type arg, Type varSymbol) {
@@ -414,24 +761,85 @@ public abstract class DProcessor extends AbstractProcessor {
         return tmp;
     }
 
-//    public java.util.List<Type> getArgs(final JCMethodInvocation mi, final Map<String, JCExpression> vars, final CompilationUnitTree cut, Object packageName, com.sun.source.tree.Scope scope, JCStatement stmt, Collection<Symbol> varSyms) {
-//        java.util.List<Type> args = new ArrayList<Type>();
-//        if (!mi.args.isEmpty()) {
-//            for (JCExpression arg : mi.args) {
-//                java.util.List<Type> argArgs;
-//                if (arg instanceof JCMethodInvocation) {
-//                    argArgs = null; //call will figure out
-//                } else {
-//                    argArgs = Collections.EMPTY_LIST;
-//                    stmt = null;
-//                }
-//                Type t = getType(arg, vars, cut, packageName, scope, stmt, argArgs, varSyms);
-//                if (t != null) {
-//                    args.add(t);
-//                }
-//            }
-//        }
-//        return args;
-//    }
+    public java.util.List<Type> getArgs(final JCMethodInvocation mi, final Map<String, JCExpression> vars, final CompilationUnitTree cut, Object packageName, com.sun.source.tree.Scope scope, JCStatement stmt, Collection<Symbol> varSyms) {
+        java.util.List<Type> args = new ArrayList<Type>();
+        if (!mi.args.isEmpty()) {
+            for (JCExpression arg : mi.args) {
+                java.util.List<Type> argArgs;
+                if (arg instanceof JCMethodInvocation) {
+                    argArgs = null; //call will figure out
+                } else {
+                    argArgs = Collections.EMPTY_LIST;
+                    stmt = null;
+                }
+                Type t = getType(arg, vars, cut, packageName, scope, stmt, argArgs, varSyms);
+                if (t != null) {
+                    args.add(t);
+                }
+            }
+        }
+        return args;
+    }
 
+    protected Type getType(JCExpression ifExp, Map<String, JCExpression> vars, final CompilationUnitTree cut, Object packageName, com.sun.source.tree.Scope scope, JCStatement stmt, java.util.List<Type> args, Collection<Symbol> varSyms) {
+        if (ifExp instanceof JCFieldAccess) {
+            final JCFieldAccess fa = (JCFieldAccess) ifExp;
+            ifExp.type = getType(fa, vars, cut, packageName, scope, stmt, args, varSyms);
+        } else if (ifExp instanceof JCMethodInvocation) {
+            final JCMethodInvocation mi = (JCMethodInvocation) ifExp;
+            args = getArgs(mi, vars, cut, packageName, scope, stmt, varSyms);
+            ifExp.type = ((MethodSymbol) getSymbol(mi, args, vars, cut, packageName, scope, stmt, varSyms)).getReturnType();
+        } else if (ifExp instanceof JCNewClass) {
+            //TODO: it's a method too! handle similarly
+            ClassSymbol cs = getClassSymbol(ifExp, vars, cut, packageName, scope, stmt, args, varSyms);
+            ifExp.type = cs.type;
+        } else if (ifExp instanceof JCTypeCast) {
+            JCTypeCast cast = (JCTypeCast) ifExp;
+            cast.type = getType(cast.expr, vars, cut, packageName, scope, stmt, args, varSyms);
+            ifExp.type = cast.type;
+        } else if (ifExp instanceof JCParens) {
+            JCParens parensExp = (JCParens) ifExp;
+            ifExp.type = getType(parensExp.expr, vars, cut, packageName, scope, stmt, args, varSyms);
+        } else if (ifExp instanceof JCLiteral) {
+            ifExp.type = getType((JCLiteral) ifExp);
+        } else if (ifExp instanceof JCIdent) {
+            final String exp = ifExp.toString();
+            final Symbol sym = contains(varSyms, exp, args, cut, packageName);
+            if (sym != null) {
+                ifExp.type = sym.type;
+                return ifExp.type;
+            }
+            JCExpression get = vars.get(exp);
+            if (get == null) {
+                Type type = getType(exp.toString(), cut, packageName);
+                return type;
+            }
+            ifExp.type = get.type;
+            if (ifExp.type != null) {
+                return ifExp.type;
+            }
+            ifExp.type = getType(get.toString(), cut, packageName);
+        } else if (ifExp instanceof JCPrimitiveTypeTree) {
+            return getType(ifExp.toString(), cut, packageName);
+        } else if (ifExp instanceof JCBinary) {
+            return getType(((JCBinary) ifExp).lhs, vars, cut, packageName, scope, stmt, args, varSyms);
+        } else if (ifExp instanceof JCNewArray) {
+            Type eType = getType(((JCNewArray) ifExp).elemtype, vars, cut, packageName, scope, stmt, args, varSyms);
+            return (Type) typeUtils.getArrayType(eType);
+        }
+        return ifExp.type;
+    }
+
+    public Type getType(JCLiteral ifExp) {
+        final int typetag = (ifExp).typetag;
+        final Object value = (ifExp).value;
+        if (value == null) {
+            return (Type) typeUtils.getNullType();
+        }
+        final JCLiteral Literal = tm.Literal(value);
+        if (typetag == TypeTags.BOOLEAN) { //bug fix http://bugs.sun.com/bugdatabase/view_bug.do?bug_id=6504896
+            Literal.setType(symTable.booleanType.constType(value));
+        }
+        return Literal.type;
+    }
 }

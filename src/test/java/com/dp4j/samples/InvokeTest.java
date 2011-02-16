@@ -5,7 +5,7 @@
 package com.dp4j.samples;
 
 import org.junit.Test;
-import java.lang.*;
+
 /**
  *
  * @author simpatico
@@ -18,7 +18,5 @@ public class InvokeTest {
         System.out.println();
         System.out.getClass().getClassLoader().toString().contentEquals("cs");
         System.class.toString().contentEquals("cds");
-        int[] ints = {4,32,34};
-        System.out.println(ints);
     }
 }

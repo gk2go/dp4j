@@ -23,8 +23,6 @@ import com.sun.tools.javac.code.*;
 import com.sun.tools.javac.code.Symbol.ClassSymbol;
 import com.sun.tools.javac.code.Symbol.MethodSymbol;
 import com.sun.tools.javac.util.List;
-import com.sun.tools.javac.code.Symtab;
-import javax.lang.model.util.Types;
 
 /**
  *
@@ -36,19 +34,15 @@ public class Resolver {
     final Trees trees;
     private final TreeMaker tm;
     private final TypeElement encClass;
-    protected final Types typeUtils;
-    protected final Symtab symTable;
 
-    public Resolver(JavacElements elementUtils, final Trees trees, final TreeMaker tm, TypeElement encClass, final Types typeUtils, final Symtab symTable) {
+    public Resolver(JavacElements elementUtils, final Trees trees, final TreeMaker tm, TypeElement encClass) {
         this.elementUtils = elementUtils;
         this.trees = trees;
         this.tm = tm;
         this.encClass = encClass;
-        this.typeUtils = typeUtils;
-        this.symTable = symTable;
     }
 
-    private Symbol getSymbol(Scope scope, java.util.List<Symbol> typeParams, Name varName, java.util.List<Symbol> args) {
+    public Symbol getSymbol(Scope scope, java.util.List<Symbol> typeParams, Name varName, java.util.List<Symbol> args) {
         Symbol t = contains(scope, typeParams, varName, args); //first lookup scope for all public identifiers
         TypeElement cl = scope.getEnclosingClass();
         while (t == null && cl != null) { //lookup hierarchy for inacessible identifiers too
@@ -58,12 +52,15 @@ public class Resolver {
                 cl = (TypeElement) ((Type) superclass).asElement();
             }
         }
+        if (t == null) {
+            throw new NoSuchElementException(varName.toString());
+        }
         return t;
     }
 
     public Symbol getSymbol(JCFieldAccess fa, Symbol accessor, Scope scope) {
         if (fa.selected instanceof JCIdent) {
-            if (fa.name.contentEquals("class")) {
+            if(fa.name.contentEquals("class")){
                 JCExpression acccessor = tm.Select(fa.selected, elementUtils.getName("getClass"));
                 JCMethodInvocation mi = tm.Apply(List.<JCExpression>nil(), acccessor, List.<JCExpression>nil());
                 return getSymbol(mi, scope).getReturnType().tsym;
@@ -88,19 +85,12 @@ public class Resolver {
      * @param scope
      * @return
      */
-    public MethodSymbol getSymbol(final JCMethodInvocation mi, final Scope scope) {
+    public MethodSymbol getSymbol(final JCMethodInvocation mi, final Scope scope){
         Symbol invTarget = getInvokationTarget(mi, scope);
         Name mName = getName(mi);
         java.util.List<Symbol> args = getArgs(mi.args, scope);
         java.util.List<Symbol> typeParams = getArgs(mi.typeargs, scope);
-        if (invTarget instanceof VarSymbol) {//this, super,
-            invTarget = invTarget.enclClass();
-        }
-        MethodSymbol ms = (MethodSymbol) contains(elementUtils.getAllMembers((TypeElement) invTarget), typeParams, mName, args);
-        if (ms == null) {
-            throw new NoSuchElementException(mi.toString());
-        }
-        return ms;
+        return (MethodSymbol) contains(elementUtils.getAllMembers((TypeElement) invTarget), typeParams, mName, args);
     }
 
     public Symbol getSymbol(JCExpression exp, Scope scope) {
@@ -115,38 +105,21 @@ public class Resolver {
             System.out.println(exp);
         } else if (exp instanceof JCMethodInvocation) {
             return getSymbol((JCMethodInvocation) exp, scope);
-        } else if (exp instanceof JCLiteral) {
-            return getType((JCLiteral) exp).tsym;
         }
         throw new RuntimeException(exp.toString());
     }
 
-    public Type getType(JCLiteral ifExp) {
-        final int typetag = (ifExp).typetag;
-        final Object value = (ifExp).value;
-        if (value == null) {
-            return (Type) typeUtils.getNullType();
-        }
-        final JCLiteral Literal = tm.Literal(value);
-        if (typetag == TypeTags.BOOLEAN) { //bug fix http://bugs.sun.com/bugdatabase/view_bug.do?bug_id=6504896
-            Literal.setType(symTable.booleanType.constType(value));
-        }
-        return Literal.type;
-    }
-
-    public Symbol getAccessor(JCFieldAccess fa, Scope scope) {
+    public Symbol getAccessor(JCFieldAccess fa, Scope scope){
         if (fa.selected instanceof JCIdent) {
             Symbol accessor = getSymbol(scope, null, ((JCIdent) fa.selected).name, null);
             return accessor;
         }
         if (fa.selected instanceof JCFieldAccess) {
-            Symbol accessor = getSymbol(scope, null, elementUtils.getName(fa.selected.toString()), null);
-            if(accessor != null) return accessor;
-            accessor = getAccessor((JCFieldAccess) fa.selected, scope);
-            return getSymbol((JCFieldAccess)fa.selected, accessor, scope).type.tsym;
+            Symbol accessor = getAccessor((JCFieldAccess) fa.selected, scope);
+            return getSymbol(fa, accessor, scope);
         }
-        if (fa.selected instanceof JCMethodInvocation) {
-            return getInvokationTarget((JCMethodInvocation) fa.selected, scope);
+        if(fa.selected instanceof JCMethodInvocation){
+            return getInvokationTarget((JCMethodInvocation)fa.selected, scope);
         }
         throw new NoSuchElementException(fa.toString());
     }
@@ -179,12 +152,12 @@ public class Resolver {
         }
         if (mi.meth instanceof JCFieldAccess) {
             return (Symbol) getAccessor((JCFieldAccess) mi.meth, scope);
-        } else if (mi.meth instanceof JCNewClass) {
+        } else if (mi.meth instanceof JCNewClass){
             final JCNewClass nc = (JCNewClass) mi.meth;
             final JCExpression clas = nc.clazz;
             Symbol symbol = getSymbol(scope, null, getName(clas), null);
             return symbol;
-        } else if (mi.meth instanceof JCMethodInvocation) {
+        } else if (mi.meth instanceof JCMethodInvocation){
             MethodSymbol symbol = getSymbol(mi, scope);
             return symbol.getReturnType().tsym;
         }
@@ -201,7 +174,7 @@ public class Resolver {
         return t;
     }
 
-    public Symbol contains(Iterable<? extends Element> list, java.util.List<Symbol> typeParams, Name varName, java.util.List<Symbol> args) {
+    private Symbol contains(Iterable<? extends Element> list, java.util.List<Symbol> typeParams, Name varName, java.util.List<Symbol> args) {
         for (Element e : list) {
             final Name elName;
             if (e instanceof ClassSymbol) {
@@ -236,20 +209,6 @@ public class Resolver {
     }
 
     private boolean sameArgs(List<? extends Symbol> formal, java.util.List<Symbol> actual) {
-        if (formal == null || actual == null) {
-
-            if (formal == null && actual == null) {
-                return true;
-            } else {
-                if (formal != null) {
-                    if (formal.size() == 1) {
-                        Symbol get = formal.get(0);
-                        //FIXME: handle varargs
-                    }
-                }
-                return false;
-            }
-        }
         int i = 0;
         for (Symbol symbol : actual) {
             Symbol ts = formal.get(i++);
