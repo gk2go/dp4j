@@ -109,7 +109,7 @@ public class Resolver {
             if (symbol != null) {
                 return symbol;
             }
-            Symbol acc = getAccessor((JCFieldAccess) exp, scope).type.tsym;
+            Symbol acc = getAccessor((JCFieldAccess) exp, scope);
             return getSymbol(((JCFieldAccess) exp).name, acc, scope);
         } else if (exp instanceof JCNewClass) {
             final JCNewClass nc = (JCNewClass) exp;
@@ -166,7 +166,7 @@ public class Resolver {
 //            getSymbol(scope, null, elementUtils.getName(fa.selected.toString()), null);
             return getSymbol(arr.elemtype, scope);
         }
-        Symbol s = getSymbol(fa.selected, scope);
+        Symbol s = getSymbol(fa.selected, scope).enclClass();
         if (s == null) {
             throw new NoSuchElementException(fa.toString());
         }
