@@ -7,7 +7,7 @@ package com.dp4j.samples;
 
 public class IfReflectedTest extends WithAccessibilePrivateDataInstance {
 
-//    @org.junit.Test
+    @org.junit.Test
     public void t() throws java.lang.ClassNotFoundException, java.lang.NoSuchFieldException, java.lang.IllegalAccessException {
         final java.lang.Class privateClassClass = java.lang.Class.forName("com.dp4j.samples.PrivateData");
         final java.lang.reflect.Field iField = privateClassClass.getDeclaredField("i");

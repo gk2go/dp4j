@@ -57,9 +57,6 @@ public class Resolver {
                 cl = (TypeElement) ((Type) superclass).asElement();
             }
         }
-        if (t == null) {
-            throw new NoSuchElementException(varName.toString());
-        }
         return t;
     }
 
@@ -121,6 +118,10 @@ public class Resolver {
         } else if (exp instanceof JCArrayTypeTree) {
             JCArrayTypeTree arr = (JCArrayTypeTree) exp;
             return getSymbol(arr.elemtype, scope);
+        } else if (exp instanceof JCParens){
+            return getSymbol(((JCParens)exp).expr, scope);
+        } else if (exp instanceof JCTypeCast){
+            return getSymbol(((JCTypeCast)exp).expr, scope);
         }
         throw new RuntimeException(exp.toString());
     }
@@ -162,7 +163,9 @@ public class Resolver {
             return accessor;
         }
         if (fa.selected instanceof JCFieldAccess) {
-            Symbol accessor = getAccessor((JCFieldAccess) fa.selected, scope);
+            Symbol accessor = getSymbol(scope, null, elementUtils.getName(fa.selected.toString()), null);
+            if(accessor != null) return accessor;
+            accessor = getAccessor((JCFieldAccess) fa.selected, scope);
             return getSymbol(((JCFieldAccess) fa.selected).name, accessor, scope);
         }
         if (fa.selected instanceof JCMethodInvocation) {
@@ -284,7 +287,7 @@ public class Resolver {
             for (Symbol symbol : actual) {
                 if (actual.size() > i) {
                     Symbol ts = formal.get(i++);
-                    
+
                     //subclass stuff
                 }else{
 

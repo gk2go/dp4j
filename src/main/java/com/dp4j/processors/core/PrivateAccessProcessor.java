@@ -356,7 +356,11 @@ public class PrivateAccessProcessor extends DProcessor {
             return accessible;
         } else if (exp instanceof JCLiteral) {
             return true;
-        } else {
+        } else if(exp instanceof JCParens){
+            return isAccessible(((JCParens)exp).expr, scope);
+        } else if (exp instanceof JCTypeCast){
+            return isAccessible(((JCTypeCast)exp).expr, scope);
+        }else {
             throw new RuntimeException("is this accessible " + exp);
         }
         return isAccessible(s, scope, accessor);
