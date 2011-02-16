@@ -5,7 +5,6 @@
 package com.dp4j.samples;
 
 import org.junit.Test;
-import com.dp4j.samples.*;
 /**
  *
  * @author simpatico

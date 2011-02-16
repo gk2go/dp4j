@@ -22,7 +22,9 @@ import javax.lang.model.type.*;
 import javax.tools.Diagnostic.Kind.*;
 import org.apache.commons.lang.*;
 import com.sun.source.tree.Scope;
-
+import com.sun.tools.javac.api.JavacScope;
+import com.sun.tools.javac.tree.JCTree.TypeBoundKind;
+import com.sun.tools.javac.code.Type.WildcardType;
 /**
  *
  * @author simpatico
@@ -61,7 +63,10 @@ public class PrivateAccessProcessor extends DProcessor {
     @Override
     protected void processElement(Element e, TypeElement ann, boolean warningsOnly) {
         encClass = (TypeElement) e.getEnclosingElement();
-        rs = new Resolver(elementUtils, trees, tm, encClass, typeUtils, symTable);
+        PackageElement packageOf = elementUtils.getPackageOf(e);
+        List<? extends Element> pkgClasses = packageOf.getEnclosedElements();
+        rs = new Resolver(elementUtils, trees, tm, encClass, typeUtils, symTable, pkgClasses);
+
         final JCMethodDecl tree = (JCMethodDecl) elementUtils.getTree(e);
         final TreePath treePath = trees.getPath(e);
 
@@ -74,6 +79,7 @@ public class PrivateAccessProcessor extends DProcessor {
         }
 
         thisExp = tm.This((Type) encClass.asType());
+
         addAll(vars, varSyms, encClass);
 
         TypeElement superclass = getTypeElement(encClass.getSuperclass().toString());
@@ -90,6 +96,7 @@ public class PrivateAccessProcessor extends DProcessor {
         com.sun.source.tree.Scope scope = trees.getScope(treePath);
 
         final CompilationUnitTree cut = treePath.getCompilationUnit();
+
         List<? extends ImportTree> imports = cut.getImports();
         for (ImportTree importTree : imports) {
             if (importTree.isStatic()) {
@@ -109,6 +116,7 @@ public class PrivateAccessProcessor extends DProcessor {
             }
         }
         ExpressionTree packageName = cut.getPackageName();
+
         tree.body.stats = processElement(tree.body.stats, scope, cut, packageName, vars, varSyms);
         if (reflectionInjected) {
             tree.thrown = tree.thrown.append(getId("java.lang.ClassNotFoundException"));

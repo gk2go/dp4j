@@ -37,14 +37,16 @@ public class Resolver {
     private final TypeElement encClass;
     protected final Types typeUtils;
     protected final Symtab symTable;
+    private final java.util.List<? extends Element> pkgClasses;
 
-    public Resolver(JavacElements elementUtils, final Trees trees, final TreeMaker tm, TypeElement encClass, final Types typeUtils, final Symtab symTable) {
+    public Resolver(JavacElements elementUtils, final Trees trees, final TreeMaker tm, TypeElement encClass, final Types typeUtils, final Symtab symTable, final java.util.List<? extends Element> pkgClasses) {
         this.elementUtils = elementUtils;
         this.trees = trees;
         this.tm = tm;
         this.encClass = encClass;
         this.typeUtils = typeUtils;
         this.symTable = symTable;
+        this.pkgClasses = pkgClasses;
     }
 
     public Symbol getSymbol(Scope scope, List<JCExpression> typeParams, Name varName, List<JCExpression> args) {
@@ -244,7 +246,7 @@ public class Resolver {
     }
 
     private Symbol contains(Scope scope, java.util.List<? extends Symbol> typeParams, Name varName, java.util.List<Symbol> args) {
-        Symbol t = null;
+        Symbol t = contains(pkgClasses, typeParams, varName, args);
         while (t == null && scope != null) {
             Iterable<? extends Element> localElements = scope.getLocalElements();
             t = contains(localElements, typeParams, varName, args);
