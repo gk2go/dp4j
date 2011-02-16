@@ -23,6 +23,8 @@ import com.sun.tools.javac.code.*;
 import com.sun.tools.javac.code.Symbol.ClassSymbol;
 import com.sun.tools.javac.code.Symbol.MethodSymbol;
 import com.sun.tools.javac.util.List;
+import com.sun.tools.javac.code.Symtab;
+import javax.lang.model.util.Types;
 
 /**
  *
@@ -34,12 +36,17 @@ public class Resolver {
     final Trees trees;
     private final TreeMaker tm;
     private final TypeElement encClass;
+    protected final Types typeUtils;
+    protected final Symtab symTable;
 
-    public Resolver(JavacElements elementUtils, final Trees trees, final TreeMaker tm, TypeElement encClass) {
+    public Resolver(JavacElements elementUtils, final Trees trees, final TreeMaker tm, TypeElement encClass, final Types typeUtils, final Symtab symTable) {
         this.elementUtils = elementUtils;
         this.trees = trees;
         this.tm = tm;
         this.encClass = encClass;
+        this.typeUtils = typeUtils;
+        this.symTable = symTable;
+
     }
 
     public Symbol getSymbol(Scope scope, java.util.List<Symbol> typeParams, Name varName, java.util.List<Symbol> args) {
@@ -58,25 +65,20 @@ public class Resolver {
         return t;
     }
 
-    public Symbol getSymbol(JCFieldAccess fa, Symbol accessor, Scope scope) {
-        if (fa.selected instanceof JCIdent) {
-            if(fa.name.contentEquals("class")){
-                JCExpression acccessor = tm.Select(fa.selected, elementUtils.getName("getClass"));
-                JCMethodInvocation mi = tm.Apply(List.<JCExpression>nil(), acccessor, List.<JCExpression>nil());
-                return getSymbol(mi, scope).getReturnType().tsym;
-            }
-            java.util.List<Symbol> enclosedElements = accessor.getEnclosedElements();
-            for (Symbol symbol : enclosedElements) {
-                if (symbol.getQualifiedName().equals(fa.name)) {
-                    return symbol;
-                }
+    public Symbol getSymbol(Name varName, Symbol accessor, Scope scope) {
+        if (varName.contentEquals("class")) {
+            JCIdent id = tm.Ident(accessor);
+            JCExpression acccessor = tm.Select(id, elementUtils.getName("getClass"));
+            JCMethodInvocation mi = tm.Apply(List.<JCExpression>nil(), acccessor, List.<JCExpression>nil());
+            return getSymbol(mi, scope).getReturnType().tsym;
+        }
+        java.util.List<Symbol> enclosedElements = accessor.getEnclosedElements();
+        for (Symbol symbol : enclosedElements) {
+            if (symbol.getQualifiedName().equals(varName)) {
+                return symbol;
             }
         }
-        if (fa.selected instanceof JCFieldAccess) {
-            Symbol acc = getAccessor((JCFieldAccess) fa.selected, scope);
-            return getSymbol((JCFieldAccess) fa.selected, acc, scope);
-        }
-        throw new NoSuchElementException(fa.toString());
+        throw new NoSuchElementException(varName + " in "  + accessor);
     }
 
     /**
@@ -85,12 +87,20 @@ public class Resolver {
      * @param scope
      * @return
      */
-    public MethodSymbol getSymbol(final JCMethodInvocation mi, final Scope scope){
+    public MethodSymbol getSymbol(final JCMethodInvocation mi, final Scope scope) {
         Symbol invTarget = getInvokationTarget(mi, scope);
         Name mName = getName(mi);
         java.util.List<Symbol> args = getArgs(mi.args, scope);
         java.util.List<Symbol> typeParams = getArgs(mi.typeargs, scope);
-        return (MethodSymbol) contains(elementUtils.getAllMembers((TypeElement) invTarget), typeParams, mName, args);
+        if (invTarget instanceof VarSymbol) {//this, super,
+            invTarget = invTarget.type.tsym;
+        }
+        MethodSymbol ms = (MethodSymbol) contains(elementUtils.getAllMembers((TypeElement) invTarget), typeParams, mName, args);
+        if (ms == null) {
+            throw new NoSuchElementException(mi.toString());
+        }
+        return ms;
+
     }
 
     public Symbol getSymbol(JCExpression exp, Scope scope) {
@@ -99,27 +109,44 @@ public class Resolver {
         }
         if (exp instanceof JCFieldAccess) {
             Symbol acc = getAccessor((JCFieldAccess) exp, scope);
-            return getSymbol((JCFieldAccess) exp, acc, scope);
+            return getSymbol(((JCFieldAccess) exp).name, acc, scope);
         } else if (exp instanceof JCNewClass) {
             final JCNewClass nc = (JCNewClass) exp;
             System.out.println(exp);
         } else if (exp instanceof JCMethodInvocation) {
             return getSymbol((JCMethodInvocation) exp, scope);
+        } else if (exp instanceof JCLiteral) {
+            return getType((JCLiteral) exp).tsym;
         }
         throw new RuntimeException(exp.toString());
     }
 
-    public Symbol getAccessor(JCFieldAccess fa, Scope scope){
+    public Type getType(JCLiteral ifExp) {
+        final int typetag = (ifExp).typetag;
+        final Object value = (ifExp).value;
+        if (value == null) {
+            return (Type) typeUtils.getNullType();
+        }
+        final JCLiteral Literal = tm.Literal(value);
+        if (typetag == TypeTags.BOOLEAN) { //bug fix http://bugs.sun.com/bugdatabase/view_bug.do?bug_id=6504896
+            Literal.setType(symTable.booleanType.constType(value));
+        }
+        return Literal.type;
+    }
+
+    public Symbol getAccessor(JCFieldAccess fa, Scope scope) {
         if (fa.selected instanceof JCIdent) {
             Symbol accessor = getSymbol(scope, null, ((JCIdent) fa.selected).name, null);
             return accessor;
         }
         if (fa.selected instanceof JCFieldAccess) {
             Symbol accessor = getAccessor((JCFieldAccess) fa.selected, scope);
-            return getSymbol(fa, accessor, scope);
+            return getSymbol(((JCFieldAccess)fa.selected).name, accessor, scope);
         }
-        if(fa.selected instanceof JCMethodInvocation){
-            return getInvokationTarget((JCMethodInvocation)fa.selected, scope);
+        if (fa.selected instanceof JCMethodInvocation) {
+             MethodSymbol s = getSymbol((JCMethodInvocation)fa.selected, scope);
+            Type returnType = s.getReturnType();
+            return returnType.asElement();
         }
         throw new NoSuchElementException(fa.toString());
     }
@@ -151,13 +178,14 @@ public class Resolver {
             return getInvokationTarget(mi, scope);
         }
         if (mi.meth instanceof JCFieldAccess) {
-            return (Symbol) getAccessor((JCFieldAccess) mi.meth, scope);
-        } else if (mi.meth instanceof JCNewClass){
+            Symbol s = (Symbol) getAccessor((JCFieldAccess) mi.meth, scope);
+            return s;
+        } else if (mi.meth instanceof JCNewClass) {
             final JCNewClass nc = (JCNewClass) mi.meth;
             final JCExpression clas = nc.clazz;
             Symbol symbol = getSymbol(scope, null, getName(clas), null);
             return symbol;
-        } else if (mi.meth instanceof JCMethodInvocation){
+        } else if (mi.meth instanceof JCMethodInvocation) {
             MethodSymbol symbol = getSymbol(mi, scope);
             return symbol.getReturnType().tsym;
         }
@@ -174,7 +202,7 @@ public class Resolver {
         return t;
     }
 
-    private Symbol contains(Iterable<? extends Element> list, java.util.List<Symbol> typeParams, Name varName, java.util.List<Symbol> args) {
+    public Symbol contains(Iterable<? extends Element> list, java.util.List<Symbol> typeParams, Name varName, java.util.List<Symbol> args) {
         for (Element e : list) {
             final Name elName;
             if (e instanceof ClassSymbol) {
@@ -209,6 +237,21 @@ public class Resolver {
     }
 
     private boolean sameArgs(List<? extends Symbol> formal, java.util.List<Symbol> actual) {
+        if (formal == null || actual == null) {
+
+            if (formal == null && actual == null) {
+                return true;
+            } else {
+                if (formal != null) {
+                    if (formal.size() == 1) {
+                        Symbol get = formal.get(0);
+                        //FIXME: handle varargs
+                    }
+                }
+                return false;
+            }
+        }
+
         int i = 0;
         for (Symbol symbol : actual) {
             Symbol ts = formal.get(i++);
