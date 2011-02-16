@@ -71,6 +71,7 @@ public class Resolver {
             JCMethodInvocation mi = tm.Apply(List.<JCExpression>nil(), acccessor, List.<JCExpression>nil());
             return getSymbol(mi, scope).getReturnType().tsym;
         }
+        accessor = getTypeSymbol(accessor);
         java.util.List<Symbol> enclosedElements = accessor.getEnclosedElements();
         for (Symbol symbol : enclosedElements) {
             if (symbol.getQualifiedName().equals(varName)) {
@@ -115,8 +116,8 @@ public class Resolver {
             final JCNewClass nc = (JCNewClass) exp;
             final Name name = getName(nc.clazz);
             TypeElement cl = (TypeElement) getSymbol(scope, null, name, null);
-            java.util.List<Symbol> args = getArgs(nc.typeargs, scope);
-            java.util.List<Symbol> typeParams = getArgs(nc.args, scope);
+            java.util.List<Symbol> args = getArgs(nc.args, scope);
+            java.util.List<Symbol> typeParams = getArgs(nc.typeargs, scope);
             Symbol s = contains(cl.getEnclosedElements(), typeParams, elementUtils.getName("<init>"), args);
             return s;
         } else if (exp instanceof JCMethodInvocation) {
@@ -140,6 +141,10 @@ public class Resolver {
             return getSymbol(((JCParens) exp).expr, scope);
         } else if (exp instanceof JCTypeCast) {
             return getSymbol(((JCTypeCast) exp).expr, scope);
+        } else if (exp instanceof JCBinary) {
+            JCBinary bin = (JCBinary) exp;
+            Symbol s = getSymbol(bin.lhs, scope);
+            return getTypeSymbol(s);
         }
         throw new RuntimeException(exp.toString());
     }
@@ -166,7 +171,8 @@ public class Resolver {
 //            getSymbol(scope, null, elementUtils.getName(fa.selected.toString()), null);
             return getSymbol(arr.elemtype, scope);
         }
-        Symbol s = getSymbol(fa.selected, scope).enclClass();
+        Symbol s = getSymbol(fa.selected, scope);
+        s = s.enclClass();
         if (s == null) {
             throw new NoSuchElementException(fa.toString());
         }
@@ -225,10 +231,13 @@ public class Resolver {
 
     public Symbol getInvokationTarget(JCMethodInvocation mi, Scope scope) {
         if (mi.meth instanceof JCIdent) { //method name ==> invoked as member of enclosing class
-            JCExpression thisExp = tm.This((Type) encClass.asType());
-            JCExpression acccessor = tm.Select(thisExp, getName(mi));
-            mi = tm.Apply(mi.typeargs, acccessor, mi.args);
-            return getInvokationTarget(mi, scope);
+            Symbol symbol = getSymbol(scope, mi.typeargs, getName(mi), mi.args);
+            if(elementUtils.getAllMembers((TypeElement) encClass).contains(symbol)){
+                JCExpression thisExp = tm.This((Type) encClass.asType());
+                return getSymbol(thisExp, scope);
+            }else{ //static import
+                return symbol.owner;
+            }
         }
         if (mi.meth instanceof JCFieldAccess) {
             Symbol s = (Symbol) getAccessor((JCFieldAccess) mi.meth, scope);
@@ -306,6 +315,13 @@ public class Resolver {
         return null;
     }
 
+    public Symbol getTypeSymbol(Symbol s) {
+        if (!s.isConstructor() && !(s instanceof ClassSymbol)) {
+            s = s.type.tsym;
+        }
+        return s;
+    }
+
     public java.util.List<Symbol> getArgs(List<JCExpression> args, Scope scope) {
         if (args == null) {
             return null;
@@ -313,6 +329,7 @@ public class Resolver {
         java.util.List<Symbol> syms = new ArrayList<Symbol>();
         for (JCExpression arg : args) {
             Symbol s = getSymbol(arg, scope);
+            s = getTypeSymbol(s);
             syms.add(s);
         }
         return syms;

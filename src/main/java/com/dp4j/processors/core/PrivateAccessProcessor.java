@@ -163,11 +163,9 @@ public class PrivateAccessProcessor extends DProcessor {
             boolean accessible = isAccessible(varDec.init, scope);
             if (!accessible) {
                 ExpProcResult processCond = processCond(varDec.init, vars, cut, packageName, scope, stats, stmt, null, varSyms);
-//                varDec.type = varDec.sym.asType();
                 addVar(vars, varDec, varSyms);
-
                 Symbol s = rs.getSymbol(varDec.init, scope);
-                if (differentArg(s.type, varDec.type)) {
+                if (differentArg(s.type, varDec.sym.type)) {
                     varDec.init = tm.TypeCast(getBoxedType(varDec.type.tsym), processCond.exp);
                 } else {
                     varDec.init = processCond.exp;
@@ -372,6 +370,12 @@ public class PrivateAccessProcessor extends DProcessor {
             return isAccessible(((JCTypeCast) exp).expr, scope);
         } else if (exp instanceof JCNewClass) {
             accessor = rs.getSymbol(((JCNewClass)exp).clazz, scope); //retrieve the class symbol, as it's considered to be the accessor of the constructor
+        } else if (exp instanceof JCBinary){
+            JCBinary bin = (JCBinary) exp;
+            return isAccessible(bin.lhs, scope) && isAccessible(bin.rhs, scope);
+        } else if (exp instanceof JCIdent){
+            accessor = (Symbol) encClass;
+
         }
         if (accessor == null || s == null) {
             throw new RuntimeException("is this accessible " + exp);
@@ -569,9 +573,8 @@ public class PrivateAccessProcessor extends DProcessor {
         JCVariableDecl meDecl = null;
         final String methodVar = getMethodVar(objName.toString());
         if (!vars.containsKey(methodVar)) {
-//            tm.Select(thisExp, null)
-//            meDecl = getVarDecl(methodVar, "java.lang.reflect.Method", clazz + ".getDeclaredMethod", objName, getTypes(params), vars, cut, packageName, scope, stmt, varSyms);
-//            addVar(vars, meDecl, varSyms);
+            meDecl = getVarDecl(methodVar, "java.lang.reflect.Method", clazz + ".getDeclaredMethod", objName, getTypes(params), vars, cut, packageName, scope, stmt, varSyms);
+            addVar(vars, meDecl, varSyms);
         }
         return meDecl;
     }

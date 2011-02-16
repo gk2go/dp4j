@@ -87,10 +87,10 @@ public abstract class DProcessor extends AbstractProcessor {
         return tm.VarDef(tm.Modifiers(Flags.FINAL), elementUtils.getName(varName), getId(idName), valueSetter);
     }
 
-//    public JCVariableDecl getVarDecl(String varName, String idName, String methodName, String stringParam, JCExpression[] params, Map<String, JCExpression> vars, CompilationUnitTree cut, Object packageName, com.sun.source.tree.Scope scope, JCStatement stmt, Collection<Symbol> varSyms) {
-//        final JCMethodInvocation valueSetter = (methodName != null) ? getMethodInvoc(methodName, stringParam, toList(params), vars, cut, packageName, scope, stmt, varSyms) : null;
-//        return tm.VarDef(tm.Modifiers(Flags.FINAL), elementUtils.getName(varName), getId(idName), valueSetter);
-//    }
+    public JCVariableDecl getVarDecl(String varName, String idName, String methodName, String stringParam, JCExpression[] params, Map<String, JCExpression> vars, CompilationUnitTree cut, Object packageName, com.sun.source.tree.Scope scope, JCStatement stmt, Collection<Symbol> varSyms) {
+        final JCMethodInvocation valueSetter = (methodName != null) ? getMethodInvoc(methodName, stringParam, toList(params), vars, cut, packageName, scope, stmt, varSyms) : null;
+        return tm.VarDef(tm.Modifiers(Flags.FINAL), elementUtils.getName(varName), getId(idName), valueSetter);
+    }
 
     public JCVariableDecl getArrayDecl(JCModifiers mods, final String varName, final String idName, final JCNewArray array) {
         return tm.VarDef(mods, elementUtils.getName(varName), getId(idName), array);
@@ -183,15 +183,13 @@ public abstract class DProcessor extends AbstractProcessor {
         return type;
     }
 
-//    public JCMethodInvocation getMethodInvoc(final String methodName, final JCExpression param, final List<JCExpression> otherParams, Map<String, JCExpression> vars, CompilationUnitTree cut, Object packageName, com.sun.source.tree.Scope scope, JCStatement stmt, Collection<Symbol> varSyms) {
-//        final JCExpression methodN = getIdAfterImporting(methodName);
-//        final List<JCExpression> paramsList = injectBefore(otherParams.head, otherParams, param);
-//        final JCMethodInvocation mi = tm.Apply(List.<JCExpression>nil(), methodN, paramsList);
-//        java.util.List<Type> args = getArgs(mi, vars, cut, packageName, scope, stmt, varSyms);
-//        //FIXME: set type
-//        return mi;
-//    }
-//
+    public JCMethodInvocation getMethodInvoc(final String methodName, final JCExpression param, final List<JCExpression> otherParams, Map<String, JCExpression> vars, CompilationUnitTree cut, Object packageName, com.sun.source.tree.Scope scope, JCStatement stmt, Collection<Symbol> varSyms) {
+        final JCExpression methodN = getIdAfterImporting(methodName);
+        final List<JCExpression> paramsList = injectBefore(otherParams.head, otherParams, param);
+        final JCMethodInvocation mi = tm.Apply(List.<JCExpression>nil(), methodN, paramsList);
+        return mi;
+    }
+
 //    public JCMethodInvocation getRefMethodInvoc(final String methodName, final Object param, final com.sun.tools.javac.util.List<JCExpression> otherParams, Map<String, JCExpression> vars, CompilationUnitTree cut, Object packageName, com.sun.source.tree.Scope scope, JCStatement stmt, Collection<Symbol> varSyms) {
 //        if (param instanceof JCExpression) {
 //            return getMethodInvoc(methodName, (JCExpression) param, otherParams, vars, cut, packageName, scope, stmt, varSyms);
@@ -200,9 +198,9 @@ public abstract class DProcessor extends AbstractProcessor {
 //        }
 //    }
 
-//    public JCMethodInvocation getMethodInvoc(String methodName, String param, final com.sun.tools.javac.util.List<JCExpression> otherParams, Map<String, JCExpression> vars, CompilationUnitTree cut, Object packageName, com.sun.source.tree.Scope scope, JCStatement stmt, Collection<Symbol> varSyms) {
-//        return getMethodInvoc(methodName, tm.Literal(param), otherParams, vars, cut, packageName, scope, stmt, varSyms);
-//    }
+    public JCMethodInvocation getMethodInvoc(String methodName, String param, final com.sun.tools.javac.util.List<JCExpression> otherParams, Map<String, JCExpression> vars, CompilationUnitTree cut, Object packageName, com.sun.source.tree.Scope scope, JCStatement stmt, Collection<Symbol> varSyms) {
+        return getMethodInvoc(methodName, tm.Literal(param), otherParams, vars, cut, packageName, scope, stmt, varSyms);
+    }
     public JCMethodInvocation getRefMethodInvoc(final String methodName, final Object param) {
         if (param instanceof JCExpression) {
             return getMethodInvoc(methodName, (JCExpression) param);
