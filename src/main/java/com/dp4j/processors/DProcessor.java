@@ -389,6 +389,9 @@ public abstract class DProcessor extends AbstractProcessor {
             }
             return sameArg(arg, ((VarArgType) varSymbol).t);
         }
+        if(varSymbol.isPrimitive()){
+            return sameArg(arg, getBoxedType(varSymbol.tsym));
+        }
         boolean subs = typeUtils.isSubtype(arg, varSymbol);
         boolean sameVar = erVar.equals(varSymbol);
         boolean sameErArg = erArg.equals(arg);

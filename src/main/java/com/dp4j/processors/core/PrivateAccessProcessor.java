@@ -49,6 +49,16 @@ public class PrivateAccessProcessor extends DProcessor {
         varSyms.add(v);
     }
 
+    public Type getType(Symbol s) {
+        Type t;
+        if (s instanceof MethodSymbol) {
+            t = ((MethodSymbol) s).getReturnType();
+        } else {
+            t = s.type;
+        }
+        return t;
+    }
+
     private void addVar(JCVariableDecl varDec, Collection<Symbol> varSyms) {
         final JCExpression ex;
         if (varDec.type == null) {
@@ -158,8 +168,9 @@ public class PrivateAccessProcessor extends DProcessor {
             if (!accessible) {
                 varDec.init = processCond(varDec.init, cut, scope, stmt, null, varSyms, encBlock);
                 Symbol s = rs.getSymbol(varDec.init, scope);
-                if (differentArg(s.type, varDec.sym.type)) {
-                    varDec.init = tm.TypeCast(getBoxedType(varDec.type.tsym), varDec.init);
+                final Type t = getType(s);
+                if (differentArg(t, varDec.sym.type)) {
+                    varDec.init = tm.TypeCast(getBoxedType(varDec.sym), varDec.init);
                 }
             }
         } else if (stmt instanceof JCTry) {
@@ -201,7 +212,7 @@ public class PrivateAccessProcessor extends DProcessor {
             loop.body = processElement((JCBlock) loop.body, cut, varSyms);
         } else if (stmt instanceof JCDoWhileLoop) {
             JCDoWhileLoop loop = (JCDoWhileLoop) stmt;
-            loop.cond =processCond(loop.cond, cut, scope, stmt, null, varSyms, encBlock);
+            loop.cond = processCond(loop.cond, cut, scope, stmt, null, varSyms, encBlock);
             loop.body = processElement(((JCBlock) loop.body), cut, varSyms);
         } else if (stmt instanceof JCEnhancedForLoop) {
             JCEnhancedForLoop loop = (JCEnhancedForLoop) stmt;
@@ -221,7 +232,6 @@ public class PrivateAccessProcessor extends DProcessor {
             if (!accessible) {
                 encBlock.stats = reflect(s, scope, cut, encBlock.stats, stmt);
                 ifExp = getReflectedAccess(fa, cut, scope, stmt, null, varSyms, fa.selected);
-                ifExp = cast((JCMethodInvocation) ifExp, s.type);
                 reflectionInjected = true;
             }
         } else if (ifExp instanceof JCMethodInvocation) {
@@ -269,7 +279,7 @@ public class PrivateAccessProcessor extends DProcessor {
                 if (!accessible) {
                     Symbol s = rs.getSymbol(fa, scope);
                     encBlock.stats = reflect(s, scope, cut, encBlock.stats, stmt);
-                    ifB.lhs = cast(getReflectedAccess(fa, cut, scope, stmt, null, varSyms, fa.selected), s.type);
+                    ifB.lhs = cast(getReflectedAccess(fa, cut, scope, stmt, null, varSyms, fa.selected), getBoxedType(s));
                 }
             }
             if (ifB.rhs instanceof JCFieldAccess) {
@@ -278,7 +288,7 @@ public class PrivateAccessProcessor extends DProcessor {
                 if (!accessible) {
                     Symbol s = rs.getSymbol(fa, scope);
                     encBlock.stats = reflect(s, scope, cut, encBlock.stats, stmt);
-                    ifB.rhs = cast(getReflectedAccess(fa, cut, scope, stmt, null, varSyms, fa.selected), s.type);
+                    ifB.rhs = cast(getReflectedAccess(fa, cut, scope, stmt, null, varSyms, fa.selected), getBoxedType(s));
                     reflectionInjected = true;
                 }
             }
@@ -291,7 +301,7 @@ public class PrivateAccessProcessor extends DProcessor {
                 final boolean accessible = isAccessible(s, scope, accessor);
                 if (!accessible) {
                     encBlock.stats = reflect(s, scope, cut, encBlock.stats, stmt);
-                    assignExp.rhs = cast(getReflectedAccess(fa, cut, scope, stmt, null, varSyms, fa.selected), s.type);
+                    assignExp.rhs = cast(getReflectedAccess(fa, cut, scope, stmt, null, varSyms, fa.selected), getBoxedType(s));
                     reflectionInjected = true;
                 }
             }
@@ -426,7 +436,8 @@ public class PrivateAccessProcessor extends DProcessor {
             accesseeVarName = getMethodVar(symbol.name);
             getterName = elementUtils.getName("getDeclaredMethod");
             javaReflectMethField = getIdAfterImporting("java.lang.reflect.Method");
-            args = merge(Collections.singleton(className), toList(types));
+            JCExpression mName = tm.Literal(symbol.name.toString());
+            args = merge(Collections.singleton(mName), toList(types));
         } else {
             accesseeVarName = getFieldVar(symbol.name);
             getterName = elementUtils.getName("getDeclaredField");
