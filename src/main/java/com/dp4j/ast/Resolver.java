@@ -184,6 +184,10 @@ public class Resolver {
         return s;
     }
 
+    public JCExpression getAccessor(JCFieldAccess fa) {
+        return fa.selected;
+    }
+
     public Type getType(JCLiteral ifExp) {
         final int typetag = (ifExp).typetag;
         final Object value = (ifExp).value;
@@ -258,6 +262,27 @@ public class Resolver {
             return returnType.tsym;
         }
         throw new NoSuchElementException(mi.toString());
+    }
+
+    public JCExpression getInvokationExp(JCMethodInvocation mi, final Scope scope) {
+        if (mi.meth instanceof JCIdent) { //method name ==> invoked as member of enclosing class
+            Symbol symbol = getSymbol(scope, mi.typeargs, getName(mi), mi.args);
+            if (elementUtils.getAllMembers((TypeElement) encClass).contains(symbol)) {
+                JCExpression thisExp = tm.This((Type) encClass.asType());
+                return thisExp;
+            } else { //static import
+               throw new RuntimeException(mi.toString() + " : accessing inaccessible statically imported methods not supported");//TODO:
+            }
+        }
+        if (mi.meth instanceof JCFieldAccess) {
+            JCExpression exp = getAccessor((JCFieldAccess) mi.meth);
+            return exp;
+        } else if (mi.meth instanceof JCNewClass) {
+            return mi.meth;
+        } else if (mi.meth instanceof JCMethodInvocation) {
+            return mi.meth;
+        }
+        throw new RuntimeException(mi.toString() + " : error, what accessor is it?");
     }
 
     public Symbol getBoxedSymbol(Symbol primitive) {

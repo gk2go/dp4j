@@ -6,15 +6,16 @@
 package com.dp4j.processors;
 import com.sun.tools.javac.tree.JCTree.JCExpression;
 import com.sun.tools.javac.code.Type;
+import com.sun.tools.javac.tree.JCTree.JCMethodInvocation;
 /**
  *
  * @author simpatico
  */
 public class ReflectedAccessResult {
-    public final JCExpression exp;
+    public final JCMethodInvocation exp;
     public final Type expType;
 
-    public ReflectedAccessResult(JCExpression exp, Type expType){
+    public ReflectedAccessResult(JCMethodInvocation exp, Type expType){
         this.exp = exp;
         this.expType = expType;
     }

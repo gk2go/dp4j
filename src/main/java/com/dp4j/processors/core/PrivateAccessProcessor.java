@@ -156,16 +156,12 @@ public class PrivateAccessProcessor extends DProcessor {
             varDec.sym = (VarSymbol) rs.getSymbol(scope, null, varDec.name, null);
             boolean accessible = isAccessible(varDec.init, scope);
             if (!accessible) {
-                ExpProcResult processCond = processCond(varDec.init, cut, scope, stmt, null, varSyms, encBlock);
+                varDec.init = processCond(varDec.init, cut, scope, stmt, null, varSyms, encBlock);
                 Symbol s = rs.getSymbol(varDec.init, scope);
                 if (differentArg(s.type, varDec.sym.type)) {
-                    varDec.init = tm.TypeCast(getBoxedType(varDec.type.tsym), processCond.exp);
-                } else {
-                    varDec.init = processCond.exp;
+                    varDec.init = tm.TypeCast(getBoxedType(varDec.type.tsym), varDec.init);
                 }
-                encBlock.stats = processCond.stats;
             }
-
         } else if (stmt instanceof JCTry) {
             JCTry tryStmt = (JCTry) stmt;
             //make a copy of vars here, let him add what he wants but then we restore vars
@@ -185,56 +181,47 @@ public class PrivateAccessProcessor extends DProcessor {
             }
         } else if (stmt instanceof JCIf) {
             JCIf ifStmt = (JCIf) stmt;
-            encBlock.stats = processCond(ifStmt.cond, cut, scope, stmt, null, varSyms, encBlock).stats;
+            ifStmt.cond = processCond(ifStmt.cond, cut, scope, stmt, null, varSyms, encBlock);
             if (ifStmt.thenpart instanceof JCBlock) {
                 ifStmt.thenpart = processElement(((JCBlock) ifStmt.thenpart), cut, varSyms);
             }
         } else if (stmt instanceof JCExpressionStatement) {
             JCExpressionStatement expStmt = (JCExpressionStatement) stmt;
-            ExpProcResult result = processCond(expStmt.expr, cut, scope, stmt, null, varSyms, encBlock);
-            encBlock.stats = result.stats;
-            expStmt.expr = result.exp;
+            expStmt.expr = processCond(expStmt.expr, cut, scope, stmt, null, varSyms, encBlock);
         } else if (stmt instanceof JCBlock) {
             stmt = processElement((JCBlock) stmt, cut, varSyms);
         } else if (stmt instanceof JCWhileLoop) {
             JCWhileLoop loop = (JCWhileLoop) stmt;
-            encBlock.stats = processCond(loop.cond, cut, scope, stmt, null, varSyms, encBlock).stats;
+            loop.cond = processCond(loop.cond, cut, scope, stmt, null, varSyms, encBlock);
             loop.body = processElement((JCBlock) loop.body, cut, varSyms);
         } else if (stmt instanceof JCForLoop) {
             JCForLoop loop = (JCForLoop) stmt;
             //FIXME: loop.cond might declare i
-            encBlock.stats = processCond(loop.cond, cut, scope, stmt, null, varSyms, encBlock).stats;
+            loop.cond = processCond(loop.cond, cut, scope, stmt, null, varSyms, encBlock);
             loop.body = processElement((JCBlock) loop.body, cut, varSyms);
         } else if (stmt instanceof JCDoWhileLoop) {
             JCDoWhileLoop loop = (JCDoWhileLoop) stmt;
-            encBlock.stats = processCond(loop.cond, cut, scope, stmt, null, varSyms, encBlock).stats;
+            loop.cond =processCond(loop.cond, cut, scope, stmt, null, varSyms, encBlock);
             loop.body = processElement(((JCBlock) loop.body), cut, varSyms);
         } else if (stmt instanceof JCEnhancedForLoop) {
             JCEnhancedForLoop loop = (JCEnhancedForLoop) stmt;
             Collection<Symbol> tmpSyms = new HashSet<Symbol>(varSyms);
             addVar(loop.var, tmpSyms);
-
-            final ExpProcResult result = processCond(loop.expr, cut, scope, stmt, null, varSyms, encBlock);
-            loop.expr = result.exp;
-            encBlock.stats = result.stats;
-            loop.body= processElement((JCBlock) loop.body, cut, tmpSyms);
+            loop.expr = processCond(loop.expr, cut, scope, stmt, null, varSyms, encBlock);
+            loop.body = processElement((JCBlock) loop.body, cut, tmpSyms);
         }
         return encBlock.stats;
     }
 
-    protected ExpProcResult processCond(JCExpression ifExp, final CompilationUnitTree cut, com.sun.source.tree.Scope scope, JCStatement stmt, List<Type> args, Collection<Symbol> varSyms, JCBlock encBlock) {
-
+    protected JCExpression processCond(JCExpression ifExp, final CompilationUnitTree cut, com.sun.source.tree.Scope scope, JCStatement stmt, List<Type> args, Collection<Symbol> varSyms, JCBlock encBlock) {
         if (ifExp instanceof JCFieldAccess) {
             final JCFieldAccess fa = (JCFieldAccess) ifExp;
             Symbol s = rs.getSymbol(ifExp, scope);
             final boolean accessible = isAccessible(fa, scope);
             if (!accessible) {
-                final ReflectedAccessResult reflectedAccess;
                 encBlock.stats = reflect(s, scope, cut, encBlock.stats, stmt);
-                Symbol accessor = rs.getAccessor(fa, scope);
-                reflectedAccess = getReflectedAccess(fa, cut, scope, stmt, null, varSyms, fa.selected);
-                ifExp = cast(reflectedAccess);
-                ifExp.type = reflectedAccess.expType;
+                ifExp = getReflectedAccess(fa, cut, scope, stmt, null, varSyms, fa.selected);
+                ifExp = cast((JCMethodInvocation) ifExp, s.type);
                 reflectionInjected = true;
             }
         } else if (ifExp instanceof JCMethodInvocation) {
@@ -242,9 +229,8 @@ public class PrivateAccessProcessor extends DProcessor {
             final ListBuffer<JCExpression> lb = ListBuffer.lb();
             if (!mi.args.isEmpty()) {
                 for (JCExpression arg : mi.args) {
-                    ExpProcResult result = processCond(arg, cut, scope, null, null, varSyms, encBlock);
-                    encBlock.stats = result.stats;
-                    lb.append(result.exp);
+                    arg = processCond(arg, cut, scope, null, null, varSyms, encBlock);
+                    lb.append(arg);
                 }
                 mi.args = lb.toList();
             }
@@ -253,11 +239,9 @@ public class PrivateAccessProcessor extends DProcessor {
             if (!accessible) {
                 ifExp.type = mSym.getReturnType();
                 encBlock.stats = reflect(mSym, scope, cut, encBlock.stats, stmt);
-                Symbol accessor = rs.getInvokationTarget(mi, scope);
-                //TODO transform accessor into JCExpression
-                ReflectedAccessResult result = getReflectedAccess(mSym, cut, null, mi.args);
+                JCExpression accessor = rs.getInvokationExp(mi, scope);
+                ifExp = getReflectedAccess(mSym, cut, accessor, mi.args);
                 methodInjected = true; //could be a source of bugs here. Not injected yet!
-                mi.meth = result.exp;
             } else {
                 ifExp.type = mSym.getReturnType();
             }
@@ -266,15 +250,11 @@ public class PrivateAccessProcessor extends DProcessor {
             ifExp.type = ((JCNewClass) ifExp).type;
         } else if (ifExp instanceof JCTypeCast) {
             JCTypeCast cast = (JCTypeCast) ifExp;
-            ExpProcResult result = processCond(cast.expr, cut, scope, stmt, args, varSyms, encBlock);
-            cast.expr = result.exp;
-            encBlock.stats = result.stats;
-            ifExp.type = cast.type;
+            cast.expr = processCond(cast.expr, cut, scope, stmt, args, varSyms, encBlock);
+
         } else if (ifExp instanceof JCParens) {
             JCParens parensExp = (JCParens) ifExp;
-            ExpProcResult result = processCond(parensExp.expr, cut, scope, stmt, args, varSyms, encBlock);
-            parensExp.expr = result.exp;
-            encBlock.stats = result.stats;
+            parensExp.expr = processCond(parensExp.expr, cut, scope, stmt, args, varSyms, encBlock);
             ifExp.type = parensExp.expr.type;
         } else if (ifExp instanceof JCLiteral) {
             ifExp.type = rs.getType((JCLiteral) ifExp);
@@ -289,7 +269,7 @@ public class PrivateAccessProcessor extends DProcessor {
                 if (!accessible) {
                     Symbol s = rs.getSymbol(fa, scope);
                     encBlock.stats = reflect(s, scope, cut, encBlock.stats, stmt);
-                    ifB.lhs = cast(getReflectedAccess(fa, cut, scope, stmt, null, varSyms, fa.selected));
+                    ifB.lhs = cast(getReflectedAccess(fa, cut, scope, stmt, null, varSyms, fa.selected), s.type);
                 }
             }
             if (ifB.rhs instanceof JCFieldAccess) {
@@ -298,8 +278,7 @@ public class PrivateAccessProcessor extends DProcessor {
                 if (!accessible) {
                     Symbol s = rs.getSymbol(fa, scope);
                     encBlock.stats = reflect(s, scope, cut, encBlock.stats, stmt);
-                    Symbol accessor = rs.getAccessor(fa, scope);
-                    ifB.rhs = cast(getReflectedAccess(fa, cut, scope, stmt, null, varSyms, fa.selected));
+                    ifB.rhs = cast(getReflectedAccess(fa, cut, scope, stmt, null, varSyms, fa.selected), s.type);
                     reflectionInjected = true;
                 }
             }
@@ -312,7 +291,7 @@ public class PrivateAccessProcessor extends DProcessor {
                 final boolean accessible = isAccessible(s, scope, accessor);
                 if (!accessible) {
                     encBlock.stats = reflect(s, scope, cut, encBlock.stats, stmt);
-                    assignExp.rhs = cast(getReflectedAccess(fa, cut, scope, stmt, null, varSyms, fa.selected));
+                    assignExp.rhs = cast(getReflectedAccess(fa, cut, scope, stmt, null, varSyms, fa.selected), s.type);
                     reflectionInjected = true;
                 }
             }
@@ -329,7 +308,7 @@ public class PrivateAccessProcessor extends DProcessor {
         } else if (ifExp.type == null) {
 //            ifExp.type = getType(ifExp, vars, cut, packageName, scope, stmt, args, varSyms);
         }
-        return new ExpProcResult(encBlock.stats, ifExp, ifExp.type);
+        return ifExp;
     }
 
     public boolean isAccessible(JCMethodInvocation mi, final List<Type> args, CompilationUnitTree cut, com.sun.source.tree.Scope scope, JCStatement stmt, Collection<Symbol> varSyms) {
@@ -356,10 +335,12 @@ public class PrivateAccessProcessor extends DProcessor {
         } else if (exp instanceof JCNewArray) {
             JCNewArray arr = (JCNewArray) exp;
             boolean accessible = true;
-            for (JCExpression el : arr.elems) {
-                accessible &= isAccessible(el, scope);
-                if (!accessible) {
-                    break;
+            if (arr.elems != null) {
+                for (JCExpression el : arr.elems) {
+                    accessible &= isAccessible(el, scope);
+                    if (!accessible) {
+                        break;
+                    }
                 }
             }
             return accessible;
@@ -472,18 +453,9 @@ public class PrivateAccessProcessor extends DProcessor {
         return stats;
     }
 
-    ReflectedAccessResult getReflectedAccess(JCFieldAccess fa, final CompilationUnitTree cut, Scope scope, JCStatement stmt, com.sun.tools.javac.util.List<JCExpression> args, Collection<Symbol> varSyms, JCExpression accessor) {
+    JCMethodInvocation getReflectedAccess(JCFieldAccess fa, final CompilationUnitTree cut, Scope scope, JCStatement stmt, com.sun.tools.javac.util.List<JCExpression> args, Collection<Symbol> varSyms, JCExpression accessor) {
         final Symbol s = rs.getSymbol(fa, scope);
         return getReflectedAccess(s, cut, accessor, args);
-    }
-
-    ReflectedAccessResult getReflectedMethod(MethodSymbol s, JCMethodInvocation mi, final CompilationUnitTree cut) {
-        if (s.isStatic()) {
-            Object param = "";
-        } else {
-            Object param = mi.meth;
-        }
-        return null;
     }
 
     /**
@@ -494,7 +466,7 @@ public class PrivateAccessProcessor extends DProcessor {
      * @param args
      * @return
      */
-    ReflectedAccessResult getReflectedAccess(Symbol s, final CompilationUnitTree cut, JCExpression accessor, com.sun.tools.javac.util.List<JCExpression> args) {
+    JCMethodInvocation getReflectedAccess(Symbol s, final CompilationUnitTree cut, JCExpression accessor, com.sun.tools.javac.util.List<JCExpression> args) {
         final Name getterName;
         final JCIdent fieldMethId;
         if (s instanceof MethodSymbol) {
@@ -537,7 +509,7 @@ public class PrivateAccessProcessor extends DProcessor {
         final JCExpression getMethField = tm.Select(fieldMethId, getterName);
         JCMethodInvocation mi = tm.Apply(com.sun.tools.javac.util.List.<JCExpression>nil(), getMethField, args);
         reflectionInjected = true; //call this method to actually use it!
-        return new ReflectedAccessResult(mi, getBoxedType(s)); //FIXME: null
+        return mi;
     }
 
     JCMethodInvocation getReflectedFieldSetter(JCFieldAccess fa, final JCExpression value, final CompilationUnitTree cut) {
@@ -619,7 +591,7 @@ public class PrivateAccessProcessor extends DProcessor {
         return false;
     }
 
-    JCParens cast(ReflectedAccessResult reflectedAccess) {
-        return tm.Parens(tm.TypeCast(reflectedAccess.expType, reflectedAccess.exp));
+    JCParens cast(JCMethodInvocation reflectedAccess, Type t) {
+        return tm.Parens(tm.TypeCast(t, reflectedAccess));
     }
 }

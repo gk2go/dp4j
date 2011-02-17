@@ -350,7 +350,7 @@ public abstract class DProcessor extends AbstractProcessor {
             lb.append(stat);
         }
         for (T newStmt : newStmts) {
-            if (newStmt != null && !lb.contains(newStmt)) {
+            if (newStmt != null) {
                 lb.append(newStmt);
             }
         }

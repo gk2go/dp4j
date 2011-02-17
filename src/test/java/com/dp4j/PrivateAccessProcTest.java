@@ -146,8 +146,8 @@ public class PrivateAccessProcTest extends AbstractAnnotationProcessorTest {
         "WithAccessibleVarArgsInstance",
 //        "Test",
 //        "VarArgsCallTest",
-//        "CallTest",
-        "IfTest",
+        "CallTest",
+//        "IfTest",
 //        "MultipleCallsTest",
 //        "ArrayCallTest"
     };
