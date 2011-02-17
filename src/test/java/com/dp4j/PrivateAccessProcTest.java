@@ -140,10 +140,10 @@ public class PrivateAccessProcTest extends AbstractAnnotationProcessorTest {
     }
     final static String tests[] = {
         "PrivateData",
-//        "PrivateMethods",
-//        "PrivateVarArgs",
-//        "WithAccessibilePrivateDataInstance",
-//        "WithAccessibleVarArgsInstance",
+        "PrivateMethods",
+        "PrivateVarArgs",
+        "WithAccessibilePrivateDataInstance",
+        "WithAccessibleVarArgsInstance",
 //        "Test",
 //        "VarArgsCallTest",
 //        "CallTest",
