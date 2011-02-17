@@ -130,14 +130,14 @@ public abstract class DProcessor extends AbstractProcessor {
     }
     public final static String javaLangClass = "java.lang.Class";
 
-    public JCExpression[] getTypes(java.util.List<VarSymbol> params) {
+    public JCExpression[] getTypes(java.util.List<? extends Symbol> params) {
         int length = 0;
         if (params != null) {
             length = params.size();
         }
         JCExpression[] exps = new JCExpression[length];
         int i = 0;
-        for (VarSymbol param : params) {
+        for (Symbol param : params) {
             Symbol boxedS = rs.getBoxedSymbol(param);
             final Type type = param.type;
             JCExpression classExp;

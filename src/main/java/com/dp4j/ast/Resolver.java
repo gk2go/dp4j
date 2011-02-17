@@ -66,10 +66,13 @@ public class Resolver {
 
     public Symbol getSymbol(Name varName, Symbol accessor, Scope scope) {
         if (varName.contentEquals("class")) {
-            JCIdent id = tm.Ident(accessor);
-            JCExpression acccessor = tm.Select(id, elementUtils.getName("getClass"));
-            JCMethodInvocation mi = tm.Apply(List.<JCExpression>nil(), acccessor, List.<JCExpression>nil());
-            return getSymbol(mi, scope).getReturnType().tsym;
+            Symbol javaLangClassSym = getSymbol(scope, null, elementUtils.getName("java.lang.Class"), null);
+            JCIdent id = tm.Ident(javaLangClassSym);
+            JCExpression mName = tm.Select(id, elementUtils.getName("forName"));
+            JCLiteral idLiteral = tm.Literal(accessor.toString());
+            JCMethodInvocation mi = tm.Apply(List.<JCExpression>nil(), mName, List.<JCExpression>of(idLiteral));
+            Symbol s = getSymbol(mi, scope).getReturnType().tsym;
+            return s;
         }
         accessor = getTypeSymbol(accessor);
         java.util.List<Symbol> enclosedElements = accessor.getEnclosedElements();
@@ -94,6 +97,8 @@ public class Resolver {
         java.util.List<Symbol> typeParams = getArgs(mi.typeargs, scope);
         if (invTarget instanceof VarSymbol) {//this, super,
             invTarget = invTarget.type.tsym;
+        }else if (invTarget instanceof MethodSymbol){
+            invTarget = ((MethodSymbol)invTarget).getReturnType().tsym; //cannot invoke on void
         }
         MethodSymbol ms = (MethodSymbol) contains(elementUtils.getAllMembers((TypeElement) invTarget), typeParams, mName, args);
         if (ms == null) {
@@ -232,10 +237,10 @@ public class Resolver {
     public Symbol getInvokationTarget(JCMethodInvocation mi, Scope scope) {
         if (mi.meth instanceof JCIdent) { //method name ==> invoked as member of enclosing class
             Symbol symbol = getSymbol(scope, mi.typeargs, getName(mi), mi.args);
-            if(elementUtils.getAllMembers((TypeElement) encClass).contains(symbol)){
+            if (elementUtils.getAllMembers((TypeElement) encClass).contains(symbol)) {
                 JCExpression thisExp = tm.This((Type) encClass.asType());
                 return getSymbol(thisExp, scope);
-            }else{ //static import
+            } else { //static import
                 return symbol.owner;
             }
         }
@@ -249,7 +254,8 @@ public class Resolver {
             return symbol;
         } else if (mi.meth instanceof JCMethodInvocation) {
             MethodSymbol symbol = getSymbol(mi, scope);
-            return symbol.getReturnType().tsym;
+            final Type returnType = symbol.getReturnType();
+            return returnType.tsym;
         }
         throw new NoSuchElementException(mi.toString());
     }
@@ -317,6 +323,15 @@ public class Resolver {
 
     public Symbol getTypeSymbol(Symbol s) {
         if (!s.isConstructor() && !(s instanceof ClassSymbol)) {
+//
+//            Symbol ss =  (Symbol) typeUtils.asElement(s.type); //Problems with Integer.TYPE?
+//            if(ss == null){
+//                ss = (Symbol) typeUtils.asElement(s.erasure_field);
+//            }
+//            s = ss;
+//            //            if (s instanceof MethodSymbol){
+////
+////            }
             s = s.type.tsym;
         }
         return s;
