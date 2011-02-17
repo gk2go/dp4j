@@ -71,7 +71,7 @@ public class Resolver {
             JCExpression mName = tm.Select(id, elementUtils.getName("forName"));
             JCLiteral idLiteral = tm.Literal(accessor.toString());
             JCMethodInvocation mi = tm.Apply(List.<JCExpression>nil(), mName, List.<JCExpression>of(idLiteral));
-            Symbol s = getSymbol(mi, scope).getReturnType().tsym;
+            Symbol s = getSymbol(mi, scope);
             return s;
         }
         accessor = getTypeSymbol(accessor);
