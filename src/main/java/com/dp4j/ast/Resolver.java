@@ -6,6 +6,7 @@ package com.dp4j.ast;
 
 import com.sun.source.tree.ArrayTypeTree;
 import com.sun.source.tree.Scope;
+import com.sun.tools.javac.model.FilteredMemberList;
 import com.sun.tools.javac.util.Name;
 import com.sun.tools.javac.code.Symbol.*;
 import com.sun.tools.javac.tree.JCTree.*;
@@ -137,11 +138,11 @@ public class Resolver {
             }
             Symbol symbol = getSymbol(arr.elemtype, scope);
             ArrayType arrayType = typeUtils.getArrayType(symbol.type);
-            return ((Type)arrayType).tsym;
+            return ((Type) arrayType).tsym;
         } else if (exp instanceof JCArrayTypeTree) {
             JCArrayTypeTree arr = (JCArrayTypeTree) exp;
             ArrayType arrayType = typeUtils.getArrayType((TypeMirror) arr.elemtype);
-            return ((Type)arrayType).tsym;
+            return ((Type) arrayType).tsym;
         } else if (exp instanceof JCParens) {
             return getSymbol(((JCParens) exp).expr, scope);
         } else if (exp instanceof JCTypeCast) {
@@ -273,11 +274,14 @@ public class Resolver {
     public JCExpression getInvokationExp(JCMethodInvocation mi, final Scope scope) {
         if (mi.meth instanceof JCIdent) { //method name ==> invoked as member of enclosing class
             Symbol symbol = getSymbol(scope, mi.typeargs, getName(mi), mi.args);
-            if (elementUtils.getAllMembers((TypeElement) encClass).contains(symbol)) {
-                JCExpression thisExp = tm.This((Type) encClass.asType());
-                return thisExp;
-            } else { //static import
-                throw new RuntimeException(mi.toString() + " : accessing inaccessible statically imported methods not supported");//TODO:
+            try {
+                if (typeUtils.asMemberOf((DeclaredType)encClass.asType(), symbol) != null) {
+                    JCExpression thisExp = tm.This((Type) encClass.asType());
+                    return thisExp;
+                }
+            } catch (IllegalArgumentException ie) {
+                JCIdent staticImport = tm.Ident(symbol.owner);
+                return staticImport;
             }
         }
         if (mi.meth instanceof JCFieldAccess) {
@@ -288,6 +292,8 @@ public class Resolver {
         } else if (mi.meth instanceof JCMethodInvocation) {
             return mi.meth;
         }
+
+
         throw new RuntimeException(mi.toString() + " : error, what accessor is it?");
     }
 

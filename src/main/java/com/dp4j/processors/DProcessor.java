@@ -38,6 +38,7 @@ import com.sun.tools.javac.model.FilteredMemberList;
 import javax.lang.model.type.ArrayType;
 import org.apache.commons.lang.StringUtils;
 import com.dp4j.ast.Resolver;
+
 /**
  *
  * @author simpatico
@@ -199,10 +200,10 @@ public abstract class DProcessor extends AbstractProcessor {
 //            return getMethodInvoc(methodName, (String) param, otherParams, vars, cut, packageName, scope, stmt, varSyms);
 //        }
 //    }
-
     public JCMethodInvocation getMethodInvoc(String methodName, String param, final com.sun.tools.javac.util.List<JCExpression> otherParams, Map<String, JCExpression> vars, CompilationUnitTree cut, Object packageName, com.sun.source.tree.Scope scope, JCStatement stmt, Collection<Symbol> varSyms) {
         return getMethodInvoc(methodName, tm.Literal(param), otherParams, vars, cut, packageName, scope, stmt, varSyms);
     }
+
     public JCMethodInvocation getRefMethodInvoc(final String methodName, final Object param) {
         if (param instanceof JCExpression) {
             return getMethodInvoc(methodName, (JCExpression) param);
@@ -326,22 +327,27 @@ public abstract class DProcessor extends AbstractProcessor {
         return injectBefore(stmt, stats, false, newStmts);
     }
 
-    protected static <T> com.sun.tools.javac.util.List<T> injectBefore(T stmt, final com.sun.tools.javac.util.List<T> stats, final boolean skipStmt, T... newStmts) {
+    protected static <T> com.sun.tools.javac.util.List<T> injectBefore(T stmt, final com.sun.tools.javac.util.List<T> stats, final boolean skipStmt, T... newStmts){
+        if(stmt == null || !stats.contains(stmt)){
+            throw new IllegalArgumentException("" +stmt + " doesn't belong to " + stats);
+        }
         final ListBuffer<T> lb = ListBuffer.lb();
         int i = 0;
-        final int index = skipStmt ? stats.indexOf(stmt) + 1 : stats.indexOf(stmt);
-        for (; i < index; i++) {
-            lb.append(stats.get(i));
+        java.util.List<T> pre = stats.subList(0, stats.indexOf(stmt));
+        for (T p : pre){
+            lb.append(p);
         }
-        for (T newStmt : newStmts) {
+        for (T newStmt : newStmts){
             if (newStmt != null) {
                 lb.append(newStmt);
             }
         }
-        if (index > -1) {
-            for (i = index; i < stats.size(); i++) {
-                lb.append(stats.get(i));
-            }
+        if(!skipStmt){
+            lb.append(stmt);
+        }
+        java.util.List<T> remStats = stats.subList(stats.indexOf(stmt)+1, stats.size());
+        for (T stat : remStats){
+            lb.append(stat);
         }
         return lb.toList();
     }
@@ -380,7 +386,6 @@ public abstract class DProcessor extends AbstractProcessor {
         return typ;
     }
 
-
     public boolean sameArg(Type arg, Type varSymbol) {
         final Type erArg = (Type) typeUtils.erasure(arg);
         final Type erVar = (Type) typeUtils.erasure(varSymbol);
@@ -390,7 +395,7 @@ public abstract class DProcessor extends AbstractProcessor {
             }
             return sameArg(arg, ((VarArgType) varSymbol).t);
         }
-        if(varSymbol.isPrimitive()){
+        if (varSymbol.isPrimitive()) {
             return sameArg(arg, getBoxedType(varSymbol.tsym));
         }
         boolean subs = typeUtils.isSubtype(arg, varSymbol);
@@ -408,7 +413,6 @@ public abstract class DProcessor extends AbstractProcessor {
         tmp.remove(ms);
         return tmp;
     }
-
 //    public java.util.List<Type> getArgs(final JCMethodInvocation mi, final Map<String, JCExpression> vars, final CompilationUnitTree cut, Object packageName, com.sun.source.tree.Scope scope, JCStatement stmt, Collection<Symbol> varSyms) {
 //        java.util.List<Type> args = new ArrayList<Type>();
 //        if (!mi.args.isEmpty()) {
@@ -428,5 +432,4 @@ public abstract class DProcessor extends AbstractProcessor {
 //        }
 //        return args;
 //    }
-
 }
