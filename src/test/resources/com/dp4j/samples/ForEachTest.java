@@ -14,9 +14,9 @@ public class ForEachTest {
 
     @Test
     public void t() throws Exception {
-//        for(Object staticObj: PrivateData.staticObjs){
-//            System.out.println(staticObj);
-//        }
+        for(Object staticObj: PrivateData.staticObjs){
+            System.out.println(staticObj);
+        }
         for(int i: new PrivateData().ints){
             System.out.println(i);
         }

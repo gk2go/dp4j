@@ -301,6 +301,10 @@ public class Resolver {
             }
         }
         if (mi.meth instanceof JCFieldAccess) {
+            final Symbol s = getSymbol(mi, cut, stmt);
+            if (s.isStatic()) {
+                return tm.Literal("");
+            }
             JCExpression exp = getAccessor((JCFieldAccess) mi.meth);
             return exp;
         } else if (mi.meth instanceof JCNewClass) {

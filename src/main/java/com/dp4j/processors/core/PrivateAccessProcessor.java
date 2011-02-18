@@ -237,7 +237,13 @@ public class PrivateAccessProcessor extends DProcessor {
             final boolean accessible = isAccessible(fa, cut, stmt);
             if (!accessible) {
                 encBlock.stats = reflect(s, cut, encBlock.stats, stmt);
-                ifExp = getReflectedAccess(fa, cut, stmt, null, varSyms, fa.selected);
+                final JCExpression accessor;
+                if(s.isStatic()){
+                    accessor = tm.Literal("");
+                }else{
+                    accessor = fa.selected;
+                }
+                ifExp = getReflectedAccess(fa, cut, stmt, null, varSyms, accessor);
                 reflectionInjected = true;
             }
         } else if (ifExp instanceof JCMethodInvocation) {
