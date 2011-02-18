@@ -4,6 +4,7 @@
  */
 package com.dp4j.ast;
 
+import com.sun.source.tree.ArrayTypeTree;
 import com.sun.source.tree.Scope;
 import com.sun.tools.javac.util.Name;
 import com.sun.tools.javac.code.Symbol.*;
@@ -111,7 +112,7 @@ public class Resolver {
         if (exp instanceof JCIdent) {
             return getSymbol(scope, null, ((JCIdent) exp).name, null);
         } else if (exp instanceof JCFieldAccess) {
-            Symbol symbol = getSymbol(scope, null, elementUtils.getName(exp.toString()), null);
+            Symbol symbol = getSymbol(scope, null, getName(exp.toString()), null);
             if (symbol != null) {
                 return symbol;
             }
@@ -138,7 +139,8 @@ public class Resolver {
             return symbol;
         } else if (exp instanceof JCArrayTypeTree) {
             JCArrayTypeTree arr = (JCArrayTypeTree) exp;
-            return getSymbol(arr.elemtype, scope);
+            ArrayType arrayType = typeUtils.getArrayType((TypeMirror) arr.elemtype);
+            return ((Type)arrayType).tsym;
         } else if (exp instanceof JCParens) {
             return getSymbol(((JCParens) exp).expr, scope);
         } else if (exp instanceof JCTypeCast) {
@@ -148,10 +150,10 @@ public class Resolver {
             Symbol s = getSymbol(bin.lhs, scope);
             return getTypeSymbol(s);
         } else if (exp instanceof JCPrimitiveTypeTree) {
-            if(exp.type != null){
+            if (exp.type != null) {
                 return exp.type.tsym;
             }
-            PrimitiveType primitiveType = typeUtils.getPrimitiveType(((JCPrimitiveTypeTree)exp).getPrimitiveTypeKind());
+            PrimitiveType primitiveType = typeUtils.getPrimitiveType(((JCPrimitiveTypeTree) exp).getPrimitiveTypeKind());
             exp.type = (Type) primitiveType;
             return getSymbol(exp, scope);
         }
@@ -164,7 +166,7 @@ public class Resolver {
             return accessor;
         }
         if (fa.selected instanceof JCFieldAccess) {
-            Symbol accessor = getSymbol(scope, null, elementUtils.getName(fa.selected.toString()), null);
+            Symbol accessor = getSymbol(scope, null, getName(fa.selected.toString()), null);
             if (accessor != null) {
                 return accessor;
             }
@@ -177,7 +179,6 @@ public class Resolver {
             return returnType.asElement();
         } else if (fa.selected instanceof JCArrayTypeTree) {
             JCArrayTypeTree arr = (JCArrayTypeTree) fa.selected;
-//            getSymbol(scope, null, elementUtils.getName(fa.selected.toString()), null);
             return getSymbol(arr.elemtype, scope);
         }
         Symbol s = getSymbol(fa.selected, scope);
@@ -406,5 +407,17 @@ public class Resolver {
             return true;
         }
         return false;
+    }
+    public static final String dot = ".";
+
+    public Name getName(Name className) {
+        return getName(className.toString());
+    }
+
+    public Name getName(String className) {
+        if (className.startsWith(dot)) {
+            className = className.substring(1);
+        }
+        return elementUtils.getName(className);
     }
 }

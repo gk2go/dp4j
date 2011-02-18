@@ -251,7 +251,7 @@ public class PrivateAccessProcessor extends DProcessor {
                 ifExp.type = mSym.getReturnType();
                 encBlock.stats = reflect(mSym, scope, cut, encBlock.stats, stmt);
                 JCExpression accessor = rs.getInvokationExp(mi, scope);
-                ifExp = getReflectedAccess(mSym, cut, accessor, mi.args);
+                ifExp = getReflectedAccess(mSym, cut, accessor, mi.args, scope);
                 methodInjected = true; //could be a source of bugs here. Not injected yet!
             } else {
                 ifExp.type = mSym.getReturnType();
@@ -467,7 +467,7 @@ public class PrivateAccessProcessor extends DProcessor {
 
     JCMethodInvocation getReflectedAccess(JCFieldAccess fa, final CompilationUnitTree cut, Scope scope, JCStatement stmt, com.sun.tools.javac.util.List<JCExpression> args, Collection<Symbol> varSyms, JCExpression accessor) {
         final Symbol s = rs.getSymbol(fa, scope);
-        return getReflectedAccess(s, cut, accessor, args);
+        return getReflectedAccess(s, cut, accessor, args, scope);
     }
 
     /**
@@ -478,40 +478,39 @@ public class PrivateAccessProcessor extends DProcessor {
      * @param args
      * @return
      */
-    JCMethodInvocation getReflectedAccess(Symbol s, final CompilationUnitTree cut, JCExpression accessor, com.sun.tools.javac.util.List<JCExpression> args) {
+    JCMethodInvocation getReflectedAccess(Symbol s, final CompilationUnitTree cut, JCExpression accessor, com.sun.tools.javac.util.List<JCExpression> args, Scope scope) {
         final Name getterName;
         final JCIdent fieldMethId;
         if (s instanceof MethodSymbol) {
             fieldMethId = tm.Ident(getMethodVar(s.name));
             getterName = elementUtils.getName("invoke");
-        if (args.size() > 0) {
-            Type t = elementUtils.getTypeElement("java.lang.Object").type;
-            args = com.sun.tools.javac.util.List.<JCExpression>of(getArray(t, args));
-        }
-//        com.sun.tools.javac.util.List<VarSymbol> params = mSym.params();
-//        if (mSym.isVarArgs()) {
-//            int i = 0;
-//            VarSymbol last = params.last();
-//            Type varArgType = (Type) ((ArrayType) last.asType()).getComponentType();
-//            com.sun.tools.javac.util.List<JCExpression> reverse = mi.args.reverse();
-//            for (JCExpression arg : reverse) {
-//                Type type = getType(arg, vars, cut, packageName, scope, stmt, args, varSyms);
-//                if (differentArg(type, varArgType)) {
-//                    break;
-//                } else {
-//                    i++;
-//                }
-//            }
-//            final int varArgEnd = mi.args.size();
-//            final int varArgIndex = varArgEnd - i;
-//            List<JCExpression> varArgs = mi.args.subList(varArgIndex, varArgEnd);
-//            JCNewArray varArgArray = getArray(varArgType, varArgs);
-//            List<JCExpression> otherArgs = mi.args.subList(0, varArgIndex);
-//            List<JCExpression> arrayList = new ArrayList<JCExpression>();
-//            arrayList.add(varArgArray);
-//            mi.args = merge(otherArgs, arrayList);
-//        }
-//        resMi.args = merge(resMi.args, mi.args);
+            if (args.size() > 0) {
+                Type t = elementUtils.getTypeElement("java.lang.Object").type;
+                args = com.sun.tools.javac.util.List.<JCExpression>of(getArray(t, args));
+            }
+            if (((MethodSymbol) s).isVarArgs()) {
+                int i = 0;
+                VarSymbol last = ((MethodSymbol) s).params.last();
+                Type varArgType = (Type) ((ArrayType) last.asType()).getComponentType();
+                com.sun.tools.javac.util.List<JCExpression> reverse = args.reverse();
+                for (JCExpression arg : reverse) {
+                    Symbol argSym = rs.getSymbol(arg, scope);
+                    Type type = getType(argSym);
+                    if (differentArg(type, varArgType)) {
+                        break;
+                    } else {
+                        i++;
+                    }
+                }
+                final int varArgEnd = args.size();
+                final int varArgIndex = varArgEnd - i;
+                java.util.List<JCExpression> varArgs = args.subList(varArgIndex, varArgEnd);
+                JCNewArray varArgArray = getArray(varArgType, varArgs);
+                List<JCExpression> otherArgs = args.subList(0, varArgIndex);
+                List<JCExpression> arrayList = new ArrayList<JCExpression>();
+                arrayList.add(varArgArray);
+                args = merge(otherArgs, arrayList);
+            }
             args = merge(Collections.singleton(accessor), args);
         } else {
             fieldMethId = tm.Ident(getFieldVar(s.name));
@@ -532,13 +531,7 @@ public class PrivateAccessProcessor extends DProcessor {
     }
 
     Name getClassVarName(Name className) {
-        final int lastIndexOf = className.toString().lastIndexOf(".");
-        if (lastIndexOf > -1) {
-            className = elementUtils.getName(className.toString().substring(lastIndexOf));
-            if (className.toString().startsWith(".")) {
-                className = elementUtils.getName(className.toString().substring(1));
-            }
-        }
+        className = rs.getName(className);
         className = elementUtils.getName(StringUtils.uncapitalize(className.toString()));
 
         return elementUtils.getName(className + "Class");
@@ -551,7 +544,6 @@ public class PrivateAccessProcessor extends DProcessor {
     Name getMethodVar(Name objName) {
         return elementUtils.getName(objName + "Method");
     }
-
     boolean reflectionInjected = false;
     boolean methodInjected = false;
 

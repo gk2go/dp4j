@@ -47,7 +47,6 @@ public abstract class DProcessor extends AbstractProcessor {
 
     public static final String clazz = "class";
     public final String arrayBrac = "[]";
-    public final String dot = ".";
     protected Trees trees;
     protected TreeMaker tm;
     protected JavacElements elementUtils;
@@ -58,12 +57,16 @@ public abstract class DProcessor extends AbstractProcessor {
     protected Resolver rs;
 
     public JCNewArray getArray(Type t, List<JCExpression> args) {
-        JCExpression[] toArray = args.toArray(new JCExpression[0]);
-        List<JCExpression> toList = toList(toArray);
         JCExpression tExp = tm.Type(t);
         final JCExpression dim = tm.Literal(args.size());
         com.sun.tools.javac.util.List<JCExpression> dims = com.sun.tools.javac.util.List.of(dim);
-        return tm.NewArray(tExp, dims, toList);
+        return tm.NewArray(tExp, dims, args);
+    }
+
+    public JCNewArray getArray(Type t, java.util.List<JCExpression> args) {
+        JCExpression[] toArray = args.toArray(new JCExpression[0]);
+        List<JCExpression> toList = toList(toArray);
+        return getArray(t, toList);
     }
 
     protected void printMsg(final String msg, final Element e, final boolean warningsOnly) {
@@ -372,12 +375,11 @@ public abstract class DProcessor extends AbstractProcessor {
     }
 
     public ClassSymbol getTypeElement(String className) {
-        if (className.startsWith(dot)) {
-            className = className.substring(1);
-        }
+        className = rs.getName(className).toString();
         final ClassSymbol typ = elementUtils.getTypeElement(className);
         return typ;
     }
+
 
     public boolean sameArg(Type arg, Type varSymbol) {
         final Type erArg = (Type) typeUtils.erasure(arg);

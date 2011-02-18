@@ -5,7 +5,6 @@
 
 package com.dp4j.processors;
 
-import com.sun.tools.internal.xjc.reader.TypeUtil;
 import com.sun.tools.javac.code.Type;
 
 /**
