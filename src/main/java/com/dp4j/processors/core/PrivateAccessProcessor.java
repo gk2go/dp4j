@@ -221,8 +221,8 @@ public class PrivateAccessProcessor extends DProcessor {
                 final Symbol s = rs.getSymbol(loop.expr, cut, stmt);
                 final Type t = getType(s);
                 ArrayType arrayType = typeUtils.getArrayType(loop.var.sym.type);
-                if (differentArg(t, (Type)arrayType)) {
-                    loop.expr = tm.TypeCast((Type)arrayType, loop.expr);
+                if (differentArg(t, (Type) arrayType)) {
+                    loop.expr = tm.TypeCast((Type) arrayType, loop.expr);
                 }
             }
             loop.body = processElement((JCBlock) loop.body, cut, tmpSyms);
@@ -238,9 +238,9 @@ public class PrivateAccessProcessor extends DProcessor {
             if (!accessible) {
                 encBlock.stats = reflect(s, cut, encBlock.stats, stmt);
                 final JCExpression accessor;
-                if(s.isStatic()){
+                if (s.isStatic()) {
                     accessor = tm.Literal("");
-                }else{
+                } else {
                     accessor = fa.selected;
                 }
                 ifExp = getReflectedAccess(fa, cut, stmt, null, varSyms, accessor);
@@ -255,13 +255,6 @@ public class PrivateAccessProcessor extends DProcessor {
                     if (!newArg.equals(arg)) {
                         mi.args = rs.injectBefore(arg, mi.args, true, newArg);
                     }
-//                    scope = getScope(cut, stmt);
-//                    Symbol s = rs.getSymbol(arg, scope);
-//                    final Type t = getType(s);
-//                    if (differentArg(t, varDec.sym.type)) {
-//                        varDec.init = tm.TypeCast(getBoxedType(varDec.sym), varDec.init);
-//                    }
-//                    //should cast here too!
                 }
             }
             final boolean accessible = isAccessible(mi, cut, stmt);
@@ -292,25 +285,31 @@ public class PrivateAccessProcessor extends DProcessor {
             ifExp.type = symbol.type;
         } else if (ifExp instanceof JCBinary) {
             JCBinary ifB = (JCBinary) ifExp;
-            if (ifB.lhs instanceof JCFieldAccess) {
-                final JCFieldAccess fa = (JCFieldAccess) ifB.lhs;
-                final boolean accessible = isAccessible(fa, cut, stmt);
-                if (!accessible) {
-                    Symbol s = rs.getSymbol(fa, cut, stmt);
-                    encBlock.stats = reflect(s, cut, encBlock.stats, stmt);
-                    ifB.lhs = cast(getReflectedAccess(fa, cut, stmt, null, varSyms, fa.selected), rs.getBoxedType(s));
+//            if (ifB.lhs instanceof JCFieldAccess) {
+//                final JCFieldAccess fa = (JCFieldAccess) ifB.lhs;
+            ifB.rhs = processCond(ifB.rhs, cut, stmt, args, varSyms, encBlock);
+
+            final boolean accessible = isAccessible(ifB.lhs, cut, stmt);
+            if (!accessible) {
+                ifB.lhs = processCond(ifB.lhs, cut, stmt, args, varSyms, encBlock);
+                Symbol s = rs.getSymbol(ifB.lhs, cut, stmt);
+                final Type t = getType(s);
+                if (differentArg(t, ifB.rhs.type)) {
+                    ifB.lhs = tm.Parens(tm.TypeCast(rs.getBoxedType(ifB.rhs.type), ifB.lhs));
                 }
             }
-            if (ifB.rhs instanceof JCFieldAccess) {
-                final JCFieldAccess fa = (JCFieldAccess) ifB.rhs;
-                final boolean accessible = isAccessible(fa, cut, stmt);
-                if (!accessible) {
-                    Symbol s = rs.getSymbol(fa, cut, stmt);
-                    encBlock.stats = reflect(s, cut, encBlock.stats, stmt);
-                    ifB.rhs = cast(getReflectedAccess(fa, cut, stmt, null, varSyms, fa.selected), rs.getBoxedType(s));
-                    reflectionInjected = true;
-                }
-            }
+//            }
+
+//            if (ifB.rhs instanceof JCFieldAccess) {
+//                final JCFieldAccess fa = (JCFieldAccess) ifB.rhs;
+//                final boolean accessible = isAccessible(fa, cut, stmt);
+//                if (!accessible) {
+//                    Symbol s = rs.getSymbol(fa, cut, stmt);
+//                    encBlock.stats = reflect(s, cut, encBlock.stats, stmt);
+//                    ifB.rhs = cast(getReflectedAccess(fa, cut, stmt, null, varSyms, fa.selected), rs.getBoxedType(s));
+//                    reflectionInjected = true;
+//                }
+//            }
         } else if (ifExp instanceof JCAssign) {
             JCAssign assignExp = (JCAssign) ifExp;
             if (assignExp.rhs instanceof JCFieldAccess) {

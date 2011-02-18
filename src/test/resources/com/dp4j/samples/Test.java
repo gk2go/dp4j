@@ -49,7 +49,7 @@ public class Test extends K {
             for (Object object : pc.objs) {
                kk = pc.i;
                 System.out.println(get(3));
-                System.out.println(get(2) + pc.i);
+//                System.out.println(get(2) + pc.i);
             }
         }
 

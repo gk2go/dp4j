@@ -545,6 +545,14 @@ public class Resolver {
         return type;
     }
 
+    public Type getBoxedType(Type s) {
+        if (s.isPrimitive()) {
+            final TypeElement boxedClass = typeUtils.boxedClass(s);
+            s = (Type) boxedClass.asType();
+        }
+        return s;
+    }
+
     public Name getName(Name className) {
         return getName(className.toString());
     }
