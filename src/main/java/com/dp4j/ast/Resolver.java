@@ -97,8 +97,8 @@ public class Resolver {
         java.util.List<Symbol> typeParams = getArgs(mi.typeargs, scope);
         if (invTarget instanceof VarSymbol) {//this, super,
             invTarget = invTarget.type.tsym;
-        }else if (invTarget instanceof MethodSymbol){
-            invTarget = ((MethodSymbol)invTarget).getReturnType().tsym; //cannot invoke on void
+        } else if (invTarget instanceof MethodSymbol) {
+            invTarget = ((MethodSymbol) invTarget).getReturnType().tsym; //cannot invoke on void
         }
         MethodSymbol ms = (MethodSymbol) contains(elementUtils.getAllMembers((TypeElement) invTarget), typeParams, mName, args);
         if (ms == null) {
@@ -134,9 +134,6 @@ public class Resolver {
             if (arr.elemtype == null) {
                 arr = getTypedArray(arr);
             }
-            if (arr.elemtype instanceof JCPrimitiveTypeTree) {
-                return arr.type.tsym;
-            }
             Symbol symbol = getSymbol(arr.elemtype, scope);
             return symbol;
         } else if (exp instanceof JCArrayTypeTree) {
@@ -150,6 +147,13 @@ public class Resolver {
             JCBinary bin = (JCBinary) exp;
             Symbol s = getSymbol(bin.lhs, scope);
             return getTypeSymbol(s);
+        } else if (exp instanceof JCPrimitiveTypeTree) {
+            if(exp.type != null){
+                return exp.type.tsym;
+            }
+            PrimitiveType primitiveType = typeUtils.getPrimitiveType(((JCPrimitiveTypeTree)exp).getPrimitiveTypeKind());
+            exp.type = (Type) primitiveType;
+            return getSymbol(exp, scope);
         }
         throw new RuntimeException(exp.toString());
     }
@@ -271,7 +275,7 @@ public class Resolver {
                 JCExpression thisExp = tm.This((Type) encClass.asType());
                 return thisExp;
             } else { //static import
-               throw new RuntimeException(mi.toString() + " : accessing inaccessible statically imported methods not supported");//TODO:
+                throw new RuntimeException(mi.toString() + " : accessing inaccessible statically imported methods not supported");//TODO:
             }
         }
         if (mi.meth instanceof JCFieldAccess) {
