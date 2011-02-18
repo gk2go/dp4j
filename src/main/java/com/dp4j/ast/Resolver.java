@@ -4,6 +4,7 @@
  */
 package com.dp4j.ast;
 
+import com.dp4j.processors.VarArgType;
 import com.sun.source.tree.CompilationUnitTree;
 import com.sun.source.tree.Scope;
 import com.sun.source.util.TreePath;
@@ -25,6 +26,7 @@ import com.sun.tools.javac.code.Symbol.MethodSymbol;
 import com.sun.tools.javac.util.List;
 import com.sun.tools.javac.code.Symtab;
 import com.sun.tools.javac.tree.JCTree;
+import com.sun.tools.javac.util.ListBuffer;
 import javax.lang.model.util.Types;
 
 /**
@@ -68,8 +70,8 @@ public class Resolver {
 
     public Symbol getSymbol(CompilationUnitTree cut, JCStatement stmt, List<JCExpression> typeParams, Name varName, List<JCExpression> args) {
         final Scope scope = getScope(cut, stmt);
-        java.util.List<Symbol> typeSyms = getArgs(typeParams, cut, stmt);
-        java.util.List<Symbol> argsSyms = getArgs(args, cut, stmt);
+        java.util.List<Type> typeSyms = getArgTypes(typeParams, cut, stmt);
+        java.util.List<Type> argsSyms = getArgTypes(args, cut, stmt);
         Symbol t = contains(scope, typeSyms, varName, argsSyms); //first lookup scope for all public identifiers
         TypeElement cl = scope.getEnclosingClass();
         while (t == null && cl != null) { //lookup hierarchy for inacessible identifiers too
@@ -111,8 +113,8 @@ public class Resolver {
     public MethodSymbol getSymbol(final JCMethodInvocation mi, CompilationUnitTree cut, JCStatement stmt) {
         Symbol invTarget = getInvokationTarget(mi, cut, stmt);
         Name mName = getName(mi);
-        java.util.List<Symbol> args = getArgs(mi.args, cut, stmt);
-        java.util.List<Symbol> typeParams = getArgs(mi.typeargs, cut, stmt);
+        java.util.List<Type> args = getArgTypes(mi.args, cut, stmt);
+        java.util.List<Type> typeParams = getArgTypes(mi.typeargs, cut, stmt);
         if (invTarget instanceof VarSymbol) {//this, super,
             invTarget = invTarget.type.tsym;
         } else if (invTarget instanceof MethodSymbol) {
@@ -139,8 +141,8 @@ public class Resolver {
             final JCNewClass nc = (JCNewClass) exp;
             final Name name = getName(nc.clazz);
             TypeElement cl = (TypeElement) getSymbol(cut, stmt, null, name, null);
-            java.util.List<Symbol> args = getArgs(nc.args, cut, stmt);
-            java.util.List<Symbol> typeParams = getArgs(nc.typeargs, cut, stmt);
+            java.util.List<Type> args = getArgTypes(nc.args, cut, stmt);
+            java.util.List<Type> typeParams = getArgTypes(nc.typeargs, cut, stmt);
             Symbol s = contains(cl.getEnclosedElements(), typeParams, elementUtils.getName("<init>"), args);
             return s;
         } else if (exp instanceof JCMethodInvocation) {
@@ -154,7 +156,7 @@ public class Resolver {
             }
             Symbol symbol = getSymbol(arr.elemtype, cut, stmt);
             ArrayType arrayType = typeUtils.getArrayType(symbol.type);
-            return ((Type) arrayType).tsym;
+            return new Symbol.TypeSymbol(0l, elementUtils.getName("Array"), (Type) arrayType, null);
         } else if (exp instanceof JCArrayTypeTree) {
             JCArrayTypeTree arr = (JCArrayTypeTree) exp;
             ArrayType arrayType = typeUtils.getArrayType((TypeMirror) arr.elemtype);
@@ -322,7 +324,7 @@ public class Resolver {
         return primitive;
     }
 
-    public boolean sameMethod(final List<? extends Symbol> formalArgs, java.util.List<? extends Symbol> args, final List<? extends Symbol> formalTypeParams, java.util.List<? extends Symbol> typeParams, final boolean varArgs) {
+    public boolean sameMethod(final List<? extends Symbol> formalArgs, java.util.List<? extends Type> args, final List<? extends Symbol> formalTypeParams, java.util.List<? extends Type> typeParams, final boolean varArgs) {
         if (!sameArgs(formalArgs, args, varArgs)) {
             return false;
         }
@@ -332,7 +334,7 @@ public class Resolver {
         return true;
     }
 
-    private Symbol contains(Scope scope, java.util.List<? extends Symbol> typeParams, Name varName, java.util.List<Symbol> args) {
+    private Symbol contains(Scope scope, java.util.List<? extends Type> typeParams, Name varName, java.util.List<Type> args) {
         Symbol t = contains(pkgClasses, typeParams, varName, args);
         while (t == null && scope != null) {
             Iterable<? extends Element> localElements = scope.getLocalElements();
@@ -342,7 +344,7 @@ public class Resolver {
         return t;
     }
 
-    public Symbol contains(Iterable<? extends Element> list, java.util.List<? extends Symbol> typeParams, Name varName, java.util.List<? extends Symbol> args) {
+    public Symbol contains(Iterable<? extends Element> list, java.util.List<? extends Type> typeParams, Name varName, java.util.List<? extends Type> args) {
         for (Element e : list) {
             final Name elName;
             if (e instanceof ClassSymbol) {
@@ -377,6 +379,7 @@ public class Resolver {
     }
 
     public Symbol getTypeSymbol(Symbol s) {
+
         if (!s.isConstructor() && !(s instanceof ClassSymbol)) {
 //
 //            Symbol ss =  (Symbol) typeUtils.asElement(s.type); //Problems with Integer.TYPE?
@@ -384,56 +387,163 @@ public class Resolver {
 //                ss = (Symbol) typeUtils.asElement(s.erasure_field);
 //            }
 //            s = ss;
-//            //            if (s instanceof MethodSymbol){
-////
-////            }
+            if (s instanceof MethodSymbol) {
+                return ((MethodSymbol) s).getReturnType().tsym;
+            }
+            if (s instanceof VarSymbol && s.name.toString().equals("TYPE")) {
+                return s.type.tsym;
+            }
             s = s.type.tsym;
+        }
+        if (s.isConstructor()) {
+            return s.enclClass();
         }
         return s;
     }
 
-    public java.util.List<Symbol> getArgs(List<JCExpression> args, CompilationUnitTree cut, JCStatement stmt) {
+    public Type getType(Symbol s) {
+
+        if (!s.isConstructor() && !(s instanceof ClassSymbol)) {
+//
+//            Symbol ss =  (Symbol) typeUtils.asElement(s.type); //Problems with Integer.TYPE?
+//            if(ss == null){
+//                ss = (Symbol) typeUtils.asElement(s.erasure_field);
+//            }
+//            s = ss;
+            if (s instanceof MethodSymbol) {
+                return ((MethodSymbol) s).getReturnType();
+            }
+            if (s instanceof VarSymbol && s.name.toString().equals("TYPE")) {
+                return s.type;
+            }
+            return s.type;
+        }
+        if (s.isConstructor()) {
+            return s.enclClass().type;
+        }
+        return s.type;
+    }
+
+//    public java.util.List<Symbol> getArgs(List<JCExpression> args, CompilationUnitTree cut, JCStatement stmt) {
+//        if (args == null) {
+//            return null;
+//        }
+//        java.util.List<Symbol> syms = new ArrayList<Symbol>();
+//        for (JCExpression arg : args) {
+//            Symbol s = getSymbol(arg, cut, stmt);
+//            s = getTypeSymbol(s);
+//            syms.add(s);
+//        }
+//        return syms;
+//    }
+
+    public java.util.List<Type> getArgTypes(List<JCExpression> args, CompilationUnitTree cut, JCStatement stmt) {
         if (args == null) {
             return null;
         }
-        java.util.List<Symbol> syms = new ArrayList<Symbol>();
+        java.util.List<Type> syms = new ArrayList<Type>();
         for (JCExpression arg : args) {
             Symbol s = getSymbol(arg, cut, stmt);
-            s = getTypeSymbol(s);
-            syms.add(s);
+            Type t = getType(s);
+            syms.add(t);
         }
         return syms;
     }
 
-    private boolean sameArgs(List<? extends Symbol> formal, java.util.List<? extends Symbol> actual, final boolean varArgs) {
+    private boolean sameArgs(List<? extends Symbol> formal, java.util.List<? extends Type> actual, final boolean varArgs) {
         if (formal == null || actual == null) {
             if (formal == null && actual == null) {
                 return true;
             } else {
-                if (formal != null) {
-                    if (formal.size() == 1) {
-                        Symbol get = formal.get(0);
-                        //FIXME: handle varargs
-                    }
+                if (actual == null) {
+                    return sameArgs(formal, Collections.EMPTY_LIST, varArgs);
                 }
-                return false;
             }
         }
+        if (formal.isEmpty() && actual.isEmpty()) {
+            return sameArgs(null, null, varArgs);
+        }
+        /**
+         * same number of arguments, or vararg and:
+         *  - vararg is not passed
+         *  - several varargs are passed
+         */
         if (formal.size() == actual.size() || varArgs && ((formal.size() == actual.size() + 1) || actual.size() > formal.size())) {
-            int i = 0;
-            for (Symbol symbol : actual) {
-                if (formal.size() > i) {
-                    Symbol ts = formal.get(i++);
-
-                    //subclass stuff
-                } else {
+            if (varArgs) {
+                Symbol varArg = formal.last();
+                Symbol singleVarArg = ((Type) ((ArrayType) varArg.type).getComponentType()).tsym;
+                final int varArgsNo = actual.size() - formal.size();
+                if (actual.size() > formal.size()) { //several varargs are passed
+                    Symbol[] flattenedVarArgs = new Symbol[varArgsNo + 1];
+                    for (int i = 0; i < varArgsNo + 1; i++) {
+                        flattenedVarArgs[i] = singleVarArg;
+                    }
+                    formal = injectBefore(varArg, formal, true, flattenedVarArgs);
+                } else if (varArgsNo == 0) {
+                    final Type lastArg = actual.get(actual.size() - 1);
+                    if (!(lastArg instanceof ArrayType)) {////should be treated as single component
+                        formal = injectBefore(varArg, formal, true, singleVarArg);
+                    }//assuming it's treated as an array
+                } else if (actual.isEmpty() || varArgsNo < 0) {
+                    formal = injectBefore(varArg, formal, true, new Symbol[]{});//remove vararg
                 }
+                return sameArgs(formal, actual, false);
+            }
+
+            assert (formal.size() == actual.size());
+            int i = 0;
+            for (Type arg : actual) {
+                Symbol ts = formal.get(i);
+                final Type formalType = ts.type;
+                if (!sameArg(arg, formalType)) {
+                    return false;
+                }
+                i++;
             }
             return true;
         }
         return false;
     }
     public static final String dot = ".";
+
+    public boolean sameArg(Type actual, Type formal) {
+        final Type erArg = (Type) typeUtils.erasure(actual);
+        final Type erVar = (Type) typeUtils.erasure(formal);
+        boolean sameVar = erVar.equals(formal);
+        boolean sameErArg = erArg.equals(actual);
+        if ((!sameErArg || !sameVar)) {
+            return sameArg(erArg, erVar);
+        }
+        if (formal instanceof VarArgType) {
+            if (actual instanceof ArrayType) {
+                actual = (Type) ((ArrayType) actual).getComponentType();
+            }
+            return sameArg(actual, ((VarArgType) formal).t);
+        }
+        if (formal.isPrimitive()) {
+            if (actual.isPrimitive()) {
+                if (actual.toString().equals("int") && (formal.toString().equals("double") || formal.toString().equals("float"))) {
+                    return true;
+                }
+                return formal.equals(actual);
+            }
+            return sameArg(actual, getBoxedType(formal.tsym));
+        }
+        if (actual.isPrimitive()) {
+            actual = getBoxedType(actual.tsym);
+        }
+        boolean subs = typeUtils.isSubtype(actual, formal);
+        return subs;
+    }
+
+    public Type getBoxedType(final Symbol s) {
+        Type type = s.type;
+        if (s.type.isPrimitive()) {
+            final TypeElement boxedClass = typeUtils.boxedClass(s.type);
+            type = (Type) boxedClass.asType();
+        }
+        return type;
+    }
 
     public Name getName(Name className) {
         return getName(className.toString());
@@ -444,5 +554,29 @@ public class Resolver {
             className = className.substring(1);
         }
         return elementUtils.getName(className);
+    }
+
+    public static <T> com.sun.tools.javac.util.List<T> injectBefore(T stmt, final com.sun.tools.javac.util.List<? extends T> stats, final boolean skipStmt, T... newStmts) {
+        if (stmt == null || !stats.contains(stmt)) {
+            throw new IllegalArgumentException("" + stmt + " doesn't belong to " + stats);
+        }
+        final ListBuffer<T> lb = ListBuffer.lb();
+        java.util.List<? extends T> pre = stats.subList(0, stats.indexOf(stmt));
+        for (T p : pre) {
+            lb.append(p);
+        }
+        for (T newStmt : newStmts) {
+            if (newStmt != null) {
+                lb.append(newStmt);
+            }
+        }
+        if (!skipStmt) {
+            lb.append(stmt);
+        }
+        java.util.List<? extends T> remStats = stats.subList(stats.indexOf(stmt) + 1, stats.size());
+        for (T stat : remStats) {
+            lb.append(stat);
+        }
+        return lb.toList();
     }
 }

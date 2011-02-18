@@ -177,14 +177,6 @@ public abstract class DProcessor extends AbstractProcessor {
         return ret;
     }
 
-    public Type getBoxedType(final Symbol s) {
-        Type type = s.type;
-        if (s.type.isPrimitive()) {
-            final TypeElement boxedClass = typeUtils.boxedClass(s.type);
-            type = (Type) boxedClass.asType();
-        }
-        return type;
-    }
 
     public JCMethodInvocation getMethodInvoc(final String methodName, final JCExpression param, final List<JCExpression> otherParams, Map<String, JCExpression> vars, CompilationUnitTree cut, Object packageName, com.sun.source.tree.Scope scope, JCStatement stmt, Collection<Symbol> varSyms) {
         final JCExpression methodN = getIdAfterImporting(methodName);
@@ -323,33 +315,8 @@ public abstract class DProcessor extends AbstractProcessor {
         return lb.toList();
     }
 
-    protected static <T> com.sun.tools.javac.util.List<T> injectBefore(T stmt, final com.sun.tools.javac.util.List<T> stats, T... newStmts) {
-        return injectBefore(stmt, stats, false, newStmts);
-    }
-
-    protected static <T> com.sun.tools.javac.util.List<T> injectBefore(T stmt, final com.sun.tools.javac.util.List<T> stats, final boolean skipStmt, T... newStmts){
-        if(stmt == null || !stats.contains(stmt)){
-            throw new IllegalArgumentException("" +stmt + " doesn't belong to " + stats);
-        }
-        final ListBuffer<T> lb = ListBuffer.lb();
-        int i = 0;
-        java.util.List<T> pre = stats.subList(0, stats.indexOf(stmt));
-        for (T p : pre){
-            lb.append(p);
-        }
-        for (T newStmt : newStmts){
-            if (newStmt != null) {
-                lb.append(newStmt);
-            }
-        }
-        if(!skipStmt){
-            lb.append(stmt);
-        }
-        java.util.List<T> remStats = stats.subList(stats.indexOf(stmt)+1, stats.size());
-        for (T stat : remStats){
-            lb.append(stat);
-        }
-        return lb.toList();
+    protected <T> com.sun.tools.javac.util.List<T> injectBefore(T stmt, final com.sun.tools.javac.util.List<? extends T> stats, T... newStmts) {
+        return rs.injectBefore(stmt, stats, false, newStmts);
     }
 
     protected static <T> com.sun.tools.javac.util.List<T> merge(final Collection<T> stats, Collection<T> newStmts) {
@@ -386,26 +353,9 @@ public abstract class DProcessor extends AbstractProcessor {
         return typ;
     }
 
-    public boolean sameArg(Type arg, Type varSymbol) {
-        final Type erArg = (Type) typeUtils.erasure(arg);
-        final Type erVar = (Type) typeUtils.erasure(varSymbol);
-        if (varSymbol instanceof VarArgType) {
-            if (arg instanceof ArrayType) {
-                arg = (Type) ((ArrayType) arg).getComponentType();
-            }
-            return sameArg(arg, ((VarArgType) varSymbol).t);
-        }
-        if (varSymbol.isPrimitive()) {
-            return sameArg(arg, getBoxedType(varSymbol.tsym));
-        }
-        boolean subs = typeUtils.isSubtype(arg, varSymbol);
-        boolean sameVar = erVar.equals(varSymbol);
-        boolean sameErArg = erArg.equals(arg);
-        return subs || ((!sameErArg || !sameVar) && sameArg(erArg, erVar));
-    }
 
     public boolean differentArg(Type arg, Type varSymbol) {
-        return !sameArg(arg, varSymbol);
+        return !rs.sameArg(arg, varSymbol);
     }
 
     public Collection<Symbol> getSmallerList(Collection<Symbol> methodsWithSameName, Symbol ms) {

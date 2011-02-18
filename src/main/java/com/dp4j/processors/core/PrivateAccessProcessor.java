@@ -166,7 +166,7 @@ public class PrivateAccessProcessor extends DProcessor {
                 Symbol s = rs.getSymbol(varDec.init, cut, stmt);
                 final Type t = getType(s);
                 if (differentArg(t, varDec.sym.type)) {
-                    varDec.init = tm.TypeCast(getBoxedType(varDec.sym), varDec.init);
+                    varDec.init = tm.TypeCast(rs.getBoxedType(varDec.sym), varDec.init);
                 }
             }
         } else if (stmt instanceof JCTry) {
@@ -253,7 +253,7 @@ public class PrivateAccessProcessor extends DProcessor {
                 for (JCExpression arg : mi.args) {
                     JCExpression newArg = processCond(arg, cut, stmt, null, varSyms, encBlock);
                     if (!newArg.equals(arg)) {
-                        mi.args = injectBefore(arg, mi.args, true, newArg);
+                        mi.args = rs.injectBefore(arg, mi.args, true, newArg);
                     }
 //                    scope = getScope(cut, stmt);
 //                    Symbol s = rs.getSymbol(arg, scope);
@@ -298,7 +298,7 @@ public class PrivateAccessProcessor extends DProcessor {
                 if (!accessible) {
                     Symbol s = rs.getSymbol(fa, cut, stmt);
                     encBlock.stats = reflect(s, cut, encBlock.stats, stmt);
-                    ifB.lhs = cast(getReflectedAccess(fa, cut, stmt, null, varSyms, fa.selected), getBoxedType(s));
+                    ifB.lhs = cast(getReflectedAccess(fa, cut, stmt, null, varSyms, fa.selected), rs.getBoxedType(s));
                 }
             }
             if (ifB.rhs instanceof JCFieldAccess) {
@@ -307,7 +307,7 @@ public class PrivateAccessProcessor extends DProcessor {
                 if (!accessible) {
                     Symbol s = rs.getSymbol(fa, cut, stmt);
                     encBlock.stats = reflect(s, cut, encBlock.stats, stmt);
-                    ifB.rhs = cast(getReflectedAccess(fa, cut, stmt, null, varSyms, fa.selected), getBoxedType(s));
+                    ifB.rhs = cast(getReflectedAccess(fa, cut, stmt, null, varSyms, fa.selected), rs.getBoxedType(s));
                     reflectionInjected = true;
                 }
             }
@@ -320,7 +320,7 @@ public class PrivateAccessProcessor extends DProcessor {
                 final boolean accessible = isAccessible(s, accessor, cut, stmt);
                 if (!accessible) {
                     encBlock.stats = reflect(s, cut, encBlock.stats, stmt);
-                    assignExp.rhs = cast(getReflectedAccess(fa, cut, stmt, null, varSyms, fa.selected), getBoxedType(s));
+                    assignExp.rhs = cast(getReflectedAccess(fa, cut, stmt, null, varSyms, fa.selected), rs.getBoxedType(s));
                     reflectionInjected = true;
                 }
             }
@@ -330,7 +330,7 @@ public class PrivateAccessProcessor extends DProcessor {
                 if (!accessible) {
                     Symbol s = rs.getSymbol(fa, cut, stmt);
                     encBlock.stats = reflect(s, cut, encBlock.stats, stmt);
-                    JCMethodInvocation reflectedFieldSetter = getReflectedFieldSetter(fa, assignExp.rhs, cut);
+                    JCMethodInvocation reflectedFieldSetter = getReflectedFieldSetter(fa, assignExp.rhs, cut, stmt);
                     ifExp = reflectedFieldSetter;
                 }
             }
@@ -530,9 +530,13 @@ public class PrivateAccessProcessor extends DProcessor {
         return mi;
     }
 
-    JCMethodInvocation getReflectedFieldSetter(JCFieldAccess fa, final JCExpression value, final CompilationUnitTree cut) {
+    JCMethodInvocation getReflectedFieldSetter(JCFieldAccess fa, final JCExpression value, final CompilationUnitTree cut, JCStatement stmt) {
         final Name field = getFieldVar(fa.name);
-        JCMethodInvocation set = getMethodInvoc(field + ".set", fa.selected, value); //TODO: would be better to use setInt, setDouble, etc.. based on type to compile-time check more
+        Symbol s = rs.getSymbol(value, cut, stmt);
+        s = rs.getTypeSymbol(s);
+        String typeName = s.name.toString();
+        typeName = StringUtils.capitalize(typeName);
+        JCMethodInvocation set = getMethodInvoc(field + ".set" + typeName, fa.selected, value);
         return set;
     }
 

@@ -140,17 +140,17 @@ public class PrivateAccessProcTest extends AbstractAnnotationProcessorTest {
     }
     final static String tests[] = {
         "PrivateData",
-        "PrivateMethods",
-        "PrivateVarArgs",
-        "WithAccessibilePrivateDataInstance",
-        "WithAccessibleVarArgsInstance",
-        "Test",
-        "VarArgsCallTest",
-        "CallTest",
-        "IfTest",
-        "MultipleCallsTest",
-        "ForEachTest",
-        "ArrayCallTest"
+//        "PrivateMethods",
+//        "PrivateVarArgs",
+//        "WithAccessibilePrivateDataInstance",
+//        "WithAccessibleVarArgsInstance",
+//        "Test",
+//        "VarArgsCallTest",
+//        "CallTest",
+//        "IfTest",
+//        "MultipleCallsTest",
+//        "ForEachTest",
+//        "ArrayCallTest"
     };
 
     static String getTestSources() {
