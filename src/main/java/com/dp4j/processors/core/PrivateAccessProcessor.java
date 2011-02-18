@@ -167,6 +167,7 @@ public class PrivateAccessProcessor extends DProcessor {
             boolean accessible = isAccessible(varDec.init, scope);
             if (!accessible) {
                 varDec.init = processCond(varDec.init, cut, scope, stmt, null, varSyms, encBlock);
+                scope = getScope(cut, stmt);
                 Symbol s = rs.getSymbol(varDec.init, scope);
                 final Type t = getType(s);
                 if (differentArg(t, varDec.sym.type)) {
