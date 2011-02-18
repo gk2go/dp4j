@@ -136,7 +136,8 @@ public class Resolver {
                 arr = getTypedArray(arr);
             }
             Symbol symbol = getSymbol(arr.elemtype, scope);
-            return symbol;
+            ArrayType arrayType = typeUtils.getArrayType(symbol.type);
+            return ((Type)arrayType).tsym;
         } else if (exp instanceof JCArrayTypeTree) {
             JCArrayTypeTree arr = (JCArrayTypeTree) exp;
             ArrayType arrayType = typeUtils.getArrayType((TypeMirror) arr.elemtype);
