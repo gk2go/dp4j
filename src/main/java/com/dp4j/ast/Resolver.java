@@ -308,8 +308,6 @@ public class Resolver {
         } else if (mi.meth instanceof JCMethodInvocation) {
             return mi.meth;
         }
-
-
         throw new RuntimeException(mi.toString() + " : error, what accessor is it?");
     }
 

@@ -149,6 +149,7 @@ public class PrivateAccessProcTest extends AbstractAnnotationProcessorTest {
         "CallTest",
         "IfTest",
         "MultipleCallsTest",
+        "ForEachTest",
         "ArrayCallTest"
     };
 
