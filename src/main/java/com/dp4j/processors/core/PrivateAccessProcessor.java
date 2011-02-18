@@ -484,10 +484,6 @@ public class PrivateAccessProcessor extends DProcessor {
         if (s instanceof MethodSymbol) {
             fieldMethId = tm.Ident(getMethodVar(s.name));
             getterName = elementUtils.getName("invoke");
-            if (args.size() > 0) {
-                Type t = elementUtils.getTypeElement("java.lang.Object").type;
-                args = com.sun.tools.javac.util.List.<JCExpression>of(getArray(t, args));
-            }
             if (((MethodSymbol) s).isVarArgs()) {
                 int i = 0;
                 VarSymbol last = ((MethodSymbol) s).params.last();
@@ -510,6 +506,10 @@ public class PrivateAccessProcessor extends DProcessor {
                 List<JCExpression> arrayList = new ArrayList<JCExpression>();
                 arrayList.add(varArgArray);
                 args = merge(otherArgs, arrayList);
+            }
+             if (args.size() > 0) {
+                Type t = elementUtils.getTypeElement("java.lang.Object").type;
+                args = com.sun.tools.javac.util.List.<JCExpression>of(getArray(t, args));
             }
             args = merge(Collections.singleton(accessor), args);
         } else {
