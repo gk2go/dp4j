@@ -484,9 +484,10 @@ public class PrivateAccessProcessor extends DProcessor {
         if (s instanceof MethodSymbol) {
             fieldMethId = tm.Ident(getMethodVar(s.name));
             getterName = elementUtils.getName("invoke");
-//        if (mi.args.size() == 1) {
-//            mi.args = com.sun.tools.javac.util.List.<JCExpression>of(getArray("java.lang.Object", mi.args, cut));
-//        }
+        if (args.size() > 0) {
+            Type t = elementUtils.getTypeElement("java.lang.Object").type;
+            args = com.sun.tools.javac.util.List.<JCExpression>of(getArray(t, args));
+        }
 //        com.sun.tools.javac.util.List<VarSymbol> params = mSym.params();
 //        if (mSym.isVarArgs()) {
 //            int i = 0;
@@ -530,28 +531,6 @@ public class PrivateAccessProcessor extends DProcessor {
         return set;
     }
 
-    private JCVariableDecl addClassVarIfNew(Map<String, JCExpression> vars, String className, Collection<Symbol> varSyms, Symbol s) {
-        JCVariableDecl classDecl = null;
-//        final Name clName = getClassVarName(className);
-//        if (!vars.containsKey(clName)) {
-//            VarSymbol classVar = new VarSymbol(Flags.FINAL, clName, , null);
-//            classDecl = getVarDecl(clName, javaLangClass, javaLangClass + ".forName", clName);
-//
-//            addVar(vars, classDecl, varSyms);
-//        }
-        return classDecl;
-    }
-
-    private JCVariableDecl addFieldVarIfNeW(Map<String, JCExpression> vars, Name objName, final String clazz, Collection<Symbol> varSyms) {
-        JCVariableDecl fieldDecl = null;
-        final Name field = getFieldVar(objName);
-        if (!vars.containsKey(field)) {
-//            fieldDecl = getVarDecl(field, "java.lang.reflect.Field", clazz + ".getDeclaredField", objName);
-            addVar(fieldDecl, varSyms);
-        }
-        return fieldDecl;
-    }
-
     Name getClassVarName(Name className) {
         final int lastIndexOf = className.toString().lastIndexOf(".");
         if (lastIndexOf > -1) {
@@ -573,24 +552,6 @@ public class PrivateAccessProcessor extends DProcessor {
         return elementUtils.getName(objName + "Method");
     }
 
-    private JCVariableDecl addMethodVarIfNeW(Map<String, JCExpression> vars, CompilationUnitTree cut, Object packageName, com.sun.source.tree.Scope scope, JCStatement stmt, Symbol accessor, java.util.List<VarSymbol> params, final Symbol classSymbol, Collection<Symbol> varSyms) {
-        JCVariableDecl meDecl = null;
-//        final String methodVar = getMethodVar();
-//        if (!vars.containsKey(methodVar)) {
-//
-//
-//            JCIdent classId = tm.Ident(classSymbol);
-//            JCExpression acccessor = tm.Select(classId, elementUtils.getName("getDeclaredMethod"));
-//
-//            JCExpression[] types = getTypes(params);
-//            com.sun.tools.javac.util.List<JCExpression> args = merge(Collections.singleton(acccessor), toList(types));
-//            JCMethodInvocation mi = tm.Apply(com.sun.tools.javac.util.List.<JCExpression>nil(), acccessor, args);
-//            tm.VarDef(null, null, acccessor, acccessor);
-//            meDecl = getVarDecl(methodVar, "java.lang.reflect.Method", clazz + ".getDeclaredMethod", objName, getTypes(params), vars, cut, packageName, scope, stmt, varSyms);
-//            addVar(vars, meDecl, varSyms);
-//        }
-        return meDecl;
-    }
     boolean reflectionInjected = false;
     boolean methodInjected = false;
 

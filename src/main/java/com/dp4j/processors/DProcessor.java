@@ -57,14 +57,13 @@ public abstract class DProcessor extends AbstractProcessor {
     protected TypeElement encClass;
     protected Resolver rs;
 
-    public JCNewArray getArray(Type t, java.util.List<JCExpression> args) {
+    public JCNewArray getArray(Type t, List<JCExpression> args) {
         JCExpression[] toArray = args.toArray(new JCExpression[0]);
         List<JCExpression> toList = toList(toArray);
         JCExpression tExp = tm.Type(t);
         final JCExpression dim = tm.Literal(args.size());
         com.sun.tools.javac.util.List<JCExpression> dims = com.sun.tools.javac.util.List.of(dim);
         return tm.NewArray(tExp, dims, toList);
-
     }
 
     protected void printMsg(final String msg, final Element e, final boolean warningsOnly) {
