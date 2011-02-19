@@ -3,31 +3,21 @@ package com.dp4j.processors.core;
 import com.dp4j.InjectReflection;
 import com.dp4j.ast.Resolver;
 import com.dp4j.processors.DProcessor;
-import com.dp4j.processors.ExpProcResult;
-import com.dp4j.processors.ReflectedAccessResult;
 import com.sun.source.tree.*;
 import com.sun.source.util.TreePath;
 import com.sun.tools.javac.code.*;
 import com.sun.tools.javac.code.Symbol.*;
-import com.sun.tools.javac.model.FilteredMemberList;
-import com.sun.tools.javac.tree.JCTree;
 import javax.annotation.processing.*;
 import javax.lang.model.*;
 import javax.lang.model.element.*;
 import com.sun.tools.javac.tree.JCTree.*;
 import com.sun.tools.javac.tree.JCTree.JCExpression;
-import com.sun.tools.javac.util.ListBuffer;
 import java.util.*;
 import java.util.ArrayList;
 import javax.lang.model.type.*;
 import javax.tools.Diagnostic.Kind.*;
 import org.apache.commons.lang.*;
-import com.sun.source.tree.Scope;
-import com.sun.tools.javac.api.JavacScope;
-import com.sun.tools.javac.tree.JCTree.TypeBoundKind;
-import com.sun.tools.javac.code.Type.WildcardType;
 import com.sun.tools.javac.util.Name;
-import javax.tools.Diagnostic.Kind;
 
 /**
  *

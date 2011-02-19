@@ -7,6 +7,7 @@ package com.dp4j;
 import java.io.FilenameFilter;
 import com.dp4j.processors.core.PrivateAccessProcessor;
 import com.dp4j.processors.*;
+import com.sun.tools.javac.comp.Resolve;
 
 import java.io.File;
 import java.io.IOException;
@@ -87,7 +88,7 @@ public class PrivateAccessProcTest extends AbstractAnnotationProcessorTest {
         String cp = getCp(tools, commons);
         String javacCmd = "javac -Xlint -d " + targetClasses + " ";
 
-        final String dp4jCompile = javacCmd + cp + getClassesToCompile(templateMethod.class, DProcessor.class, ExpProcResult.class, PrivateAccessProcessor.class);
+        final String dp4jCompile = javacCmd + cp + getClassesToCompile(templateMethod.class, InjectReflection.class, Resolve.class, DProcessor.class, PrivateAccessProcessor.class);
 
         System.out.println(dp4jCompile);
         cp = getCp(targetClasses.getAbsolutePath(), tools, commons, junit);

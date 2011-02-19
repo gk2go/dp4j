@@ -3,8 +3,6 @@
  * and open the template in the editor.
  */
 package com.dp4j.ast;
-
-import com.dp4j.processors.VarArgType;
 import com.sun.source.tree.CompilationUnitTree;
 import com.sun.source.tree.Scope;
 import com.sun.source.util.TreePath;
@@ -513,12 +511,6 @@ public class Resolver {
         boolean sameErArg = erArg.equals(actual);
         if ((!sameErArg || !sameVar)) {
             return sameArg(erArg, erVar);
-        }
-        if (formal instanceof VarArgType) {
-            if (actual instanceof ArrayType) {
-                actual = (Type) ((ArrayType) actual).getComponentType();
-            }
-            return sameArg(actual, ((VarArgType) formal).t);
         }
         if (formal.isPrimitive()) {
             if (actual.isPrimitive()) {
