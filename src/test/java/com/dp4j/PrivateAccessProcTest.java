@@ -25,7 +25,7 @@ import static org.junit.Assert.*;
  *
  * @author simpatico
  */
-public class PrivateAccessProcTest extends AbstractAnnotationProcessorTest {
+public class PrivateAccessProcTest{
 
     File getFile(final String... dirs) {
         File ret = null;
@@ -188,10 +188,10 @@ public class PrivateAccessProcTest extends AbstractAnnotationProcessorTest {
 //        asssertCompilationSuccessful(compileTestCase("IfTest"));
 //    }
 
-    @Override
-    protected Collection<Processor> getProcessors() {
-        return Arrays.<Processor>asList(new PrivateAccessProcessor());
-    }
+//    @Override
+//    protected Collection<Processor> getProcessors() {
+//        return Arrays.<Processor>asList(new PrivateAccessProcessor());
+//    }
 
     private void assertClassExists(final String[] testFiles) {
         for (String testFile : testFiles) {
