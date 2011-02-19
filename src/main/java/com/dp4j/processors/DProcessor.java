@@ -253,6 +253,9 @@ public abstract class DProcessor extends AbstractProcessor {
     }
     protected JCExpression thisExp;
 
+    protected boolean verbose = false;
+    protected Map<String, String> options;
+
     @Override
     public void init(ProcessingEnvironment processingEnv) {
         super.init(processingEnv);
@@ -263,6 +266,10 @@ public abstract class DProcessor extends AbstractProcessor {
         msgr = processingEnv.getMessager();
         tm = TreeMaker.instance(((JavacProcessingEnvironment) processingEnv).getContext());
         typeUtils = processingEnv.getTypeUtils();
+        options = processingEnv.getOptions();
+        if(options.containsKey("verbose")){
+            verbose = true;
+        }
     }
 
     protected Map<Element, TypeElement> getElementsAnnotated(final RoundEnvironment roundEnv, Set<? extends TypeElement> annotations) {
@@ -362,6 +369,12 @@ public abstract class DProcessor extends AbstractProcessor {
         Collection<Symbol> tmp = new ArrayList<Symbol>(methodsWithSameName);
         tmp.remove(ms);
         return tmp;
+    }
+
+    public void printVerbose(CompilationUnitTree cut, final Element e) {
+        if (verbose) {
+            msgr.printMessage(Kind.NOTE, cut.toString(), e);
+        }
     }
 //    public java.util.List<Type> getArgs(final JCMethodInvocation mi, final Map<String, JCExpression> vars, final CompilationUnitTree cut, Object packageName, com.sun.source.tree.Scope scope, JCStatement stmt, Collection<Symbol> varSyms) {
 //        java.util.List<Type> args = new ArrayList<Type>();

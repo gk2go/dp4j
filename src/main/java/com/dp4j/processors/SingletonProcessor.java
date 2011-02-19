@@ -117,6 +117,6 @@ public class SingletonProcessor extends DProcessor {
                 }
             }
         }
-        System.out.println(singletonCU);
+        printVerbose(singletonCU, e);
     }
 }

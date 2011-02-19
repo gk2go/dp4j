@@ -1,5 +1,6 @@
 package com.dp4j.processors.core;
 
+import com.dp4j.InjectReflection;
 import com.dp4j.ast.Resolver;
 import com.dp4j.processors.DProcessor;
 import com.dp4j.processors.ExpProcResult;
@@ -26,6 +27,7 @@ import com.sun.tools.javac.api.JavacScope;
 import com.sun.tools.javac.tree.JCTree.TypeBoundKind;
 import com.sun.tools.javac.code.Type.WildcardType;
 import com.sun.tools.javac.util.Name;
+import javax.tools.Diagnostic.Kind;
 
 /**
  *
@@ -47,6 +49,12 @@ public class PrivateAccessProcessor extends DProcessor {
 
     @Override
     protected void processElement(Element e, TypeElement ann, boolean warningsOnly) {
+        if(options.containsKey("conservative")){
+            if(!ann.getQualifiedName().toString().equals(InjectReflection.class.getCanonicalName())){
+                return;
+            }
+        }
+
         encClass = (TypeElement) e.getEnclosingElement();
         PackageElement packageOf = elementUtils.getPackageOf(e);
         List<? extends Element> pkgClasses = packageOf.getEnclosedElements();
@@ -82,7 +90,7 @@ public class PrivateAccessProcessor extends DProcessor {
             }
             reflectionInjected = false;
         }
-        System.out.println(cut);
+        printVerbose(cut, e);
     }
 
     protected JCBlock processElement(final JCBlock tree, final CompilationUnitTree cut) {
@@ -117,7 +125,6 @@ public class PrivateAccessProcessor extends DProcessor {
             }
         } else if (stmt instanceof JCTry) {
             JCTry tryStmt = (JCTry) stmt;
-            //make a copy of vars here, let him add what he wants but then we restore vars
             if (tryStmt.finalizer != null && tryStmt.finalizer.stats != null && !tryStmt.finalizer.stats.isEmpty()) {
                 tryStmt.finalizer = processElement(tryStmt.finalizer, cut);
             }
