@@ -182,7 +182,7 @@ public class PrivateAccessProcessor extends DProcessor {
             Symbol s = rs.getSymbol(ifExp, cut, stmt);
             final boolean accessible = isAccessible(fa, cut, stmt);
             if (!accessible) {
-                encBlock.stats = reflect(s, cut, encBlock.stats, stmt);
+                encBlock.stats = reflect(s, cut, encBlock.stats, stmt, null);
                 final JCExpression accessor;
                 if (s.isStatic()) {
                     accessor = tm.Literal("");
@@ -206,7 +206,7 @@ public class PrivateAccessProcessor extends DProcessor {
             final boolean accessible = isAccessible(mi, cut, stmt);
             if (!accessible) {
                 ifExp.type = mSym.getReturnType();
-                encBlock.stats = reflect(mSym, cut, encBlock.stats, stmt);
+                encBlock.stats = reflect(mSym, cut, encBlock.stats, stmt, mi.args);
                 JCExpression accessor = rs.getInvokationExp(mi, cut, stmt);
                 ifExp = getReflectedAccess(mSym, cut, accessor, mi.args, stmt);
                 methodInjected = true;
@@ -227,7 +227,7 @@ public class PrivateAccessProcessor extends DProcessor {
             final boolean accessible = isAccessible(initSym, initSym.enclClass(), cut, stmt);
             ifExp.type = rs.getType(initSym);
             if (!accessible) {
-                encBlock.stats = reflect(initSym, cut, encBlock.stats, stmt);
+                encBlock.stats = reflect(initSym, cut, encBlock.stats, stmt, init.args);
                 ifExp = getReflectedAccess(initSym, cut, null, init.args, stmt);
                 constructorInjected = true;
             }
@@ -256,8 +256,10 @@ public class PrivateAccessProcessor extends DProcessor {
                 ifB.lhs = processCond(ifB.lhs, cut, stmt, encBlock);
                 Symbol s = rs.getSymbol(ifB.lhs, cut, stmt);
                 final Type t = getType(s);
-                if (differentArg(t, ifB.rhs.type)) {
-                    ifB.lhs = tm.Parens(tm.TypeCast(rs.getBoxedType(ifB.rhs.type), ifB.lhs));
+                if (!typeUtils.getNullType().equals(ifB.rhs.type)) {
+                    if (differentArg(t, ifB.rhs.type)) {
+                        ifB.lhs = tm.Parens(tm.TypeCast(rs.getBoxedType(ifB.rhs.type), ifB.lhs));
+                    }
                 }
             }
 //            }
@@ -280,7 +282,7 @@ public class PrivateAccessProcessor extends DProcessor {
                 Symbol s = rs.getSymbol(fa, cut, stmt);
                 final boolean accessible = isAccessible(s, accessor, cut, stmt);
                 if (!accessible) {
-                    encBlock.stats = reflect(s, cut, encBlock.stats, stmt);
+                    encBlock.stats = reflect(s, cut, encBlock.stats, stmt, null);
                     assignExp.rhs = cast(getReflectedAccess(fa, cut, stmt, null, fa.selected), rs.getBoxedType(s));
                     reflectionInjected = true;
                 }
@@ -290,7 +292,7 @@ public class PrivateAccessProcessor extends DProcessor {
                 final boolean accessible = isAccessible(fa, cut, stmt);
                 if (!accessible) {
                     Symbol s = rs.getSymbol(fa, cut, stmt);
-                    encBlock.stats = reflect(s, cut, encBlock.stats, stmt);
+                    encBlock.stats = reflect(s, cut, encBlock.stats, stmt, null);
                     JCMethodInvocation reflectedFieldSetter = getReflectedFieldSetter(fa, assignExp.rhs, cut, stmt);
                     ifExp = reflectedFieldSetter;
                 }
@@ -370,14 +372,20 @@ public class PrivateAccessProcessor extends DProcessor {
         return trees.isAccessible(rs.getScope(cut, stmt), s, itd);
     }
 
-    protected com.sun.tools.javac.util.List<JCStatement> reflect(Symbol s, final CompilationUnitTree cut, com.sun.tools.javac.util.List<JCStatement> stats, JCStatement stmt) {
+    protected com.sun.tools.javac.util.List<JCStatement> reflect(Symbol s, final CompilationUnitTree cut, com.sun.tools.javac.util.List<JCStatement> stats, JCStatement stmt, com.sun.tools.javac.util.List<JCExpression> args) {
         final java.util.List<? extends Symbol> params;
         if (s instanceof MethodSymbol) {
-            params = ((MethodSymbol) s).params;
+            final com.sun.tools.javac.util.List<TypeSymbol> formalTypeParams = ((MethodSymbol) s).getTypeParameters();
+            if (formalTypeParams.isEmpty()) {
+                params = ((MethodSymbol) s).params;
+            }else{
+                params = rs.getArgs(args, cut, stmt);
+            }
         } else {
             params = Collections.EMPTY_LIST;
         }
-        return reflect(s, cut, stats, params, stmt);
+        com.sun.tools.javac.util.List<JCStatement> reflect = reflect(s, cut, stats, params, stmt);
+        return reflect;
     }
 
     public com.sun.tools.javac.util.List<JCStatement> reflect(Symbol symbol, CompilationUnitTree cut, com.sun.tools.javac.util.List<JCStatement> stats, List<? extends Symbol> params, JCStatement stmt) {

@@ -178,7 +178,7 @@ public class Resolver {
                 return symTable.booleanType.tsym;
             }
             Type type = getType(bin.lhs, cut, stmt);
-            if (type != Type.noType) {
+            if (!typeUtils.getNullType().equals(type)) {
                 return getSymbol(bin.lhs, cut, stmt);
             }
             return getSymbol(bin.rhs, cut, stmt);
@@ -471,18 +471,18 @@ public class Resolver {
         return s.type;
     }
 
-//    public java.util.List<Symbol> getArgs(List<JCExpression> args, CompilationUnitTree cut, JCStatement stmt) {
-//        if (args == null) {
-//            return null;
-//        }
-//        java.util.List<Symbol> syms = new ArrayList<Symbol>();
-//        for (JCExpression arg : args) {
-//            Symbol s = getSymbol(arg, cut, stmt);
-//            s = getTypeSymbol(s);
-//            syms.add(s);
-//        }
-//        return syms;
-//    }
+    public java.util.List<Symbol> getArgs(List<JCExpression> args, CompilationUnitTree cut, JCStatement stmt) {
+        if (args == null) {
+            return null;
+        }
+        java.util.List<Symbol> syms = new ArrayList<Symbol>();
+        for (JCExpression arg : args) {
+            Symbol s = getSymbol(arg, cut, stmt);
+            s = getTypeSymbol(s);
+            syms.add(s);
+        }
+        return syms;
+    }
     public java.util.List<Type> getArgTypes(List<JCExpression> args, CompilationUnitTree cut, JCStatement stmt) {
         if (args == null) {
             return null;

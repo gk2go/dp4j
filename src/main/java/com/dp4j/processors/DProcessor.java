@@ -38,6 +38,7 @@ import com.sun.tools.javac.model.FilteredMemberList;
 import javax.lang.model.type.ArrayType;
 import org.apache.commons.lang.StringUtils;
 import com.dp4j.ast.Resolver;
+import com.sun.tools.javac.code.Type.ClassType;
 
 /**
  *
@@ -142,7 +143,15 @@ public abstract class DProcessor extends AbstractProcessor {
         int i = 0;
         for (Symbol param : params) {
             Symbol boxedS = rs.getBoxedSymbol(param);
-            final Type type = param.type;
+            Type type = param.type;
+            if(type.isParameterized()){
+                if (type instanceof ClassType){
+                    type = ((ClassType)type).supertype_field;
+                }
+                if(type == null){
+                    type = param.type.removeBounds();
+                }
+            }
             JCExpression classExp;
             if (type.isPrimitive()) {
                 java.util.List<Symbol> enclosedElements = boxedS.getEnclosedElements();

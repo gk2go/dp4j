@@ -14,8 +14,12 @@ import org.junit.Test;
  */
 
 class Genericer{
-    static<T> String getAll(T t){
+    private static<T> String getAll(T t){
         return null;
+    }
+
+    void test(){
+        getAll(new String());
     }
 }
 
