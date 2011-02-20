@@ -30,6 +30,7 @@ import com.sun.tools.javac.util.ListBuffer;
 import java.lang.Iterable;
 import java.util.ArrayList;
 import javax.lang.model.util.Types;
+import org.apache.commons.lang.StringUtils;
 
 /**
  *
@@ -170,8 +171,17 @@ public class Resolver {
             return getSymbol(((JCTypeCast) exp).expr, cut, stmt);
         } else if (exp instanceof JCBinary) {
             JCBinary bin = (JCBinary) exp;
-            Symbol s = getSymbol(bin.lhs, cut, stmt);
-            return getTypeSymbol(s);
+            String op = bin.toString();
+            op = StringUtils.remove(op, bin.lhs.toString());
+            op = StringUtils.remove(op, bin.rhs.toString());
+            if (op.contains("==") || op.contains("!=") || op.contains("&&") || op.contains("||")) {
+                return symTable.booleanType.tsym;
+            }
+            Type type = getType(bin.lhs, cut, stmt);
+            if (type != Type.noType) {
+                return getSymbol(bin.lhs, cut, stmt);
+            }
+            return getSymbol(bin.rhs, cut, stmt);
         } else if (exp instanceof JCPrimitiveTypeTree) {
             if (exp.type != null) {
                 return exp.type.tsym;
@@ -359,12 +369,12 @@ public class Resolver {
     }
 
     public Symbol contains(Iterable<? extends Element> list, java.util.List<? extends Type> typeParams, Name varName, java.util.List<? extends Type> args) {
-        list = listgetSameNameEls(list, varName);
+        Collection<? extends Element> els = listgetSameNameEls(list, varName, args);
 
-        for (Element e : list) {
+        for (Element e : els) {
             if (args != null) { //isEmpty means empty-args method
                 final List<VarSymbol> formalArgs;
-                final List<TypeSymbol> formalTypeParams;
+                List<TypeSymbol> formalTypeParams;
                 final boolean varArgs;
                 if (e.getKind().equals(ElementKind.METHOD) || e.getKind().equals(ElementKind.CONSTRUCTOR)) {
                     MethodSymbol me = (MethodSymbol) e;
@@ -376,6 +386,10 @@ public class Resolver {
                     formalTypeParams = null;
                     varArgs = false;
                 }
+                if (typeParams.isEmpty() && !formalTypeParams.isEmpty() && els.size() == 1) { //basic type inference, shouldn't also check same args-size? Yes, but varargs!
+                    formalTypeParams = null;
+                    typeParams = null;
+                }
                 if (!sameMethod(formalArgs, args, formalTypeParams, typeParams, varArgs)) {
                     continue;
                 }
@@ -385,7 +399,7 @@ public class Resolver {
         return null;
     }
 
-    Iterable<? extends Element> listgetSameNameEls(Iterable<? extends Element> list, Name varName) {
+    Collection<? extends Element> listgetSameNameEls(Iterable<? extends Element> list, Name varName, java.util.List<? extends Type> args) {
         Collection<Element> els = new ArrayList<Element>();
         for (Element e : list) {
             final Name elName;
@@ -396,6 +410,11 @@ public class Resolver {
                 elName = (Name) e.getSimpleName();
             }
             if (elName.equals(varName) || e.getSimpleName().equals(varName)) {
+                if (args != null) {//isEmpty means empty-args method
+                    if (!e.getKind().equals(ElementKind.METHOD) && !e.getKind().equals(ElementKind.CONSTRUCTOR)) {
+                        continue;
+                    }
+                }
                 els.add(e);
             }
         }

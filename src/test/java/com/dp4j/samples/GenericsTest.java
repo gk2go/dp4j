@@ -23,6 +23,6 @@ public class GenericsTest {
 
     @Test
     public void test(){
-//          Assert.assertTrue(Genericer.getAll(String.class) == null); //some entity
+          Assert.assertTrue(Genericer.getAll(String.class) == null);
     }
 }
