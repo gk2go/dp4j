@@ -9,9 +9,9 @@ package com.dp4j.samples;
  * @author simpatico
  */
 @com.dp4j.Singleton
-public class Singleton {
+public class ASingleton {
 
-    private Singleton(){
-        
+    private ASingleton(){
+
     }
 }

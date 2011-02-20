@@ -6,6 +6,7 @@ package com.dp4j.ast;
 
 import com.sun.source.tree.CompilationUnitTree;
 import com.sun.source.tree.Scope;
+import com.sun.source.tree.Tree;
 import com.sun.source.util.TreePath;
 import com.sun.tools.javac.util.Name;
 import com.sun.tools.javac.code.Symbol.*;

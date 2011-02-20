@@ -4,6 +4,7 @@
  */
 package com.dp4j.samples;
 
+import com.dp4j.samples.ASingleton;
 import org.junit.Test;
 
 /**
@@ -14,6 +15,11 @@ public class PrivateConstructorTest {
 
     @Test
     public void test() {
-        new Singleton();
+        new ASingleton();
     }
+//FIXME: injected code is not available to other processors already!
+//    @Test
+//    public void instanceTest() {
+//        ASingleton.instance = null;
+//    }
 }

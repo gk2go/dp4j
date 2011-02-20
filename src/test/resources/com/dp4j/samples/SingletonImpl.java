@@ -6,7 +6,7 @@ package com.dp4j.samples;
 
 import com.dp4j.*;
 
-@Singleton
+@com.dp4j.Singleton
 public class SingletonImpl {
 
     @instance

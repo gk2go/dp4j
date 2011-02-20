@@ -89,6 +89,7 @@
                             <compilerArgument>-proc:none</compilerArgument>
                             <includes>
                                 <include>com/dp4j/processors/core/**</include>
+                                <include>com/dp4j/processors/**</include>
                             </includes>
                         </configuration>
                     </execution>
