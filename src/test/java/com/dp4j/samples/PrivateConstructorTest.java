@@ -19,8 +19,7 @@ public class PrivateConstructorTest {
     public PrivateConstructorTest() {
         ASingleton singleton = new ASingleton();
         final List<String[]> mengsWithSharedExp = new LinkedList<String[]>();
-        final String[] mengs = {"...so geht die Legende ...", ""};
-//        final String[][] mengs = {{"...so geht die Legende ...", ""}};
+        final String[][] mengs = {{"...so geht die Legende ...", ""}};
 //        final String[] expressions = uniqueStrings(mengs).toArray(new String[0]);
     }
 

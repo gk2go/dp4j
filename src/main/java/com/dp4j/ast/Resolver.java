@@ -157,10 +157,10 @@ public class Resolver {
             ArrayType arrayType = typeUtils.getArrayType(symbol.type);
             ((Type) arrayType).tsym.type = (Type) arrayType;
             return ((Type) arrayType).tsym;
-//            return new Symbol.TypeSymbol(0l, elementUtils.getName("Array"), (Type) arrayType, null);
         } else if (exp instanceof JCArrayTypeTree) {
             JCArrayTypeTree arr = (JCArrayTypeTree) exp;
-            ArrayType arrayType = typeUtils.getArrayType((TypeMirror) arr.elemtype);
+            Symbol s = getSymbol(arr.elemtype, cut, stmt);
+            ArrayType arrayType = typeUtils.getArrayType(s.type);
             return ((Type) arrayType).tsym;
         } else if (exp instanceof JCParens) {
             return getSymbol(((JCParens) exp).expr, cut, stmt);
