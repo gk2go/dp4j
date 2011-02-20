@@ -29,10 +29,10 @@
             </roles>
         </developer>
     </developers>
-    <scm>
+<!--    <scm>
         <connection>scm:hg:file:///${basedir}</connection>
         <developerConnection>scm:hg:file:///${basedir}</developerConnection>
-    </scm>
+    </scm>-->
     <build>
         <testResources>
             <testResource>
@@ -192,4 +192,5 @@
             <url>http://snapshots.repository.codehaus.org</url>
         </pluginRepository>
     </pluginRepositories>
+
 </project>

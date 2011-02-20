@@ -39,8 +39,8 @@ public class PrivateAccessProcessor extends DProcessor {
 
     @Override
     protected void processElement(Element e, TypeElement ann, boolean warningsOnly) {
-        if(options.containsKey("conservative")){
-            if(!ann.getQualifiedName().toString().equals(InjectReflection.class.getCanonicalName())){
+        if (options.containsKey("conservative")) {
+            if (!ann.getQualifiedName().toString().equals(InjectReflection.class.getCanonicalName())) {
                 return;
             }
         }
@@ -68,20 +68,27 @@ public class PrivateAccessProcessor extends DProcessor {
         final CompilationUnitTree cut = treePath.getCompilationUnit();
 
         tree.body = processElement(tree.body, cut);
-        if (reflectionInjected) {
+        if (reflectionInjected || methodInjected || constructorInjected) {
             tree.thrown = tree.thrown.append(getId("java.lang.ClassNotFoundException"));
             tree.thrown = tree.thrown.append(getId("java.lang.NoSuchFieldException"));
             tree.thrown = tree.thrown.append(getId("java.lang.IllegalAccessException"));
-            if (methodInjected) {
-                tree.thrown = tree.thrown.append(getId("java.lang.reflect.InvocationTargetException"));
-                tree.thrown = tree.thrown.append(getId("java.lang.IllegalArgumentException"));
+            if (constructorInjected || methodInjected) {
                 tree.thrown = tree.thrown.append(getId("java.lang.NoSuchMethodException"));
+                tree.thrown = tree.thrown.append(getId("java.lang.reflect.InvocationTargetException"));
+                if (constructorInjected) {
+                    tree.thrown = tree.thrown.append(getId("java.lang.InstantiationException"));
+                    constructorInjected = false;
+                }
+            }
+            if (methodInjected) {
+                tree.thrown = tree.thrown.append(getId("java.lang.IllegalArgumentException"));
                 methodInjected = false;
             }
             reflectionInjected = false;
         }
         printVerbose(cut, e);
     }
+    boolean constructorInjected = false;
 
     protected JCBlock processElement(final JCBlock tree, final CompilationUnitTree cut) {
         for (JCStatement stmt : tree.stats) {
@@ -144,7 +151,7 @@ public class PrivateAccessProcessor extends DProcessor {
             loop.body = processElement((JCBlock) loop.body, cut);
         } else if (stmt instanceof JCForLoop) {
             JCForLoop loop = (JCForLoop) stmt;
-            //FIXME: loop.cond might declare i
+            //FIXME: loop.init
             loop.cond = processCond(loop.cond, cut, stmt, encBlock);
             loop.body = processElement((JCBlock) loop.body, cut);
         } else if (stmt instanceof JCDoWhileLoop) {
@@ -202,13 +209,29 @@ public class PrivateAccessProcessor extends DProcessor {
                 encBlock.stats = reflect(mSym, cut, encBlock.stats, stmt);
                 JCExpression accessor = rs.getInvokationExp(mi, cut, stmt);
                 ifExp = getReflectedAccess(mSym, cut, accessor, mi.args, stmt);
-                methodInjected = true; //could be a source of bugs here. Not injected yet!
+                methodInjected = true;
             } else {
                 ifExp.type = mSym.getReturnType();
             }
         } else if (ifExp instanceof JCNewClass) {
-            //TODO: it's a method too! handle similarly
-            ifExp.type = ((JCNewClass) ifExp).type;
+            JCNewClass init = (JCNewClass) ifExp;
+            Symbol initSym = rs.getSymbol(ifExp, cut, stmt);
+            if (!init.args.isEmpty()) {
+                for (JCExpression arg : init.args) {
+                    JCExpression newArg = processCond(arg, cut, stmt, encBlock);
+                    if (!newArg.equals(arg)) {
+                        init.args = rs.injectBefore(arg, init.args, true, newArg);
+                    }
+                }
+            }
+            final boolean accessible = isAccessible(initSym, initSym.enclClass(), cut, stmt);
+            ifExp.type = rs.getType(initSym);
+            if (!accessible) {
+                encBlock.stats = reflect(initSym, cut, encBlock.stats, stmt);
+                ifExp = getReflectedAccess(initSym, cut, null, init.args, stmt);
+                constructorInjected = true;
+            }
+            ifExp.type = rs.getType(initSym);
         } else if (ifExp instanceof JCTypeCast) {
             JCTypeCast cast = (JCTypeCast) ifExp;
             cast.expr = processCond(cast.expr, cut, stmt, encBlock);
@@ -378,11 +401,18 @@ public class PrivateAccessProcessor extends DProcessor {
         final Name getterName;
         final Name accesseeVarName;
         if (symbol instanceof MethodSymbol) {
-            accesseeVarName = getMethodVar(symbol.name);
-            getterName = elementUtils.getName("getDeclaredMethod");
-            javaReflectMethField = getIdAfterImporting("java.lang.reflect.Method");
-            JCExpression mName = tm.Literal(symbol.name.toString());
-            args = merge(Collections.singleton(mName), toList(types));
+            if (symbol.isConstructor()) {
+                accesseeVarName = getConstructorVar(symbol.name);
+                getterName = elementUtils.getName("getDeclaredConstructor");
+                javaReflectMethField = getIdAfterImporting("java.lang.reflect.Constructor");
+                args = toList(types);
+            } else {
+                accesseeVarName = getMethodVar(symbol.name);
+                getterName = elementUtils.getName("getDeclaredMethod");
+                javaReflectMethField = getIdAfterImporting("java.lang.reflect.Method");
+                JCExpression mName = tm.Literal(symbol.name.toString());
+                args = merge(Collections.singleton(mName), toList(types));
+            }
         } else {
             accesseeVarName = getFieldVar(symbol.name);
             getterName = elementUtils.getName("getDeclaredField");
@@ -424,10 +454,16 @@ public class PrivateAccessProcessor extends DProcessor {
      */
     JCMethodInvocation getReflectedAccess(Symbol s, final CompilationUnitTree cut, JCExpression accessor, com.sun.tools.javac.util.List<JCExpression> args, JCStatement stmt) {
         final Name getterName;
-        final JCIdent fieldMethId;
+        final JCIdent fieldMethInitId;
         if (s instanceof MethodSymbol) {
-            fieldMethId = tm.Ident(getMethodVar(s.name));
-            getterName = elementUtils.getName("invoke");
+            if (s.isConstructor()) {
+                getterName = elementUtils.getName("newInstance");
+                fieldMethInitId = tm.Ident(getConstructorVar(s.name));
+            } else {
+                getterName = elementUtils.getName("invoke");
+                fieldMethInitId = tm.Ident(getMethodVar(s.name));
+            }
+
             if (((MethodSymbol) s).isVarArgs()) {
                 int i = 0;
                 VarSymbol last = ((MethodSymbol) s).params.last();
@@ -455,14 +491,16 @@ public class PrivateAccessProcessor extends DProcessor {
                 Type t = elementUtils.getTypeElement("java.lang.Object").type;
                 args = com.sun.tools.javac.util.List.<JCExpression>of(getArray(t, args));
             }
-            args = merge(Collections.singleton(accessor), args);
+            if (!s.isConstructor()) {
+                args = merge(Collections.singleton(accessor), args);
+            }
         } else {
-            fieldMethId = tm.Ident(getFieldVar(s.name));
+            fieldMethInitId = tm.Ident(getFieldVar(s.name));
             getterName = elementUtils.getName("get"); //TODO: for type safety replace with primitive concatenation
             args = com.sun.tools.javac.util.List.<JCExpression>of(accessor);
         }
 
-        final JCExpression getMethField = tm.Select(fieldMethId, getterName);
+        final JCExpression getMethField = tm.Select(fieldMethInitId, getterName);
         JCMethodInvocation mi = tm.Apply(com.sun.tools.javac.util.List.<JCExpression>nil(), getMethField, args);
         reflectionInjected = true; //call this method to actually use it!
         return mi;
@@ -478,19 +516,18 @@ public class PrivateAccessProcessor extends DProcessor {
         return set;
     }
 
-    Name getClassVarName(Name className) {
-        className = rs.getName(className);
-        className = elementUtils.getName(StringUtils.uncapitalize(className.toString()));
-
-        return elementUtils.getName(className + "Class");
-    }
-
     Name getFieldVar(final Name objName) {
         return elementUtils.getName(objName + "Field");
     }
 
     Name getMethodVar(Name objName) {
         return elementUtils.getName(objName + "Method");
+    }
+
+    Name getConstructorVar(Name initName) {
+        initName = rs.getName(initName);
+        initName = elementUtils.getName(StringUtils.uncapitalize(initName.toString()));
+        return elementUtils.getName(initName + "Constructor");
     }
     boolean reflectionInjected = false;
     boolean methodInjected = false;

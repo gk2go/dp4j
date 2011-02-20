@@ -103,7 +103,7 @@ public abstract class DProcessor extends AbstractProcessor {
         return tm.VarDef(tm.Modifiers(Flags.FINAL), elementUtils.getName(varName), getId(idName), array);
     }
 
-    private List<JCExpression> getParamsList(final Boolean... params) {
+    public List<JCExpression> getParamsList(final Boolean... params) {
         final ListBuffer<JCExpression> lb = ListBuffer.lb();
         for (boolean param : params) {
 
@@ -317,8 +317,8 @@ public abstract class DProcessor extends AbstractProcessor {
         return e;
     }
 
-    public List<JCStatement> emptyList() {
-        final ListBuffer<JCStatement> lb = ListBuffer.lb();
+    public<T> List<T> emptyList() {
+        final ListBuffer<T> lb = ListBuffer.lb();
         return lb.toList();
     }
 

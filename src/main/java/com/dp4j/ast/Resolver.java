@@ -3,6 +3,7 @@
  * and open the template in the editor.
  */
 package com.dp4j.ast;
+
 import com.sun.source.tree.CompilationUnitTree;
 import com.sun.source.tree.Scope;
 import com.sun.source.util.TreePath;
@@ -63,7 +64,7 @@ public class Resolver {
         } catch (java.lang.Throwable ne) { //this occurs when the symbol is invalid (inaccessible)
             ne.printStackTrace();
         }
-        throw new RuntimeException();
+        throw new RuntimeException(tree.toString());
     }
 
     public Symbol getSymbol(CompilationUnitTree cut, JCStatement stmt, List<JCExpression> typeParams, Name varName, List<JCExpression> args) {
@@ -174,6 +175,9 @@ public class Resolver {
             PrimitiveType primitiveType = typeUtils.getPrimitiveType(((JCPrimitiveTypeTree) exp).getPrimitiveTypeKind());
             exp.type = (Type) primitiveType;
             return getSymbol(exp, cut, stmt);
+        } else if (exp instanceof JCArrayAccess) {
+            Symbol s = getSymbol((((JCArrayAccess) exp).indexed), cut, stmt);
+            return s;
         }
         throw new RuntimeException(exp.toString());
     }
@@ -200,11 +204,11 @@ public class Resolver {
             return getSymbol(arr.elemtype, cut, stmt);
         }
         Symbol s = getSymbol(fa.selected, cut, stmt);
-        s = s.enclClass();
-        if (s == null) {
+        Symbol ts = getTypeSymbol(s);
+        if (ts == null) {
             throw new NoSuchElementException(fa.toString());
         }
-        return s;
+        return ts;
     }
 
     public JCExpression getAccessor(JCFieldAccess fa) {
@@ -386,7 +390,11 @@ public class Resolver {
 //            }
 //            s = ss;
             if (s instanceof MethodSymbol) {
-                return ((MethodSymbol) s).getReturnType().tsym;
+                Type returnType = ((MethodSymbol) s).getReturnType();
+                if (returnType instanceof ArrayType) {
+                    returnType = (Type) ((ArrayType) returnType).getComponentType();
+                }
+                return returnType.tsym;
             }
             if (s instanceof VarSymbol && s.name.toString().equals("TYPE")) {
                 return s.type.tsym;
@@ -434,7 +442,6 @@ public class Resolver {
 //        }
 //        return syms;
 //    }
-
     public java.util.List<Type> getArgTypes(List<JCExpression> args, CompilationUnitTree cut, JCStatement stmt) {
         if (args == null) {
             return null;
