@@ -42,6 +42,7 @@ public class Resolver {
     protected final Types typeUtils;
     protected final Symtab symTable;
     private final java.util.List<? extends Element> pkgClasses;
+    public static final String init = "<init>";
 
     public Resolver(JavacElements elementUtils, final Trees trees, final TreeMaker tm, TypeElement encClass, final Types typeUtils, final Symtab symTable, final java.util.List<? extends Element> pkgClasses) {
         this.elementUtils = elementUtils;
@@ -143,20 +144,20 @@ public class Resolver {
             TypeElement cl = (TypeElement) getSymbol(cut, stmt, null, name, null);
             java.util.List<Type> args = getArgTypes(nc.args, cut, stmt);
             java.util.List<Type> typeParams = getArgTypes(nc.typeargs, cut, stmt);
-            Symbol s = contains(cl.getEnclosedElements(), typeParams, elementUtils.getName("<init>"), args);
+
+            Symbol s = contains(cl.getEnclosedElements(), typeParams, elementUtils.getName(init), args);
             return s;
         } else if (exp instanceof JCMethodInvocation) {
             return getSymbol((JCMethodInvocation) exp, cut, stmt);
         } else if (exp instanceof JCLiteral) {
             return getType((JCLiteral) exp).tsym;
         } else if (exp instanceof JCNewArray) {
-            JCNewArray arr = (JCNewArray) exp;
-            if (arr.elemtype == null) {
-                arr = getTypedArray(arr);
-            }
+            JCNewArray arr = getTypedArray((JCNewArray) exp, cut, stmt);
             Symbol symbol = getSymbol(arr.elemtype, cut, stmt);
             ArrayType arrayType = typeUtils.getArrayType(symbol.type);
-            return new Symbol.TypeSymbol(0l, elementUtils.getName("Array"), (Type) arrayType, null);
+            ((Type) arrayType).tsym.type = (Type) arrayType;
+            return ((Type) arrayType).tsym;
+//            return new Symbol.TypeSymbol(0l, elementUtils.getName("Array"), (Type) arrayType, null);
         } else if (exp instanceof JCArrayTypeTree) {
             JCArrayTypeTree arr = (JCArrayTypeTree) exp;
             ArrayType arrayType = typeUtils.getArrayType((TypeMirror) arr.elemtype);
@@ -179,6 +180,8 @@ public class Resolver {
         } else if (exp instanceof JCArrayAccess) {
             Symbol s = getSymbol((((JCArrayAccess) exp).indexed), cut, stmt);
             return s;
+        } else if (exp instanceof JCTypeApply) {
+            return getSymbol(((JCTypeApply) exp).clazz, cut, stmt);
         }
         throw new RuntimeException(exp.toString());
     }
@@ -229,17 +232,20 @@ public class Resolver {
         return Literal.type;
     }
 
-    public Type getType(JCExpression exp) {
+    public Type getType(JCExpression exp, CompilationUnitTree cut, JCStatement stmt) {
         if (exp instanceof JCLiteral) {
             return getType((JCLiteral) exp);
+        } else {
+            Symbol s = getSymbol(exp, cut, stmt);
+            Symbol typeSymbol = getTypeSymbol(s);
+            return typeSymbol.asType();
         }
-        return null;
     }
 
-    public JCNewArray getTypedArray(JCNewArray arr) {
-        if (arr.elemtype == null) {
+    public JCNewArray getTypedArray(JCNewArray arr, CompilationUnitTree cut, JCStatement stmt) {
+        if (arr.elemtype == null || getName(arr.elemtype).toString().equals("Array")) {
             JCExpression get = arr.elems.get(0); //FIXME: int[] f = {};
-            arr.elemtype = tm.Type(getType(get));
+            arr.elemtype = tm.Type(getType(get, cut, stmt));
             assert (arr.type != null);
         }
         arr.type = arr.elemtype.type;
@@ -258,10 +264,13 @@ public class Resolver {
         if (exp instanceof JCFieldAccess) {
             return ((JCFieldAccess) exp).name;
         } else if (exp instanceof JCNewClass) {
-            final JCNewClass nc = (JCNewClass) exp;
-            System.out.println(exp);
+            return getName(init);
         } else if (exp instanceof JCMethodInvocation) {
             System.out.println(exp);
+        } else if (exp instanceof JCTypeApply) {
+            return getName(((JCTypeApply) exp).clazz);
+        } else {
+            return getName(exp.toString());
         }
         throw new NoSuchElementException(exp.toString());
     }
