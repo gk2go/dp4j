@@ -27,6 +27,8 @@ import com.sun.tools.javac.util.List;
 import com.sun.tools.javac.code.Symtab;
 import com.sun.tools.javac.tree.JCTree;
 import com.sun.tools.javac.util.ListBuffer;
+import java.lang.Iterable;
+import java.util.ArrayList;
 import javax.lang.model.util.Types;
 
 /**
@@ -357,6 +359,34 @@ public class Resolver {
     }
 
     public Symbol contains(Iterable<? extends Element> list, java.util.List<? extends Type> typeParams, Name varName, java.util.List<? extends Type> args) {
+        list = listgetSameNameEls(list, varName);
+
+        for (Element e : list) {
+            if (args != null) { //isEmpty means empty-args method
+                final List<VarSymbol> formalArgs;
+                final List<TypeSymbol> formalTypeParams;
+                final boolean varArgs;
+                if (e.getKind().equals(ElementKind.METHOD) || e.getKind().equals(ElementKind.CONSTRUCTOR)) {
+                    MethodSymbol me = (MethodSymbol) e;
+                    formalArgs = me.getParameters();
+                    formalTypeParams = me.getTypeParameters();
+                    varArgs = me.isVarArgs();
+                } else {
+                    formalArgs = null;
+                    formalTypeParams = null;
+                    varArgs = false;
+                }
+                if (!sameMethod(formalArgs, args, formalTypeParams, typeParams, varArgs)) {
+                    continue;
+                }
+            }
+            return (Symbol) e;
+        }
+        return null;
+    }
+
+    Iterable<? extends Element> listgetSameNameEls(Iterable<? extends Element> list, Name varName) {
+        Collection<Element> els = new ArrayList<Element>();
         for (Element e : list) {
             final Name elName;
             if (e instanceof ClassSymbol) {
@@ -366,28 +396,10 @@ public class Resolver {
                 elName = (Name) e.getSimpleName();
             }
             if (elName.equals(varName) || e.getSimpleName().equals(varName)) {
-                if (args != null) { //isEmpty means empty-args method
-                    final List<VarSymbol> formalArgs;
-                    final List<TypeSymbol> formalTypeParams;
-                    final boolean varArgs;
-                    if (e.getKind().equals(ElementKind.METHOD) || e.getKind().equals(ElementKind.CONSTRUCTOR)) {
-                        MethodSymbol me = (MethodSymbol) e;
-                        formalArgs = me.getParameters();
-                        formalTypeParams = me.getTypeParameters();
-                        varArgs = me.isVarArgs();
-                    } else {
-                        formalArgs = null;
-                        formalTypeParams = null;
-                        varArgs = false;
-                    }
-                    if (!sameMethod(formalArgs, args, formalTypeParams, typeParams, varArgs)) {
-                        continue;
-                    }
-                }
-                return (Symbol) e;
+                els.add(e);
             }
         }
-        return null;
+        return els;
     }
 
     public Symbol getTypeSymbol(Symbol s) {
