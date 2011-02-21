@@ -534,6 +534,9 @@ public class Resolver {
         for (JCExpression arg : args) {
             Symbol s = getSymbol(arg, cut, stmt);
             Type t = getType(s);
+            if(arg instanceof JCArrayAccess){
+                t = (Type) ((ArrayType)t).getComponentType();
+            }
             syms.add(t);
         }
         return syms;
