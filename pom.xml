@@ -77,10 +77,18 @@
             <plugin>
                 <artifactId>maven-compiler-plugin</artifactId>
                 <version>2.3.2</version>
+                <dependencies>
+                    <dependency>
+                        <groupId>org.codehaus.plexus</groupId>
+                        <artifactId>plexus-compiler-javac</artifactId>
+                        <version>1.6</version>
+                    </dependency>
+                </dependencies>
                 <configuration>
                     <source>1.6</source>
                     <target>1.6</target>
                     <encoding>${project.build.sourceEncoding}</encoding>
+                    <compilerId>javac</compilerId>
                 </configuration>
                 <executions>
                     <execution>
@@ -88,6 +96,7 @@
                         <configuration>
                             <compilerArgument>-proc:none</compilerArgument>
                             <includes>
+                                <include>com/dp4j/**</include>
                                 <include>com/dp4j/processors/core/**</include>
                                 <include>com/dp4j/processors/**</include>
                             </includes>
@@ -125,6 +134,24 @@
                 <configuration>
                     <encoding>${project.build.sourceEncoding}</encoding>
                 </configuration>
+            </plugin>
+            <plugin>
+                <artifactId>maven-assembly-plugin</artifactId>
+                <version>2.2</version>
+                <configuration>
+                    <descriptorRefs>
+                        <descriptorRef>jar-with-dependencies</descriptorRef>
+                    </descriptorRefs>
+                </configuration>
+                <executions>
+                    <execution>
+                        <id>make-assembly</id> <!-- this is used for inheritance merges -->
+                        <phase>package</phase> <!-- append to the packaging phase. -->
+                        <goals>
+                            <goal>single</goal> <!-- goals == mojos -->
+                        </goals>
+                    </execution>
+                </executions>
             </plugin>
         </plugins>
     </build>
