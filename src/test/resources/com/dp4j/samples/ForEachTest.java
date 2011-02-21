@@ -24,6 +24,10 @@ public class ForEachTest {
         for (int i = 0; i < d.length; i++) {
             System.out.println(i);
             boolean a = d.equals(null);
+//            Object o = PrivateData.staticObjs[0];
+            Object[] arr = {null,""};
+            Object o = arr[1];
+            o.equals("");
         }
     }
 }

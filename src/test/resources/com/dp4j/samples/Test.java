@@ -11,6 +11,10 @@ class PriClass {
     private void aPrivateMethod(int i, Double b, String... strings) {
 
     }
+
+    private String aPrivateM(){
+        return "";
+    }
 }
 
 class K {
@@ -57,7 +61,7 @@ public class Test extends K {
         int ff = privateClass.i;
         pi = new PriClass().i;
         int i = new PriClass().j;
-
+//TODO:        new PriClass().aPrivateM().equals("");
         try {
             int kk = new PriClass().i;
             privateClass.aPrivateMethod(kk, new Double(5), "hello", "injected", "reflection");

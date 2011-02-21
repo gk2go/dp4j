@@ -111,6 +111,10 @@ public class PrivateAccessProcessor extends DProcessor {
         if (stmt instanceof JCVariableDecl) {
             JCVariableDecl varDec = (JCVariableDecl) stmt;
             varDec.sym = (VarSymbol) rs.getSymbol(cut, stmt, null, varDec.name, null);
+            varDec.type = varDec.sym.type;
+            if(varDec.init.type == null){
+                varDec.init.type = varDec.sym.type;
+            }
             boolean accessible = isAccessible(varDec.init, cut, stmt);
             if (!accessible) {
                 ((JCVariableDecl) stmt).init = processCond(varDec.init, cut, stmt, encBlock);
@@ -296,7 +300,9 @@ public class PrivateAccessProcessor extends DProcessor {
                     ifExp = reflectedFieldSetter;
                 }
             }
-        } else if (ifExp.type == null) {
+        } else if (ifExp instanceof JCArrayAccess){
+            //TODO: reflect array
+        }else if (ifExp.type == null) {
 //            ifExp.type = getType(ifExp, vars, cut, packageName, scope, stmt, args, varSyms);
         }
         return ifExp;
@@ -354,6 +360,12 @@ public class PrivateAccessProcessor extends DProcessor {
         } else if (exp instanceof JCAssign) {
             JCAssign assign = (JCAssign) exp;
             return isAccessible(assign.lhs, cut, stmt) && isAccessible(assign.rhs, cut, stmt);
+        } else if (exp instanceof JCArrayAccess){
+            if(((JCArrayAccess)exp).indexed instanceof JCFieldAccess){
+                accessor = rs.getAccessor((JCFieldAccess)((JCArrayAccess)exp).indexed, cut, stmt);
+            }else{
+                return isAccessible(((JCArrayAccess)exp).indexed, cut, stmt);
+            }
         }
         if (accessor == null || s == null) {
             throw new RuntimeException("is this accessible " + exp);
@@ -412,7 +424,7 @@ public class PrivateAccessProcessor extends DProcessor {
         final Name accesseeVarName;
         if (symbol instanceof MethodSymbol) {
             if (symbol.isConstructor()) {
-                accesseeVarName = getConstructorVar(symbol.name);
+                accesseeVarName = getConstructorVar(symbol.owner.name);
                 getterName = elementUtils.getName("getDeclaredConstructor");
                 javaReflectMethField = getIdAfterImporting("java.lang.reflect.Constructor");
                 args = toList(types);
@@ -468,7 +480,7 @@ public class PrivateAccessProcessor extends DProcessor {
         if (s instanceof MethodSymbol) {
             if (s.isConstructor()) {
                 getterName = elementUtils.getName("newInstance");
-                fieldMethInitId = tm.Ident(getConstructorVar(s.name));
+                fieldMethInitId = tm.Ident(getConstructorVar(s.owner.name));
             } else {
                 getterName = elementUtils.getName("invoke");
                 fieldMethInitId = tm.Ident(getMethodVar(s.name));
@@ -534,6 +546,7 @@ public class PrivateAccessProcessor extends DProcessor {
         return elementUtils.getName(objName + "Method");
     }
 
+    //TODO: need to number them
     Name getConstructorVar(Name initName) {
         initName = rs.getName(initName);
         initName = elementUtils.getName(StringUtils.uncapitalize(initName.toString()));

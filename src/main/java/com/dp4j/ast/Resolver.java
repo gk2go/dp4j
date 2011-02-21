@@ -157,7 +157,11 @@ public class Resolver {
             TypeElement cl = (TypeElement) getSymbol(cut, stmt, null, name, null);
             java.util.List<Type> args = getArgTypes(nc.args, cut, stmt);
             java.util.List<Type> typeParams = getArgTypes(nc.typeargs, cut, stmt);
-
+            if(cl == null){
+                System.out.println(name);
+                System.out.println(exp);
+                System.out.println(cut);
+            }
             Symbol s = contains(cl.getEnclosedElements(), typeParams, elementUtils.getName(init), args);
             return s;
         } else if (exp instanceof JCMethodInvocation) {
@@ -230,8 +234,15 @@ public class Resolver {
             return getSymbol(arr.elemtype, cut, stmt);
         } else if (fa.selected instanceof JCArrayAccess) {
             Symbol s = getSymbol(((JCArrayAccess) fa.selected).indexed, cut, stmt);
-            Symbol ts = getTypeSymbol(s);
-            return ts;
+            Type t;
+            if (s.type instanceof ArrayType) {
+                t = (Type) ((ArrayType) s.type).getComponentType();
+                return t.tsym;
+            } else {
+                Symbol ts = getTypeSymbol(s);
+                return ts;
+            }
+
         }
         Symbol s = getSymbol(fa.selected, cut, stmt);
         Symbol ts = getTypeSymbol(s);
@@ -269,10 +280,23 @@ public class Resolver {
     }
 
     public JCNewArray getTypedArray(JCNewArray arr, CompilationUnitTree cut, JCStatement stmt) {
-        if (arr.elemtype == null || getName(arr.elemtype).toString().equals("Array")) {
-            JCExpression get = arr.elems.get(0); //FIXME: int[] f = {};
-            arr.elemtype = tm.Type(getType(get, cut, stmt));
-            assert (arr.type != null);
+        if (arr.elemtype == null) {
+            Type type = null;
+            if (arr.type == null) {
+                for (JCExpression el : arr.elems) {
+                    Type elType = getType(el, cut, stmt);
+                    if (!typeUtils.getNullType().equals(elType)) {
+                        type = elType;
+                        break;
+                    }
+                }
+                if (type == null) {
+                    type = symTable.objectType;
+                }
+            } else {
+                type = (Type) ((ArrayType) arr.type).getComponentType();
+            }
+            arr.elemtype = tm.Type(type);
         }
         arr.type = arr.elemtype.type;
         assert (arr.type != null);
@@ -312,6 +336,10 @@ public class Resolver {
             }
         }
         if (mi.meth instanceof JCFieldAccess) {
+//            if(((JCFieldAccess)mi.meth).selected instanceof JCArrayAccess){
+//                Symbol symbol = getSymbol(((JCFieldAccess)mi.meth).selected,cut,stmt);
+//                return symbol;
+//            }
             Symbol s = (Symbol) getAccessor((JCFieldAccess) mi.meth, cut, stmt);
             return s;
         } else if (mi.meth instanceof JCNewClass) {

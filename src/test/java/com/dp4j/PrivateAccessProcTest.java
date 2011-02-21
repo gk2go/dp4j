@@ -145,13 +145,16 @@ public class PrivateAccessProcTest{
         "PrivateVarArgs",
         "WithAccessibilePrivateDataInstance",
         "WithAccessibleVarArgsInstance",
+        "ASingleton",
         "Test",
         "VarArgsCallTest",
         "CallTest",
         "IfTest",
         "MultipleCallsTest",
         "ForEachTest",
-        "ArrayCallTest"
+        "ArrayCallTest",
+        "PrivateConstructorTest",
+        "GenericsTest"
     };
 
     static String getTestSources() {

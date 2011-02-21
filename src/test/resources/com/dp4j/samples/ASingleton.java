@@ -8,7 +8,7 @@ package com.dp4j.samples;
  *
  * @author simpatico
  */
-@com.dp4j.Singleton
+//@com.dp4j.Singleton
 public class ASingleton {
 
     private ASingleton(){
