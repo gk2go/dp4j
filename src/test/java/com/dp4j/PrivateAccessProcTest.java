@@ -25,7 +25,7 @@ import static org.junit.Assert.*;
  *
  * @author simpatico
  */
-public class PrivateAccessProcTest{
+public class PrivateAccessProcTest {
 
     File getFile(final String... dirs) {
         File ret = null;
@@ -78,9 +78,8 @@ public class PrivateAccessProcTest{
         runtime.traceInstructions(true);
         runtime.traceMethodCalls(true);
         File targetClasses = getFile(workingdir, "target", "classes");
-
-        final String junit = new File(testResources.getAbsolutePath(), "junit.jar").getAbsolutePath();
-        final String commons = new File(testResources.getAbsolutePath(), "commons.jar").getAbsolutePath();
+        final String junit = getFile(System.getProperty("user.home"), ".m2", "repository", "junit", "junit", "4.8.2", "junit-4.8.2.jar").getAbsolutePath();
+        final String commons = getFile(System.getProperty("user.home"), ".m2", "repository", "commons-lang", "commons-lang", "2.6", "commons-lang-2.6.jar").getAbsolutePath();
         String tools = getFile(System.getProperty("java.home")).getAbsolutePath();
         int lastIndexOf = StringUtils.lastIndexOf(tools, File.separator);
         tools = "\"" + getFile(tools.substring(0, lastIndexOf), "lib", "tools.jar").getAbsolutePath() + "\"";
@@ -127,7 +126,7 @@ public class PrivateAccessProcTest{
                 assertTrue(f.delete());
                 File parentFile = f.getParentFile();
                 if (parentFile != null && parentFile.isDirectory()) {
-                    FilenameFilter filter = new FilenameFilter()      {
+                    FilenameFilter filter = new FilenameFilter()       {
 
                         @Override
                         public boolean accept(File dir, String name) {
@@ -195,7 +194,6 @@ public class PrivateAccessProcTest{
 //    protected Collection<Processor> getProcessors() {
 //        return Arrays.<Processor>asList(new PrivateAccessProcessor());
 //    }
-
     private void assertClassExists(final String[] testFiles) {
         for (String testFile : testFiles) {
             File f = new File(getTestClassAbsolutePath(testFile));
