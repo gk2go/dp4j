@@ -57,6 +57,15 @@ public class Resolver {
         this.pkgClasses = pkgClasses;
     }
 
+    public java.util.List<Symbol> getEnclosedElements(Symbol accessor, CompilationUnitTree cut, JCStatement stmt) {
+        java.util.List<Symbol> enclosedElements = new ArrayList(accessor.getEnclosedElements());
+        if (accessor.type instanceof ArrayType) {
+            Symbol object = getSymbol(cut, stmt, null, elementUtils.getName("java.lang.Object"), null);
+            enclosedElements.addAll(object.getEnclosedElements());
+        }
+        return enclosedElements;
+    }
+
     public Scope getScope(final CompilationUnitTree cut, JCTree tree) {
         if (tree == null) {
             throw new IllegalArgumentException("tree is " + tree);
@@ -73,9 +82,9 @@ public class Resolver {
     }
 
     public Symbol getSymbol(CompilationUnitTree cut, JCStatement stmt, List<JCExpression> typeParams, Name varName, List<JCExpression> args) {
-        final Scope scope = getScope(cut, stmt);
         java.util.List<Type> typeSyms = getArgTypes(typeParams, cut, stmt);
         java.util.List<Type> argsSyms = getArgTypes(args, cut, stmt);
+        final Scope scope = getScope(cut, stmt);
         Symbol t = contains(scope, typeSyms, varName, argsSyms); //first lookup scope for all public identifiers
         TypeElement cl = scope.getEnclosingClass();
         while (t == null && cl != null) { //lookup hierarchy for inacessible identifiers too
@@ -99,13 +108,9 @@ public class Resolver {
             return s;
         }
         accessor = getTypeSymbol(accessor);
-        java.util.List<Symbol> enclosedElements = accessor.getEnclosedElements();
-        for (Symbol symbol : enclosedElements) {
-            if (symbol.getQualifiedName().equals(varName)) {
-                return symbol;
-            }
-        }
-        throw new NoSuchElementException(varName + " in " + accessor);
+        java.util.List<Symbol> enclosedElements = getEnclosedElements(accessor, cut, stmt);
+        Symbol s = contains(enclosedElements, null, varName, null);
+        return s;
     }
 
     /**
@@ -123,6 +128,11 @@ public class Resolver {
             invTarget = invTarget.type.tsym;
         } else if (invTarget instanceof MethodSymbol) {
             invTarget = ((MethodSymbol) invTarget).getReturnType().tsym; //cannot invoke on void
+        }
+        java.util.List<Symbol> enclosedElements = getEnclosedElements(invTarget, cut, stmt);
+        Symbol s = contains(enclosedElements, typeParams, mName, args);
+        if (s != null) {
+            return (MethodSymbol) s;
         }
         MethodSymbol ms = (MethodSymbol) contains(elementUtils.getAllMembers((TypeElement) invTarget), typeParams, mName, args);
         if (ms == null) {
@@ -174,7 +184,7 @@ public class Resolver {
             String op = bin.toString();
             op = StringUtils.remove(op, bin.lhs.toString());
             op = StringUtils.remove(op, bin.rhs.toString());
-            if (op.contains("==") || op.contains("!=") || op.contains("&&") || op.contains("||")) {
+            if (op.contains("==") || op.contains("!=") || op.contains("&&") || op.contains("||") || op.contains(">") || op.contains("<") || op.contains(">=") || op.contains("<=")) {
                 return symTable.booleanType.tsym;
             }
             Type type = getType(bin.lhs, cut, stmt);
@@ -218,6 +228,10 @@ public class Resolver {
         } else if (fa.selected instanceof JCArrayTypeTree) {
             JCArrayTypeTree arr = (JCArrayTypeTree) fa.selected;
             return getSymbol(arr.elemtype, cut, stmt);
+        } else if (fa.selected instanceof JCArrayAccess) {
+            Symbol s = getSymbol(((JCArrayAccess) fa.selected).indexed, cut, stmt);
+            Symbol ts = getTypeSymbol(s);
+            return ts;
         }
         Symbol s = getSymbol(fa.selected, cut, stmt);
         Symbol ts = getTypeSymbol(s);
@@ -483,6 +497,7 @@ public class Resolver {
         }
         return syms;
     }
+
     public java.util.List<Type> getArgTypes(List<JCExpression> args, CompilationUnitTree cut, JCStatement stmt) {
         if (args == null) {
             return null;

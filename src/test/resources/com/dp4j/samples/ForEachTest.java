@@ -20,5 +20,10 @@ public class ForEachTest {
         for(int i: new PrivateData().ints){
             System.out.println(i);
         }
+        final int[] d = new PrivateData().ints;
+        for (int i = 0; i < d.length; i++) {
+            System.out.println(i);
+            boolean a = d.equals(null);
+        }
     }
 }

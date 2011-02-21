@@ -151,8 +151,7 @@ public class PrivateAccessProcessor extends DProcessor {
             loop.body = processElement((JCBlock) loop.body, cut);
         } else if (stmt instanceof JCForLoop) {
             JCForLoop loop = (JCForLoop) stmt;
-            //FIXME: loop.init
-            loop.cond = processCond(loop.cond, cut, stmt, encBlock);
+            loop.cond = processCond(loop.cond, cut, loop.body, encBlock);
             loop.body = processElement((JCBlock) loop.body, cut);
         } else if (stmt instanceof JCDoWhileLoop) {
             JCDoWhileLoop loop = (JCDoWhileLoop) stmt;
@@ -179,9 +178,9 @@ public class PrivateAccessProcessor extends DProcessor {
     protected JCExpression processCond(JCExpression ifExp, final CompilationUnitTree cut, JCStatement stmt, JCBlock encBlock) {
         if (ifExp instanceof JCFieldAccess) {
             final JCFieldAccess fa = (JCFieldAccess) ifExp;
-            Symbol s = rs.getSymbol(ifExp, cut, stmt);
             final boolean accessible = isAccessible(fa, cut, stmt);
             if (!accessible) {
+                Symbol s = rs.getSymbol(ifExp, cut, stmt);
                 encBlock.stats = reflect(s, cut, encBlock.stats, stmt, null);
                 final JCExpression accessor;
                 if (s.isStatic()) {
@@ -367,7 +366,10 @@ public class PrivateAccessProcessor extends DProcessor {
         if (accessor instanceof MethodSymbol) {
             itd = (DeclaredType) ((MethodSymbol) accessor).getReturnType();
         } else {
-            itd = (DeclaredType) accessor.type;
+            if(accessor.type instanceof ArrayType){
+                return rs.getSymbol(s.name, accessor, cut, stmt) != null;
+            }
+            else itd = (DeclaredType) accessor.type;
         }
         return trees.isAccessible(rs.getScope(cut, stmt), s, itd);
     }
@@ -378,7 +380,7 @@ public class PrivateAccessProcessor extends DProcessor {
             final com.sun.tools.javac.util.List<TypeSymbol> formalTypeParams = ((MethodSymbol) s).getTypeParameters();
             if (formalTypeParams.isEmpty()) {
                 params = ((MethodSymbol) s).params;
-            }else{
+            } else {
                 params = rs.getArgs(args, cut, stmt);
             }
         } else {
