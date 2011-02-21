@@ -112,7 +112,7 @@ public class PrivateAccessProcessor extends DProcessor {
             JCVariableDecl varDec = (JCVariableDecl) stmt;
             varDec.sym = (VarSymbol) rs.getSymbol(cut, stmt, null, varDec.name, null);
             varDec.type = varDec.sym.type;
-            if(varDec.init.type == null){
+            if (varDec.init.type == null) {
                 varDec.init.type = varDec.sym.type;
             }
             boolean accessible = isAccessible(varDec.init, cut, stmt);
@@ -279,16 +279,10 @@ public class PrivateAccessProcessor extends DProcessor {
 //            }
         } else if (ifExp instanceof JCAssign) {
             JCAssign assignExp = (JCAssign) ifExp;
-            if (assignExp.rhs instanceof JCFieldAccess) {
-                final JCFieldAccess fa = (JCFieldAccess) assignExp.rhs;
-                Symbol accessor = rs.getAccessor(fa, cut, stmt);
-                Symbol s = rs.getSymbol(fa, cut, stmt);
-                final boolean accessible = isAccessible(s, accessor, cut, stmt);
-                if (!accessible) {
-                    encBlock.stats = reflect(s, cut, encBlock.stats, stmt, null);
-                    assignExp.rhs = cast(getReflectedAccess(fa, cut, stmt, null, fa.selected), rs.getBoxedType(s));
-                    reflectionInjected = true;
-                }
+            if (!isAccessible(assignExp.rhs, cut, stmt)) {
+                final Type rhsTypeBeforeReflection = rs.getType(assignExp.rhs, cut, stmt);
+                final JCMethodInvocation reflectedAccess = (JCMethodInvocation) processCond(assignExp.rhs, cut, stmt, encBlock);
+                assignExp.rhs = cast(reflectedAccess, rhsTypeBeforeReflection);
             }
             if (assignExp.lhs instanceof JCFieldAccess) {
                 final JCFieldAccess fa = (JCFieldAccess) assignExp.lhs;
@@ -300,9 +294,9 @@ public class PrivateAccessProcessor extends DProcessor {
                     ifExp = reflectedFieldSetter;
                 }
             }
-        } else if (ifExp instanceof JCArrayAccess){
+        } else if (ifExp instanceof JCArrayAccess) {
             //TODO: reflect array
-        }else if (ifExp.type == null) {
+        } else if (ifExp.type == null) {
 //            ifExp.type = getType(ifExp, vars, cut, packageName, scope, stmt, args, varSyms);
         }
         return ifExp;
@@ -360,11 +354,11 @@ public class PrivateAccessProcessor extends DProcessor {
         } else if (exp instanceof JCAssign) {
             JCAssign assign = (JCAssign) exp;
             return isAccessible(assign.lhs, cut, stmt) && isAccessible(assign.rhs, cut, stmt);
-        } else if (exp instanceof JCArrayAccess){
-            if(((JCArrayAccess)exp).indexed instanceof JCFieldAccess){
-                accessor = rs.getAccessor((JCFieldAccess)((JCArrayAccess)exp).indexed, cut, stmt);
-            }else{
-                return isAccessible(((JCArrayAccess)exp).indexed, cut, stmt);
+        } else if (exp instanceof JCArrayAccess) {
+            if (((JCArrayAccess) exp).indexed instanceof JCFieldAccess) {
+                accessor = rs.getAccessor((JCFieldAccess) ((JCArrayAccess) exp).indexed, cut, stmt);
+            } else {
+                return isAccessible(((JCArrayAccess) exp).indexed, cut, stmt);
             }
         }
         if (accessor == null || s == null) {
@@ -378,10 +372,11 @@ public class PrivateAccessProcessor extends DProcessor {
         if (accessor instanceof MethodSymbol) {
             itd = (DeclaredType) ((MethodSymbol) accessor).getReturnType();
         } else {
-            if(accessor.type instanceof ArrayType){
+            if (accessor.type instanceof ArrayType) {
                 return rs.getSymbol(s.name, accessor, cut, stmt) != null;
+            } else {
+                itd = (DeclaredType) accessor.type;
             }
-            else itd = (DeclaredType) accessor.type;
         }
         return trees.isAccessible(rs.getScope(cut, stmt), s, itd);
     }
@@ -564,7 +559,14 @@ public class PrivateAccessProcessor extends DProcessor {
         return false;
     }
 
+    /**
+     * One thing you can't do under any circumstance is cast from an object to a primitive data type, or vice versa.
+     * http://www.informit.com/articles/article.aspx?p=30871&seqNum=5
+     * @param reflectedAccess
+     * @param t
+     * @return
+     */
     JCParens cast(JCMethodInvocation reflectedAccess, Type t) {
-        return tm.Parens(tm.TypeCast(t, reflectedAccess));
+        return tm.Parens(tm.TypeCast(rs.getBoxedType(t), reflectedAccess));
     }
 }
