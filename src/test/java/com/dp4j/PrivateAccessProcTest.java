@@ -59,8 +59,12 @@ public class PrivateAccessProcTest {
         return new File(src, clazz.getCanonicalName().replace(".", File.separator) + ".java").getAbsolutePath();
     }
 
-    static String getTestFileAbsolutePath(final String className) {
-        return getFile(testResources, "com", "dp4j", "samples", className + ".java").getAbsolutePath();
+    static String getTestFileAbsolutePath(final String className, boolean defPkg) {
+        if(!defPkg){
+            return getFile(testResources, "com", "dp4j", "samples", className + ".java").getAbsolutePath();
+        }else{
+                    return getFile(testResources, className + ".java").getAbsolutePath();
+        }
     }
 
     static String getTestClassAbsolutePath(final String className) {
@@ -153,13 +157,15 @@ public class PrivateAccessProcTest {
         "ForEachTest",
         "ArrayCallTest",
         "PrivateConstructorTest",
-        "GenericsTest"
+        "GenericsTest",
+        "/Test10"
     };
 
     static String getTestSources() {
         String ret = "";
         for (String test : tests) {
-            ret += getTestFileAbsolutePath(test) + " ";
+            final boolean defPkg = test.startsWith("/");
+            ret += getTestFileAbsolutePath(test, defPkg) + " ";
         }
         return ret;
     }
