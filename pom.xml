@@ -30,8 +30,8 @@
         </developer>
     </developers>
     <scm>
-        <connection>scm:hg:file:///${basedir}</connection>
-        <developerConnection>scm:hg:file:///${basedir}</developerConnection>
+        <connection>scm:hg:https://dp4j.googlecode.com/hg/</connection>
+        <developerConnection>scm:hg:https://dp4j.googlecode.com/hg/</developerConnection>
     </scm>
     <build>
         <testResources>
