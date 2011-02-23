@@ -66,7 +66,7 @@ public class Resolver {
         return enclosedElements;
     }
 
-    public Scope getScope(final CompilationUnitTree cut, JCTree tree) {
+    private Scope getScope(final CompilationUnitTree cut, JCTree tree) {
         if (tree == null) {
             throw new IllegalArgumentException("tree is " + tree);
         }
@@ -79,6 +79,15 @@ public class Resolver {
             ne.printStackTrace();
         }
         throw new RuntimeException(tree.toString());
+    }
+
+    public Scope getScope(final Element e) {
+        final TreePath treePath = trees.getPath(e);
+        Scope scope = trees.getScope(treePath);
+        if(scope == null){
+            throw new RuntimeException("null scope for " + e);
+        }
+        return scope;
     }
 
     public Symbol getSymbol(CompilationUnitTree cut, JCStatement stmt, List<JCExpression> typeParams, Name varName, List<JCExpression> args) {
