@@ -27,7 +27,7 @@ import static org.junit.Assert.*;
  */
 public class PrivateAccessProcTest {
 
-    File getFile(final String... dirs) {
+    static File getFile(final String... dirs) {
         File ret = null;
         for (String dir : dirs) {
             if (ret == null) {
@@ -59,16 +59,12 @@ public class PrivateAccessProcTest {
         return new File(src, clazz.getCanonicalName().replace(".", File.separator) + ".java").getAbsolutePath();
     }
 
-    static String getTestFileAbsolutePath(final String className, boolean defPkg) {
-        if(!defPkg){
-            return getFile(testResources, "com", "dp4j", "samples", className + ".java").getAbsolutePath();
-        }else{
-                    return getFile(testResources, className + ".java").getAbsolutePath();
-        }
+    static String getTestFileAbsolutePath(final String className) {
+        return getFile(testResources, className + ".java").getAbsolutePath();
     }
 
     static String getTestClassAbsolutePath(final String className) {
-        return getFile(targetTestClasses, "com", "dp4j", "samples", className + ".class").getAbsolutePath();
+        return getFile(targetTestClasses, className + ".class").getAbsolutePath();
     }
 
     final String getClassPath(final File dir, final Class clazz) {
@@ -96,7 +92,8 @@ public class PrivateAccessProcTest {
         System.out.println(dp4jCompile);
         cp = getCp(targetClasses.getAbsolutePath(), tools, commons, junit);
         javacCmd = "javac -Xlint -d " + targetTestClasses;
-        String testCmd = javacCmd + cp + " -processor " + PrivateAccessProcessor.class.getCanonicalName() + " " + getTestSources();
+        final String[] testSources = getTestSources();
+        String testCmd = javacCmd + cp + " -processor " + PrivateAccessProcessor.class.getCanonicalName() + " " + StringUtils.join(testSources);
         System.out.println(testCmd);
         cleanClasses(tests);
         runtime.exec(dp4jCompile, null, src);
@@ -142,30 +139,31 @@ public class PrivateAccessProcTest {
             }
         }
     }
+    final static String comDp4jSamples = "com"+ File.separator +  "dp4j"+ File.separator +  "samples";
     final static String tests[] = {
-        "PrivateData",
-        "PrivateMethods",
-        "PrivateVarArgs",
-        "WithAccessibilePrivateDataInstance",
-        "WithAccessibleVarArgsInstance",
-        "ASingleton",
-        "Test",
-        "VarArgsCallTest",
-        "CallTest",
-        "IfTest",
-        "MultipleCallsTest",
-        "ForEachTest",
-        "ArrayCallTest",
-        "PrivateConstructorTest",
-        "GenericsTest",
-        "/Test10"
+        comDp4jSamples + File.separator + "PrivateData",
+        comDp4jSamples + File.separator +"PrivateMethods",
+        comDp4jSamples + File.separator +"PrivateVarArgs",
+        comDp4jSamples + File.separator +"WithAccessibilePrivateDataInstance",
+        comDp4jSamples + File.separator +"WithAccessibleVarArgsInstance",
+        comDp4jSamples + File.separator +"ASingleton",
+        comDp4jSamples + File.separator +"Test",
+        comDp4jSamples + File.separator +"VarArgsCallTest",
+        comDp4jSamples + File.separator +"CallTest",
+        comDp4jSamples + File.separator +"IfTest",
+        comDp4jSamples + File.separator +"MultipleCallsTest",
+        comDp4jSamples + File.separator +"ForEachTest",
+        comDp4jSamples + File.separator +"ArrayCallTest",
+        comDp4jSamples + File.separator +"PrivateConstructorTest",
+        comDp4jSamples + File.separator +"GenericsTest",
+//        "Test10"
     };
 
-    static String getTestSources() {
-        String ret = "";
+    static String[] getTestSources() {
+        String[] ret = new String[tests.length];
+        int i = 0;
         for (String test : tests) {
-            final boolean defPkg = test.startsWith("/");
-            ret += getTestFileAbsolutePath(test, defPkg) + " ";
+            ret[i++] = getTestFileAbsolutePath(test) + " ";
         }
         return ret;
     }
