@@ -62,7 +62,6 @@
                         </goals>
                     </execution>
                 </executions>
-
             </plugin>
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
@@ -89,6 +88,8 @@
                     <target>1.6</target>
                     <encoding>${project.build.sourceEncoding}</encoding>
                     <compilerId>javac</compilerId>
+                    <showWarnings>true</showWarnings>
+                        <verbose>true</verbose>
                 </configuration>
                 <executions>
                     <execution>
@@ -190,8 +191,13 @@
             <version>2.6</version>
             <type>jar</type>
         </dependency>
+        <dependency>
+            <groupId>com.mycompany</groupId>
+            <artifactId>langtools-mvn</artifactId>
+            <version>1.0-SNAPSHOT</version>
+        </dependency>
     </dependencies>
-    <profiles>
+<!--    <profiles>
         <profile>
             <id>default-tools.jar</id>
             <activation>
@@ -210,7 +216,7 @@
                 </dependency>
             </dependencies>
         </profile>
-    </profiles>
+    </profiles>-->
     <properties>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
     </properties>

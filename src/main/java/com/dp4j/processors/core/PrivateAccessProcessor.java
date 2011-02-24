@@ -48,7 +48,7 @@ public class PrivateAccessProcessor extends DProcessor {
         encClass = (TypeElement) e.getEnclosingElement();
         PackageElement packageOf = elementUtils.getPackageOf(e);
         List<? extends Element> pkgClasses = packageOf.getEnclosedElements();
-        rs = new Resolver(elementUtils, trees, tm, encClass, typeUtils, symTable, pkgClasses);
+        rs = new Resolver(elementUtils, trees, tm, encClass, typeUtils, symTable, pkgClasses, trees.getPath(e));
 
         final JCMethodDecl tree = (JCMethodDecl) elementUtils.getTree(e);
         final TreePath treePath = trees.getPath(e);
@@ -110,16 +110,16 @@ public class PrivateAccessProcessor extends DProcessor {
     protected com.sun.tools.javac.util.List<JCStatement> processStmt(JCStatement stmt, final CompilationUnitTree cut, JCBlock encBlock) {
         if (stmt instanceof JCVariableDecl) {
             JCVariableDecl varDec = (JCVariableDecl) stmt;
-            varDec.sym = (VarSymbol) rs.getSymbol(cut, stmt, null, varDec.name, null);
-            varDec.type = varDec.sym.type;
-            if (varDec.init.type == null) {
-                varDec.init.type = varDec.sym.type;
-            }
             boolean accessible = isAccessible(varDec.init, cut, stmt);
             if (!accessible) {
                 ((JCVariableDecl) stmt).init = processCond(varDec.init, cut, stmt, encBlock);
                 Symbol s = rs.getSymbol(varDec.init, cut, stmt);
                 final Type t = getType(s);
+                varDec.sym = (VarSymbol) rs.getSymbol(cut, stmt, null, varDec.name, null);
+                varDec.type = varDec.sym.type;
+                if (varDec.init.type == null) {
+                    varDec.init.type = varDec.sym.type;
+                }
                 if (differentArg(t, varDec.sym.type)) {
                     varDec.init = tm.TypeCast(rs.getBoxedType(varDec.sym), varDec.init);
                 }

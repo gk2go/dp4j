@@ -46,8 +46,9 @@ public class Resolver {
     protected final Symtab symTable;
     private final java.util.List<? extends Element> pkgClasses;
     public static final String init = "<init>";
+    private final TreePath tp;
 
-    public Resolver(JavacElements elementUtils, final Trees trees, final TreeMaker tm, TypeElement encClass, final Types typeUtils, final Symtab symTable, final java.util.List<? extends Element> pkgClasses) {
+    public Resolver(JavacElements elementUtils, final Trees trees, final TreeMaker tm, TypeElement encClass, final Types typeUtils, final Symtab symTable, final java.util.List<? extends Element> pkgClasses, TreePath tp) {
         this.elementUtils = elementUtils;
         this.trees = trees;
         this.tm = tm;
@@ -55,12 +56,13 @@ public class Resolver {
         this.typeUtils = typeUtils;
         this.symTable = symTable;
         this.pkgClasses = pkgClasses;
+        this.tp = tp;
     }
 
-    public java.util.List<Symbol> getEnclosedElements(Symbol accessor, CompilationUnitTree cut, JCStatement stmt) {
+    public java.util.List<Symbol> getEnclosedElements(Symbol accessor) {
         java.util.List<Symbol> enclosedElements = new ArrayList(accessor.getEnclosedElements());
         if (accessor.type instanceof ArrayType) {
-            Symbol object = getSymbol(cut, stmt, null, elementUtils.getName("java.lang.Object"), null);
+            Symbol object = symTable.objectType.tsym;
             enclosedElements.addAll(object.getEnclosedElements());
         }
         return enclosedElements;
@@ -70,8 +72,21 @@ public class Resolver {
         if (tree == null) {
             throw new IllegalArgumentException("tree is " + tree);
         }
-        final TreePath treePath = TreePath.getPath(cut, tree);
+        final TreePath treePath;
+        if (tree instanceof JCVariableDecl) {
+            JCExpression exp = ((JCVariableDecl) tree).init;
+            ((JCVariableDecl) tree).init = null;
+            treePath = TreePath.getPath(cut, tree);
+            ((JCVariableDecl) tree).init = exp;
+        } else if (tree instanceof JCMethodInvocation) {
+                treePath = this.tp;
+            }else {
+                treePath = TreePath.getPath(cut, tree);
+            }
 
+        if (treePath == null) {
+            throw new NullPointerException("null treePath for " + tree);
+        }
         try {
             com.sun.source.tree.Scope scope = trees.getScope(treePath);
             return scope;
@@ -81,7 +96,7 @@ public class Resolver {
         throw new RuntimeException(tree.toString());
     }
 
-    public Symbol getSymbol(CompilationUnitTree cut, JCStatement stmt, List<JCExpression> typeParams, Name varName, List<JCExpression> args) {
+    public Symbol getSymbol(CompilationUnitTree cut, JCTree stmt, List<JCExpression> typeParams, Name varName, List<JCExpression> args) {
         java.util.List<Type> typeSyms = getArgTypes(typeParams, cut, stmt);
         java.util.List<Type> argsSyms = getArgTypes(args, cut, stmt);
         final Scope scope = getScope(cut, stmt);
@@ -97,7 +112,7 @@ public class Resolver {
         return t;
     }
 
-    public Symbol getSymbol(Name varName, Symbol accessor, CompilationUnitTree cut, JCStatement stmt) {
+    public Symbol getSymbol(Name varName, Symbol accessor, CompilationUnitTree cut, JCTree stmt) {
         if (varName.contentEquals("class")) {
             Symbol javaLangClassSym = getSymbol(cut, stmt, null, elementUtils.getName("java.lang.Class"), null);
             JCIdent id = tm.Ident(javaLangClassSym);
@@ -108,7 +123,7 @@ public class Resolver {
             return s;
         }
         accessor = getTypeSymbol(accessor);
-        java.util.List<Symbol> enclosedElements = getEnclosedElements(accessor, cut, stmt);
+        java.util.List<Symbol> enclosedElements = getEnclosedElements(accessor);
         Symbol s = contains(enclosedElements, null, varName, null);
         return s;
     }
@@ -119,7 +134,7 @@ public class Resolver {
      * @param scope
      * @return
      */
-    public MethodSymbol getSymbol(final JCMethodInvocation mi, CompilationUnitTree cut, JCStatement stmt) {
+    public MethodSymbol getSymbol(final JCMethodInvocation mi, CompilationUnitTree cut, JCTree stmt) {
         Symbol invTarget = getInvokationTarget(mi, cut, stmt);
         Name mName = getName(mi);
         java.util.List<Type> args = getArgTypes(mi.args, cut, stmt);
@@ -129,7 +144,7 @@ public class Resolver {
         } else if (invTarget instanceof MethodSymbol) {
             invTarget = ((MethodSymbol) invTarget).getReturnType().tsym; //cannot invoke on void
         }
-        java.util.List<Symbol> enclosedElements = getEnclosedElements(invTarget, cut, stmt);
+        java.util.List<Symbol> enclosedElements = getEnclosedElements(invTarget);
         Symbol s = contains(enclosedElements, typeParams, mName, args);
         if (s != null) {
             return (MethodSymbol) s;
@@ -141,7 +156,7 @@ public class Resolver {
         return ms;
     }
 
-    public Symbol getSymbol(JCExpression exp, CompilationUnitTree cut, JCStatement stmt) {
+    public Symbol getSymbol(JCExpression exp, CompilationUnitTree cut, JCTree stmt) {
         if (exp instanceof JCIdent) {
             return getSymbol(cut, stmt, null, ((JCIdent) exp).name, null);
         } else if (exp instanceof JCFieldAccess) {
@@ -157,7 +172,7 @@ public class Resolver {
             TypeElement cl = (TypeElement) getSymbol(cut, stmt, null, name, null);
             java.util.List<Type> args = getArgTypes(nc.args, cut, stmt);
             java.util.List<Type> typeParams = getArgTypes(nc.typeargs, cut, stmt);
-            if(cl == null){
+            if (cl == null) {
                 System.out.println(name);
                 System.out.println(exp);
                 System.out.println(cut);
@@ -212,7 +227,7 @@ public class Resolver {
         throw new RuntimeException(exp.toString());
     }
 
-    public Symbol getAccessor(JCFieldAccess fa, CompilationUnitTree cut, JCStatement stmt) {
+    public Symbol getAccessor(JCFieldAccess fa, CompilationUnitTree cut, JCTree stmt) {
         if (fa.selected instanceof JCIdent) {
             Symbol accessor = getSymbol(cut, stmt, null, ((JCIdent) fa.selected).name, null);
             return accessor;
@@ -226,7 +241,7 @@ public class Resolver {
             return getSymbol(((JCFieldAccess) fa.selected).name, accessor, cut, stmt);
         }
         if (fa.selected instanceof JCMethodInvocation) {
-            MethodSymbol s = getSymbol((JCMethodInvocation) fa.selected, cut, stmt);
+            MethodSymbol s = (MethodSymbol) getSymbol(fa.selected, cut, stmt);
             Type returnType = s.getReturnType();
             return returnType.asElement();
         } else if (fa.selected instanceof JCArrayTypeTree) {
@@ -269,7 +284,7 @@ public class Resolver {
         return Literal.type;
     }
 
-    public Type getType(JCExpression exp, CompilationUnitTree cut, JCStatement stmt) {
+    public Type getType(JCExpression exp, CompilationUnitTree cut, JCTree stmt) {
         if (exp instanceof JCLiteral) {
             return getType((JCLiteral) exp);
         } else {
@@ -279,7 +294,7 @@ public class Resolver {
         }
     }
 
-    public JCNewArray getTypedArray(JCNewArray arr, CompilationUnitTree cut, JCStatement stmt) {
+    public JCNewArray getTypedArray(JCNewArray arr, CompilationUnitTree cut, JCTree stmt) {
         if (arr.elemtype == null) {
             Type type = null;
             if (arr.type == null) {
@@ -325,7 +340,7 @@ public class Resolver {
         throw new NoSuchElementException(exp.toString());
     }
 
-    public Symbol getInvokationTarget(JCMethodInvocation mi, CompilationUnitTree cut, JCStatement stmt) {
+    public Symbol getInvokationTarget(JCMethodInvocation mi, CompilationUnitTree cut, JCTree stmt) {
         if (mi.meth instanceof JCIdent) { //method name ==> invoked as member of enclosing class
             Symbol symbol = getSymbol(cut, stmt, mi.typeargs, getName(mi), mi.args);
             if (elementUtils.getAllMembers((TypeElement) encClass).contains(symbol)) {
@@ -355,7 +370,7 @@ public class Resolver {
         throw new NoSuchElementException(mi.toString());
     }
 
-    public JCExpression getInvokationExp(JCMethodInvocation mi, CompilationUnitTree cut, JCStatement stmt) {
+    public JCExpression getInvokationExp(JCMethodInvocation mi, CompilationUnitTree cut, JCTree stmt) {
         if (mi.meth instanceof JCIdent) { //method name ==> invoked as member of enclosing class
             Symbol symbol = getSymbol(cut, stmt, mi.typeargs, getName(mi), mi.args);
             try {
@@ -513,7 +528,7 @@ public class Resolver {
         return s.type;
     }
 
-    public java.util.List<Symbol> getArgs(List<JCExpression> args, CompilationUnitTree cut, JCStatement stmt) {
+    public java.util.List<Symbol> getArgs(List<JCExpression> args, CompilationUnitTree cut, JCTree stmt) {
         if (args == null) {
             return null;
         }
@@ -526,7 +541,7 @@ public class Resolver {
         return syms;
     }
 
-    public java.util.List<Type> getArgTypes(List<JCExpression> args, CompilationUnitTree cut, JCStatement stmt) {
+    public java.util.List<Type> getArgTypes(List<JCExpression> args, CompilationUnitTree cut, JCTree stmt) {
         if (args == null) {
             return null;
         }
@@ -534,8 +549,8 @@ public class Resolver {
         for (JCExpression arg : args) {
             Symbol s = getSymbol(arg, cut, stmt);
             Type t = getType(s);
-            if(arg instanceof JCArrayAccess){
-                t = (Type) ((ArrayType)t).getComponentType();
+            if (arg instanceof JCArrayAccess) {
+                t = (Type) ((ArrayType) t).getComponentType();
             }
             syms.add(t);
         }
