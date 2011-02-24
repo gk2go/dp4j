@@ -14,12 +14,12 @@ public class PrivateMethods {
     private void aPrivateMethod(int i, String b) {
     }
 
-    private void aPrivateMethod(int i) {
-    }
-
-
     private String getClassName() {
         return this.getClass().getCanonicalName();
+    }
+
+    private void aPrivateMethod(int i){
+
     }
 
     public void hello(){

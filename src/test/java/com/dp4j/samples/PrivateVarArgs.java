@@ -17,4 +17,8 @@ public class PrivateVarArgs {
 
     private void aPrivateMethod(int i, Double b, String... strings) {
     }
+
+    private void aPrivateMethod(String... strings) {
+
+    }
 }

@@ -142,7 +142,6 @@
                     <descriptorRefs>
                         <descriptorRef>jar-with-dependencies</descriptorRef>
                         <descriptorRef>project</descriptorRef>
-                        <descriptorRef>bin</descriptorRef>
                     </descriptorRefs>
                 </configuration>
                 <executions>

@@ -13,16 +13,6 @@ import org.junit.Test;
  * @author simpatico
  */
 
-class Genericer{
-    private static<T> String getAll(T t){
-        return null;
-    }
-
-    void test(){
-        getAll(new String());
-    }
-}
-
 public class GenericsTest {
 
     @Test

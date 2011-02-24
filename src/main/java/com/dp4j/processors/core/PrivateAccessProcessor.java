@@ -110,19 +110,20 @@ public class PrivateAccessProcessor extends DProcessor {
     protected com.sun.tools.javac.util.List<JCStatement> processStmt(JCStatement stmt, final CompilationUnitTree cut, JCBlock encBlock, Element e) {
         if (stmt instanceof JCVariableDecl) {
             JCVariableDecl varDec = (JCVariableDecl) stmt;
-            varDec.sym = (VarSymbol) rs.getSymbol(cut, stmt, null, varDec.name, null);
+            varDec.sym = (VarSymbol) rs.getSymbol(cut, stmt, null, varDec.name, null,e);
             varDec.type = varDec.sym.type;
             if (varDec.init.type == null) {
                 varDec.init.type = varDec.sym.type;
             }
-            boolean accessible = isAccessible(varDec.init, cut, stmt, e);
+            boolean accessible = true;//isAccessible(varDec.init, cut, stmt, e);
             if (!accessible) {
-                ((JCVariableDecl) stmt).init = processCond(varDec.init, cut, stmt, encBlock, e);
-                Symbol s = rs.getSymbol(varDec.init, cut, stmt);
-                final Type t = getType(s);
-                if (differentArg(t, varDec.sym.type)) {
-                    varDec.init = tm.TypeCast(rs.getBoxedType(varDec.sym), varDec.init);
-                }
+//FIXME:
+                //                ((JCVariableDecl) stmt).init = processCond(varDec.init, cut, stmt, encBlock, e);
+                //                Symbol s = rs.getSymbol(varDec.init, cut, stmt);
+//                final Type t = getType(s);
+//                if (differentArg(t, varDec.sym.type)) {
+//                    varDec.init = tm.TypeCast(rs.getBoxedType(varDec.sym), varDec.init);
+//                }
             }
         } else if (stmt instanceof JCTry) {
             JCTry tryStmt = (JCTry) stmt;
@@ -183,21 +184,22 @@ public class PrivateAccessProcessor extends DProcessor {
         if (ifExp instanceof JCFieldAccess) {
             final JCFieldAccess fa = (JCFieldAccess) ifExp;
             final boolean accessible = isAccessible(fa, cut, stmt, e);
-            if (!accessible) {
-                Symbol s = rs.getSymbol(ifExp, cut, stmt);
-                encBlock.stats = reflect(s, cut, encBlock.stats, stmt, null);
-                final JCExpression accessor;
-                if (s.isStatic()) {
-                    accessor = tm.Literal("");
-                } else {
-                    accessor = fa.selected;
-                }
-                ifExp = getReflectedAccess(fa, cut, stmt, null, accessor);
-                reflectionInjected = true;
-            }
+//FIXME:
+//            if (!accessible) {
+//                Symbol s = rs.getSymbol(ifExp, cut, stmt);
+//                encBlock.stats = reflect(s, cut, encBlock.stats, stmt, null, e);
+//                final JCExpression accessor;
+//                if (s.isStatic()) {
+//                    accessor = tm.Literal("");
+//                } else {
+//                    accessor = fa.selected;
+//                }
+//                ifExp = getReflectedAccess(fa, cut, stmt, null, accessor);
+//                reflectionInjected = true;
+//            }
         } else if (ifExp instanceof JCMethodInvocation) {
             JCMethodInvocation mi = (JCMethodInvocation) ifExp;
-            final MethodSymbol mSym = rs.getSymbol(mi, cut, stmt);
+            final MethodSymbol mSym = rs.getSymbol(mi, cut, stmt, e);
             if (!mi.args.isEmpty()) {
                 for (JCExpression arg : mi.args) {
                     JCExpression newArg = processCond(arg, cut, stmt, encBlock, e);
@@ -209,7 +211,7 @@ public class PrivateAccessProcessor extends DProcessor {
             final boolean accessible = isAccessible(mi, cut, stmt, e);
             if (!accessible) {
                 ifExp.type = mSym.getReturnType();
-                encBlock.stats = reflect(mSym, cut, encBlock.stats, stmt, mi.args);
+                encBlock.stats = reflect(mSym, cut, encBlock.stats, stmt, mi.args, e);
                 JCExpression accessor = rs.getInvokationExp(mi, cut, stmt);
                 ifExp = getReflectedAccess(mSym, cut, accessor, mi.args, stmt);
                 methodInjected = true;
@@ -230,7 +232,7 @@ public class PrivateAccessProcessor extends DProcessor {
             final boolean accessible = isAccessible(initSym, initSym.enclClass(), cut, stmt, e);
             ifExp.type = rs.getType(initSym);
             if (!accessible) {
-                encBlock.stats = reflect(initSym, cut, encBlock.stats, stmt, init.args);
+                encBlock.stats = reflect(initSym, cut, encBlock.stats, stmt, init.args, e);
                 ifExp = getReflectedAccess(initSym, cut, null, init.args, stmt);
                 constructorInjected = true;
             }
@@ -289,7 +291,7 @@ public class PrivateAccessProcessor extends DProcessor {
                 final boolean accessible = isAccessible(fa, cut, stmt, e);
                 if (!accessible) {
                     Symbol s = rs.getSymbol(fa, cut, stmt);
-                    encBlock.stats = reflect(s, cut, encBlock.stats, stmt, null);
+                    encBlock.stats = reflect(s, cut, encBlock.stats, stmt, null, e);
                     JCMethodInvocation reflectedFieldSetter = getReflectedFieldSetter(fa, assignExp.rhs, cut, stmt);
                     ifExp = reflectedFieldSetter;
                 }
@@ -303,24 +305,24 @@ public class PrivateAccessProcessor extends DProcessor {
     }
 
     public boolean isAccessible(JCMethodInvocation mi, CompilationUnitTree cut, JCStatement stmt, Element e) {
-        Symbol s = rs.getSymbol(mi, cut, stmt);
-        Symbol accessor = rs.getInvokationTarget(mi, cut, stmt);
+        Symbol s = rs.getSymbol(mi, cut, stmt, e);
+        Symbol accessor = rs.getInvokationTarget(mi, cut, stmt, e);
         return isAccessible(s, accessor, cut, stmt, e);
     }
 
     public boolean isAccessible(JCFieldAccess fa, CompilationUnitTree cut, JCStatement stmt, Element e) {
-        Symbol s = rs.getSymbol(fa, cut, stmt);
-        Symbol accessor = rs.getAccessor(fa, cut, stmt);
+        Symbol s = rs.getSymbol(fa, cut, stmt, e);
+        Symbol accessor = rs.getAccessor(fa, cut, stmt, e);
         return isAccessible(s, accessor, cut, stmt, e);
     }
 
     public boolean isAccessible(JCExpression exp, CompilationUnitTree cut, JCStatement stmt, Element e) {
-        Symbol s = rs.getSymbol(exp, cut, stmt);
+        Symbol s = rs.getSymbol(exp, cut, stmt, e);
         Symbol accessor = null;
         if (exp instanceof JCFieldAccess) {
-            accessor = rs.getAccessor((JCFieldAccess) exp, cut, stmt);
+            accessor = rs.getAccessor((JCFieldAccess) exp, cut, stmt, e);
         } else if (exp instanceof JCMethodInvocation) {
-            accessor = rs.getInvokationTarget((JCMethodInvocation) exp, cut, stmt);
+            accessor = rs.getInvokationTarget((JCMethodInvocation) exp, cut, stmt, e);
         } else if (exp instanceof JCPrimitiveTypeTree) {
             return true;
         } else if (exp instanceof JCNewArray) {
@@ -342,7 +344,7 @@ public class PrivateAccessProcessor extends DProcessor {
         } else if (exp instanceof JCTypeCast) {
             return isAccessible(((JCTypeCast) exp).expr, cut, stmt, e);
         } else if (exp instanceof JCNewClass) {
-            accessor = rs.getSymbol(((JCNewClass) exp).clazz, cut, stmt); //retrieve the class symbol, as it's considered to be the accessor of the constructor
+            accessor = rs.getSymbol(((JCNewClass) exp).clazz, cut, stmt, e); //retrieve the class symbol, as it's considered to be the accessor of the constructor
         } else if (exp instanceof JCBinary) {
             JCBinary bin = (JCBinary) exp;
             return isAccessible(bin.lhs, cut, stmt, e) && isAccessible(bin.rhs, cut, stmt, e);
@@ -356,7 +358,7 @@ public class PrivateAccessProcessor extends DProcessor {
             return isAccessible(assign.lhs, cut, stmt, e) && isAccessible(assign.rhs, cut, stmt, e);
         } else if (exp instanceof JCArrayAccess) {
             if (((JCArrayAccess) exp).indexed instanceof JCFieldAccess) {
-                accessor = rs.getAccessor((JCFieldAccess) ((JCArrayAccess) exp).indexed, cut, stmt);
+                accessor = rs.getAccessor((JCFieldAccess) ((JCArrayAccess) exp).indexed, cut, stmt, e);
             } else {
                 return isAccessible(((JCArrayAccess) exp).indexed, cut, stmt, e);
             }
@@ -381,7 +383,7 @@ public class PrivateAccessProcessor extends DProcessor {
         return trees.isAccessible(rs.getScope(e), s, itd);
     }
 
-    protected com.sun.tools.javac.util.List<JCStatement> reflect(Symbol s, final CompilationUnitTree cut, com.sun.tools.javac.util.List<JCStatement> stats, JCStatement stmt, com.sun.tools.javac.util.List<JCExpression> args) {
+    protected com.sun.tools.javac.util.List<JCStatement> reflect(Symbol s, final CompilationUnitTree cut, com.sun.tools.javac.util.List<JCStatement> stats, JCStatement stmt, com.sun.tools.javac.util.List<JCExpression> args, Element e) {
         final java.util.List<? extends Symbol> params;
         if (s instanceof MethodSymbol) {
             final com.sun.tools.javac.util.List<TypeSymbol> formalTypeParams = ((MethodSymbol) s).getTypeParameters();
@@ -393,11 +395,11 @@ public class PrivateAccessProcessor extends DProcessor {
         } else {
             params = Collections.EMPTY_LIST;
         }
-        com.sun.tools.javac.util.List<JCStatement> reflect = reflect(s, cut, stats, params, stmt);
+        com.sun.tools.javac.util.List<JCStatement> reflect = reflect(s, cut, stats, params, stmt, e);
         return reflect;
     }
 
-    public com.sun.tools.javac.util.List<JCStatement> reflect(Symbol symbol, CompilationUnitTree cut, com.sun.tools.javac.util.List<JCStatement> stats, List<? extends Symbol> params, JCStatement stmt) {
+    public com.sun.tools.javac.util.List<JCStatement> reflect(Symbol symbol, CompilationUnitTree cut, com.sun.tools.javac.util.List<JCStatement> stats, List<? extends Symbol> params, JCStatement stmt, Element e) {
         ClassSymbol cs = (ClassSymbol) symbol.owner;
         JCIdent typeId = tm.Ident(cs.fullname); //"com.dp4j.samples.RPrivateArrayMethod"
 
@@ -437,7 +439,7 @@ public class PrivateAccessProcessor extends DProcessor {
             args = com.sun.tools.javac.util.List.<JCExpression>of(tm.Literal(symbol.name.toString()));
         }
 
-        Symbol fieldMethSym = rs.getSymbol(cut, stmt, null, accesseeVarName, null);
+        Symbol fieldMethSym = rs.getSymbol(cut, stmt, null, accesseeVarName, null, e);
         if (fieldMethSym == null) {
             final JCExpression getMethField = tm.Select(classGetter, getterName);
             JCMethodInvocation mi = tm.Apply(com.sun.tools.javac.util.List.<JCExpression>nil(), getMethField, args);
