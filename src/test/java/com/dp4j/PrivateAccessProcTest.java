@@ -71,7 +71,9 @@ public class PrivateAccessProcTest {
 
     @Test()
     public void mostComprehensiveTest() throws IOException {
-        if(tests.length == 0) return;
+        if (tests.length == 0) {
+            return;
+        }
         final Runtime runtime = Runtime.getRuntime();
         runtime.traceInstructions(true);
         runtime.traceMethodCalls(true);
@@ -125,7 +127,7 @@ public class PrivateAccessProcTest {
                 assertTrue(f.delete());
                 File parentFile = f.getParentFile();
                 if (parentFile != null && parentFile.isDirectory()) {
-                    FilenameFilter filter = new FilenameFilter()       {
+                    FilenameFilter filter = new FilenameFilter() {
 
                         @Override
                         public boolean accept(File dir, String name) {
@@ -145,7 +147,7 @@ public class PrivateAccessProcTest {
                 assertTrue(f.delete());
                 File parentFile = f.getParentFile();
                 if (parentFile != null && parentFile.isDirectory()) {
-                    FilenameFilter filter = new FilenameFilter()       {
+                    FilenameFilter filter = new FilenameFilter() {
 
                         @Override
                         public boolean accept(File dir, String name) {
@@ -157,30 +159,27 @@ public class PrivateAccessProcTest {
             }
         }
     }
-
-    final static String comDp4jSamples = "com"+ File.separator +  "dp4j"+ File.separator +  "samples";
-
+    final static String comDp4jSamples = "com" + File.separator + "dp4j" + File.separator + "samples";
     final static String tests[][] = {
-    {testSrc.getAbsolutePath(), comDp4jSamples, "PrivateData"},
-//        comDp4jSamples + File.separator +"PrivateMethods",
-//        comDp4jSamples + File.separator +"PrivateVarArgs",
-    {testSrc.getAbsolutePath(), comDp4jSamples, "WithAccessibilePrivateDataInstance"},
-//
-//        comDp4jSamples + File.separator +"WithAccessibleVarArgsInstance",
-//        comDp4jSamples + File.separator +"ASingleton",
-//        comDp4jSamples + File.separator +"Test",
-//        comDp4jSamples + File.separator +"VarArgsCallTest",
-//        comDp4jSamples + File.separator +"CallTest",
-    {testResources.getAbsolutePath(), comDp4jSamples, "IfTest"}
-//       testResources.getAbsolutePath() + File.separator + comDp4jSamples + File.separator +"IfTest",
-//        comDp4jSamples + File.separator +"MultipleCallsTest",
-//        comDp4jSamples + File.separator +"ForEachTest",
-//        comDp4jSamples + File.separator +"ArrayCallTest",
-//        comDp4jSamples + File.separator +"PrivateConstructorTest",
-//        comDp4jSamples + File.separator +"GenericsTest",
-//        "Test10"
-    };
+        {testSrc.getAbsolutePath(), comDp4jSamples, "PrivateData"},
+        {testSrc.getAbsolutePath(), comDp4jSamples, "PrivateMethods"},
+        {testSrc.getAbsolutePath(), comDp4jSamples, "PrivateVarArgs"},
+        {testSrc.getAbsolutePath(), comDp4jSamples, "WithAccessibilePrivateDataInstance"},
+        {testSrc.getAbsolutePath(), comDp4jSamples, "WithAccessibleVarArgsInstance"},
+        {testSrc.getAbsolutePath(), comDp4jSamples, "ASingleton"},
+        {testSrc.getAbsolutePath(), comDp4jSamples, "Genericer"},
 
+        {testResources.getAbsolutePath(), comDp4jSamples,"Test"},
+        {testResources.getAbsolutePath(), comDp4jSamples,"VarArgsCallTest"},
+        {testResources.getAbsolutePath(), comDp4jSamples,"CallTest"},
+        {testResources.getAbsolutePath(), comDp4jSamples,"IfTest"},
+        {testResources.getAbsolutePath(), comDp4jSamples,"MultipleCallsTest"},
+        {testResources.getAbsolutePath(), comDp4jSamples,"ForEachTest"},
+        {testResources.getAbsolutePath(), comDp4jSamples,"ArrayCallTest"},
+        {testResources.getAbsolutePath(), comDp4jSamples,"PrivateConstructorTest"},
+        {testResources.getAbsolutePath(), comDp4jSamples,"GenericsTest"},
+        {testResources.getAbsolutePath(), StringUtils.EMPTY,"Test10"}
+    };
 
     static String[] getTestSources() {
         String[] ret = new String[tests.length];
