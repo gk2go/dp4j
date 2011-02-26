@@ -54,17 +54,14 @@ public class PrivateAccessProcTest {
     final String procSrc = getFile(src.getAbsolutePath(), "com", "dp4j", "processors", "core").getAbsolutePath();
     static final File workingdir = new File(System.getProperty("user.dir"));
     static final File testResources = getFile(workingdir, "src", "test", "resources");
+    static final File testSrc = getFile(workingdir, "src", "test", "java");
 
     final String getSrcFile(final Class clazz) {
         return new File(src, clazz.getCanonicalName().replace(".", File.separator) + ".java").getAbsolutePath();
     }
 
-    static String getTestFileAbsolutePath(final String className) {
-        return getFile(testResources, className + ".java").getAbsolutePath();
-    }
-
-    static String getTestClassAbsolutePath(final String className) {
-        return getFile(targetTestClasses, className + ".class").getAbsolutePath();
+    static String getTestFileAbsolutePath(final String dir, final String[] className, final String fileFormat) {
+        return getFile(dir, className[1], className[2] + fileFormat).getAbsolutePath();
     }
 
     final String getClassPath(final File dir, final Class clazz) {
@@ -74,6 +71,9 @@ public class PrivateAccessProcTest {
 
     @Test()
     public void mostComprehensiveTest() throws IOException {
+        if (tests.length == 0) {
+            return;
+        }
         final Runtime runtime = Runtime.getRuntime();
         runtime.traceInstructions(true);
         runtime.traceMethodCalls(true);
@@ -120,14 +120,14 @@ public class PrivateAccessProcTest {
         assertClassExists(tests);
     }
 
-    private void cleanClasses(final String... testFiles) {
-        for (String testFile : testFiles) {
-            File f = new File(getTestClassAbsolutePath(testFile));
+    private void cleanClasses(final String[][] testFiles) {
+        for (String[] testFile : testFiles) {
+            File f = new File(getTestFileAbsolutePath(targetTestClasses.getAbsolutePath(), testFile, ".class"));
             if (f.exists()) {
                 assertTrue(f.delete());
                 File parentFile = f.getParentFile();
                 if (parentFile != null && parentFile.isDirectory()) {
-                    FilenameFilter filter = new FilenameFilter()       {
+                    FilenameFilter filter = new FilenameFilter() {
 
                         @Override
                         public boolean accept(File dir, String name) {
@@ -139,31 +139,53 @@ public class PrivateAccessProcTest {
             }
         }
     }
-    final static String comDp4jSamples = "com"+ File.separator +  "dp4j"+ File.separator +  "samples";
-    final static String tests[] = {
-        comDp4jSamples + File.separator + "PrivateData",
-        comDp4jSamples + File.separator +"PrivateMethods",
-        comDp4jSamples + File.separator +"PrivateVarArgs",
-        comDp4jSamples + File.separator +"WithAccessibilePrivateDataInstance",
-        comDp4jSamples + File.separator +"WithAccessibleVarArgsInstance",
-        comDp4jSamples + File.separator +"ASingleton",
-        comDp4jSamples + File.separator +"Test",
-        comDp4jSamples + File.separator +"VarArgsCallTest",
-        comDp4jSamples + File.separator +"CallTest",
-        comDp4jSamples + File.separator +"IfTest",
-        comDp4jSamples + File.separator +"MultipleCallsTest",
-        comDp4jSamples + File.separator +"ForEachTest",
-        comDp4jSamples + File.separator +"ArrayCallTest",
-        comDp4jSamples + File.separator +"PrivateConstructorTest",
-        comDp4jSamples + File.separator +"GenericsTest",
-//        "Test10"
+
+    private void cleanClasses(final String[] testFiles) {
+        for (String testFile : testFiles) {
+            File f = new File(testFile);
+            if (f.exists()) {
+                assertTrue(f.delete());
+                File parentFile = f.getParentFile();
+                if (parentFile != null && parentFile.isDirectory()) {
+                    FilenameFilter filter = new FilenameFilter() {
+
+                        @Override
+                        public boolean accept(File dir, String name) {
+                            return name.endsWith(".class");
+                        }
+                    };
+                    cleanClasses(parentFile.list(filter));
+                }
+            }
+        }
+    }
+    final static String comDp4jSamples = "com" + File.separator + "dp4j" + File.separator + "samples";
+    final static String tests[][] = {
+        {testSrc.getAbsolutePath(), comDp4jSamples, "PrivateData"},
+        {testSrc.getAbsolutePath(), comDp4jSamples, "PrivateMethods"},
+        {testSrc.getAbsolutePath(), comDp4jSamples, "PrivateVarArgs"},
+        {testSrc.getAbsolutePath(), comDp4jSamples, "WithAccessibilePrivateDataInstance"},
+        {testSrc.getAbsolutePath(), comDp4jSamples, "WithAccessibleVarArgsInstance"},
+        {testSrc.getAbsolutePath(), comDp4jSamples, "ASingleton"},
+        {testSrc.getAbsolutePath(), comDp4jSamples, "Genericer"},
+
+        {testResources.getAbsolutePath(), comDp4jSamples,"Test"},
+        {testResources.getAbsolutePath(), comDp4jSamples,"VarArgsCallTest"},
+        {testResources.getAbsolutePath(), comDp4jSamples,"CallTest"},
+        {testResources.getAbsolutePath(), comDp4jSamples,"IfTest"},
+        {testResources.getAbsolutePath(), comDp4jSamples,"MultipleCallsTest"},
+        {testResources.getAbsolutePath(), comDp4jSamples,"ForEachTest"},
+        {testResources.getAbsolutePath(), comDp4jSamples,"ArrayCallTest"},
+        {testResources.getAbsolutePath(), comDp4jSamples,"PrivateConstructorTest"},
+        {testResources.getAbsolutePath(), comDp4jSamples,"GenericsTest"},
+        {testResources.getAbsolutePath(), StringUtils.EMPTY,"Test10"}
     };
 
     static String[] getTestSources() {
         String[] ret = new String[tests.length];
         int i = 0;
-        for (String test : tests) {
-            ret[i++] = getTestFileAbsolutePath(test) + " ";
+        for (String[] test : tests) {
+            ret[i++] = getTestFileAbsolutePath(test[0], test, ".java") + " ";
         }
         return ret;
     }
@@ -198,9 +220,9 @@ public class PrivateAccessProcTest {
 //    protected Collection<Processor> getProcessors() {
 //        return Arrays.<Processor>asList(new PrivateAccessProcessor());
 //    }
-    private void assertClassExists(final String[] testFiles) {
-        for (String testFile : testFiles) {
-            File f = new File(getTestClassAbsolutePath(testFile));
+    private void assertClassExists(final String[][] testFiles) {
+        for (String[] testFile : testFiles) {
+            File f = new File(getTestFileAbsolutePath(targetTestClasses.getAbsolutePath(), testFile, ".class"));
             System.out.println(f);
             assertTrue(f.exists());
         }
