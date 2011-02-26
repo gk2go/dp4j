@@ -166,11 +166,6 @@ public class Resolver {
             TypeElement cl = (TypeElement) getSymbol(cut, n, null, name, null);
             java.util.List<Type> args = getArgTypes(nc.args, cut, n);
             java.util.List<Type> typeParams = getArgTypes(nc.typeargs, cut, n);
-            if (cl == null) {
-                System.out.println(name);
-                System.out.println(exp);
-                System.out.println(cut);
-            }
             Symbol s = contains(cl.getEnclosedElements(), typeParams, elementUtils.getName(init), args);
             return s;
         } else if (exp instanceof JCMethodInvocation) {
