@@ -224,7 +224,6 @@ public class PrivateAccessProcTest {
     private void assertClassExists(final String[][] testFiles) {
         for (String[] testFile : testFiles) {
             File f = new File(getTestFileAbsolutePath(targetTestClasses.getAbsolutePath(), testFile, ".class"));
-            System.out.println(f);
             assertTrue(f.exists());
         }
     }

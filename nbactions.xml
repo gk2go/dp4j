@@ -76,4 +76,25 @@
                 <jpda.listen>maven</jpda.listen>
             </properties>
         </action>
+        <action>
+            <actionName>CUSTOM-release</actionName>
+            <displayName>release</displayName>
+            <goals>
+                <goal>--batch-mode</goal>
+                <goal>release:clean</goal>
+                <goal>release:prepare</goal>
+                <goal>release:perform</goal>
+            </goals>
+            <activatedProfiles>
+                <activatedProfile>sign</activatedProfile>
+            </activatedProfiles>
+        </action>
+        <action>
+            <actionName>CUSTOM-deploy</actionName>
+            <displayName>deploy</displayName>
+            <activatedProfiles>
+                <activatedProfile>deploy</activatedProfile>
+                <activatedProfile>sign</activatedProfile>
+            </activatedProfiles>
+        </action>
     </actions>
