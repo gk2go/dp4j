@@ -12,6 +12,6 @@ public class PrintTest {
     @com.dp4j.InjectReflection
     public void test() {
         Privater pv = new Privater();
-        //final int[] d = pv.ints;
+        final int[] d = pv.ints;
     }
 }

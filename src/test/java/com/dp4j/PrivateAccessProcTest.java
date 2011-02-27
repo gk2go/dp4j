@@ -168,7 +168,7 @@ public class PrivateAccessProcTest {
         {testSrc.getAbsolutePath(), comDp4jSamples, "WithAccessibleVarArgsInstance"},
         {testSrc.getAbsolutePath(), comDp4jSamples, "ASingleton"},
         {testSrc.getAbsolutePath(), comDp4jSamples, "Genericer"},
-
+        {testResources.getAbsolutePath(), comDp4jSamples, "EqualsTest"},
         {testResources.getAbsolutePath(), comDp4jSamples,"Test"},
         {testResources.getAbsolutePath(), comDp4jSamples,"VarArgsCallTest"},
         {testResources.getAbsolutePath(), comDp4jSamples,"CallTest"},
@@ -179,7 +179,7 @@ public class PrivateAccessProcTest {
         {testResources.getAbsolutePath(), comDp4jSamples,"PrivateConstructorTest"},
         {testResources.getAbsolutePath(), comDp4jSamples,"GenericsTest"},
         {testResources.getAbsolutePath(), StringUtils.EMPTY,"Test10"},
-            {testResources.getAbsolutePath(), StringUtils.EMPTY,"PrintTest"}
+        {testResources.getAbsolutePath(), StringUtils.EMPTY,"PrintTest"}
     };
 
     static String[] getTestSources() {

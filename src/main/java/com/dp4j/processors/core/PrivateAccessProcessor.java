@@ -116,7 +116,6 @@ public class PrivateAccessProcessor extends DProcessor {
         } else if (stmt instanceof JCEnhancedForLoop) {
             return getScope(((JCEnhancedForLoop) stmt).var, cut, validScope);
         } else if (stmt instanceof JCForLoop) {
-            //FIXME: condition might be dirty
             return getScope(((JCForLoop) stmt).init.last(), cut, validScope);
         }
         return validScope;
@@ -237,7 +236,8 @@ public class PrivateAccessProcessor extends DProcessor {
                     }
                 }
             }
-            final boolean accessible = isAccessible(mi, cut, n);
+            Symbol accSym = rs.getInvokationTarget(mi, cut, n);
+            final boolean accessible = isAccessible(mSym, accSym, cut, n);
             if (!accessible) {
                 ifExp.type = mSym.getReturnType();
                 reflect(mSym, cut, n, mi.args, encBlock);
@@ -404,7 +404,7 @@ public class PrivateAccessProcessor extends DProcessor {
             itd = (DeclaredType) ((MethodSymbol) accessor).getReturnType();
         } else {
             if (accessor.type instanceof ArrayType) {
-                return rs.getSymbol(s.name, accessor, cut, n) != null;
+                return rs.getSymbol(s.name, accessor, cut, n) != null;//FIXME: what about args? But we already have the symbol!
             } else {
                 itd = (DeclaredType) accessor.type;
             }
