@@ -171,9 +171,10 @@ public class PrivateAccessProcessor extends DProcessor {
         } else if (stmt instanceof JCIf) {
             JCIf ifStmt = (JCIf) stmt;
             ifStmt.cond = processCond(ifStmt.cond, cut, n, encBlock);
-            if (ifStmt.thenpart instanceof JCBlock) {
-                ifStmt.thenpart = processElement(((JCBlock) ifStmt.thenpart), cut, ifStmt.cond);
+            if (ifStmt.thenpart instanceof JCExpressionStatement) {
+                ifStmt.thenpart = tm.Block(0l, com.sun.tools.javac.util.List.of(ifStmt.thenpart));
             }
+            ifStmt.thenpart = processElement((JCBlock)ifStmt.thenpart, cut, ifStmt.cond);
         } else if (stmt instanceof JCExpressionStatement) {
             JCExpressionStatement expStmt = (JCExpressionStatement) stmt;
             expStmt.expr = processCond(expStmt.expr, cut, n, encBlock);

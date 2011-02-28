@@ -10,7 +10,7 @@ import org.junit.Test;
 
 class Private{
     private Private(){
-        System.out.println("private initialized");
+       if(Math.random() == Integer.MAX_VALUE) System.out.println("private initialized");
     }
 }
 

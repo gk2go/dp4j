@@ -22,6 +22,10 @@ public class PrivateMethods {
 
     }
 
+    private int get(int i){
+        return i;
+    }
+
     public void hello(){
 
     }
