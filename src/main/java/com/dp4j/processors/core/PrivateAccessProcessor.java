@@ -95,6 +95,7 @@ public class PrivateAccessProcessor extends DProcessor {
     boolean constructorInjected = false;
 
     protected JCBlock processElement(final JCBlock tree, final CompilationUnitTree cut, Scope validScope) {
+        if (tree == null) return null;
         for (Tree stmt : tree.stats) {
             validScope = getScope(stmt, cut, validScope);
             Node n = new Node(validScope, stmt);
@@ -164,8 +165,8 @@ public class PrivateAccessProcessor extends DProcessor {
             }
         } else if (stmt instanceof JCTry) {
             JCTry tryStmt = (JCTry) stmt;
-            if (tryStmt.finalizer != null && tryStmt.finalizer.stats != null && !tryStmt.finalizer.stats.isEmpty()) {
-                tryStmt.finalizer = processElement(tryStmt.finalizer, cut, n.scope);
+            if (tryStmt.body != null && tryStmt.body.stats != null && !tryStmt.body.stats.isEmpty()) {
+                tryStmt.body = processElement(tryStmt.body, cut, n.scope);
             }
             List<JCCatch> catchers = tryStmt.catchers;
             for (JCCatch jCCatch : catchers) {
@@ -173,9 +174,10 @@ public class PrivateAccessProcessor extends DProcessor {
                     jCCatch.body = processElement(jCCatch.body, cut, jCCatch.param);
                 }
             }
-            if (tryStmt.body != null && tryStmt.body.stats != null && !tryStmt.body.stats.isEmpty()) {
-                tryStmt.body = processElement(tryStmt.body, cut, n.scope);
+                        if (tryStmt.finalizer != null && tryStmt.finalizer.stats != null && !tryStmt.finalizer.stats.isEmpty()) {
+                tryStmt.finalizer = processElement(tryStmt.finalizer, cut, n.scope);
             }
+
         } else if (stmt instanceof JCIf) {
             JCIf ifStmt = (JCIf) stmt;
             ifStmt.cond = processCond(ifStmt.cond, cut, n, encBlock);
