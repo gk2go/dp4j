@@ -121,9 +121,17 @@ public class PrivateAccessProcessor extends DProcessor {
         return validScope;
     }
 
-    protected JCBlock processElement(final JCBlock tree, final CompilationUnitTree cut, Tree getScope) {
+    protected JCBlock processElement(BlockTree tree, final CompilationUnitTree cut, Tree getScope) {
+        if(tree == null) return null;
         TreePath path = trees.getPath(cut, getScope);
-        return processElement(tree, cut, trees.getScope(path));
+        return processElement((JCBlock) tree, cut, trees.getScope(path));
+    }
+
+
+    protected BlockTree blockify(StatementTree stmt){
+        if(stmt == null) return null;
+        if(stmt instanceof  BlockTree) return (BlockTree) stmt;
+        return tm.Block(0l, com.sun.tools.javac.util.List.of((JCStatement)stmt));
     }
 
     /**
@@ -171,10 +179,12 @@ public class PrivateAccessProcessor extends DProcessor {
         } else if (stmt instanceof JCIf) {
             JCIf ifStmt = (JCIf) stmt;
             ifStmt.cond = processCond(ifStmt.cond, cut, n, encBlock);
-            if (ifStmt.thenpart instanceof JCExpressionStatement) {
-                ifStmt.thenpart = tm.Block(0l, com.sun.tools.javac.util.List.of(ifStmt.thenpart));
-            }
+            ifStmt.thenpart = (JCStatement) blockify(ifStmt.thenpart);
             ifStmt.thenpart = processElement((JCBlock)ifStmt.thenpart, cut, ifStmt.cond);
+            ifStmt.elsepart = (JCStatement) blockify(ifStmt.elsepart);
+            ifStmt.elsepart = processElement((JCBlock)ifStmt.elsepart, cut, ifStmt.cond);
+            //hanlde else!!, note that JCBlock is an instance of JCStatement, generalize ProcessElement to receive to accept stmts and if not block them and then process as usual
+
         } else if (stmt instanceof JCExpressionStatement) {
             JCExpressionStatement expStmt = (JCExpressionStatement) stmt;
             expStmt.expr = processCond(expStmt.expr, cut, n, encBlock);
@@ -183,14 +193,17 @@ public class PrivateAccessProcessor extends DProcessor {
         } else if (stmt instanceof JCWhileLoop) {
             JCWhileLoop loop = (JCWhileLoop) stmt;
             loop.cond = processCond(loop.cond, cut, n, encBlock);
+            loop.body = (JCStatement) blockify(loop.body);
             loop.body = processElement((JCBlock) loop.body, cut, n.scope);
         } else if (stmt instanceof JCForLoop) {
             JCForLoop loop = (JCForLoop) stmt;
             loop.cond = processCond(loop.cond, cut, n, encBlock);
+            loop.body = (JCStatement) blockify(loop.body);
             loop.body = processElement((JCBlock) loop.body, cut, loop.cond);
         } else if (stmt instanceof JCDoWhileLoop) {
             JCDoWhileLoop loop = (JCDoWhileLoop) stmt;
             loop.cond = processCond(loop.cond, cut, n, encBlock);
+loop.body = (JCStatement) blockify(loop.body);
             loop.body = processElement(((JCBlock) loop.body), cut, n.scope);
         } else if (stmt instanceof JCEnhancedForLoop) {
             JCEnhancedForLoop loop = (JCEnhancedForLoop) stmt;
@@ -205,6 +218,7 @@ public class PrivateAccessProcessor extends DProcessor {
                     loop.expr = tm.TypeCast((Type) arrayType, loop.expr);
                 }
             }
+            loop.body = (JCStatement) blockify(loop.body);
             loop.body = processElement((JCBlock) loop.body, cut, loop.expr);
         }
         return encBlock.stats;
