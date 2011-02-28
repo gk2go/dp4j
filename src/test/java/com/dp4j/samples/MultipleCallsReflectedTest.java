@@ -4,6 +4,7 @@
  */
 package com.dp4j.samples;
 
+import com.dp4j.InjectReflection;
 import org.junit.Test;
 /**
  *
@@ -11,7 +12,7 @@ import org.junit.Test;
  */
 public class MultipleCallsReflectedTest {
 
-    @Test()
+    @InjectReflection
     public void getPrivateReturn() throws java.lang.ClassNotFoundException, java.lang.NoSuchFieldException, java.lang.IllegalAccessException, java.lang.reflect.InvocationTargetException, java.lang.IllegalArgumentException, NoSuchMethodException {
         PrivateMethods privateClazzz = new PrivateMethods();
         System.out.println(PrivateMethods.class.getCanonicalName());

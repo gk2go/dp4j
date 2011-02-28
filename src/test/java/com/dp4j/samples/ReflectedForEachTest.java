@@ -5,6 +5,7 @@
 
 package com.dp4j.samples;
 
+import com.dp4j.InjectReflection;
 import org.junit.Test;
 
 /**
@@ -13,7 +14,7 @@ import org.junit.Test;
  */
 public class ReflectedForEachTest {
 
-    @Test()
+    @InjectReflection
     public void t() throws java.lang.ClassNotFoundException, java.lang.NoSuchFieldException, java.lang.IllegalAccessException {
         final java.lang.reflect.Field staticObjsField = Class.forName("com.dp4j.samples.PrivateData").getDeclaredField("staticObjs");
         staticObjsField.setAccessible(true);

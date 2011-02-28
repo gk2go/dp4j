@@ -1,5 +1,7 @@
 package com.dp4j.samples;
 
+import com.dp4j.InjectReflection;
+
 public class ReflectedTest extends WithAccessibleVarArgsInstance{
 
     public ReflectedTest() {
@@ -9,8 +11,8 @@ public class ReflectedTest extends WithAccessibleVarArgsInstance{
     int g;
     int h;
 
-    @org.junit.Test()
-    public void t() throws java.lang.ClassNotFoundException, java.lang.NoSuchFieldException, java.lang.IllegalAccessException, java.lang.reflect.InvocationTargetException, java.lang.IllegalArgumentException, java.lang.NoSuchMethodException {
+    @InjectReflection
+            public void t() throws java.lang.ClassNotFoundException, java.lang.NoSuchFieldException, java.lang.IllegalAccessException, java.lang.reflect.InvocationTargetException, java.lang.IllegalArgumentException, java.lang.NoSuchMethodException {
         final java.lang.Class priClassClass = java.lang.Class.forName("com.dp4j.samples.PrivateVarArgs");
         final java.lang.reflect.Field iField = priClassClass.getDeclaredField("i");
         iField.setAccessible(true);

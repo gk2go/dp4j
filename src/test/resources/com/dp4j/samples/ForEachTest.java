@@ -4,6 +4,7 @@
  */
 package com.dp4j.samples;
 
+import com.dp4j.InjectReflection;
 import org.junit.Test;
 
 /**
@@ -15,7 +16,7 @@ public class ForEachTest {
     @Test
     public void t() throws Exception {
         for(Object staticObj: PrivateData.staticObjs){
-            System.out.println(staticObj);
+            if(staticObj != null && Math.random() == 0d) System.out.println(staticObj);
         }
         for(int i: new PrivateData().ints){
             if(i == Integer.MAX_VALUE)
