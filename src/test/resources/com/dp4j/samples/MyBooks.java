@@ -12,6 +12,7 @@ public class MyBooks {
     private String author;
 
     public void hello() {
-        System.out.println(instance);
+        if(year == Integer.MAX_VALUE)
+            System.out.println(instance);
     }
 }

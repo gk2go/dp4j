@@ -15,6 +15,7 @@ public class SoutTest {
 
     @org.junit.Test
             public void test(){
-                System.out.println(PrivateData.gg);
+        if(PrivateData.gg == Integer.MAX_VALUE)
+        System.out.println(PrivateData.gg);
             }
 }

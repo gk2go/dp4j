@@ -136,7 +136,10 @@ public class Resolver {
         if (invTarget instanceof VarSymbol) {//this, super,
             invTarget = invTarget.type.tsym;
         } else if (invTarget instanceof MethodSymbol) {
-            invTarget = ((MethodSymbol) invTarget).getReturnType().tsym; //cannot invoke on void
+            invTarget = getTypeSymbol(invTarget); //cannot invoke on void
+        }
+        if(invTarget == null){
+            System.out.println(mi);
         }
         java.util.List<Symbol> enclosedElements = getEnclosedElements(invTarget);
         Symbol s = contains(enclosedElements, typeParams, mName, args);

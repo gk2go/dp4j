@@ -18,10 +18,12 @@ public class ForEachTest {
             System.out.println(staticObj);
         }
         for(int i: new PrivateData().ints){
-            System.out.println(i);
+            if(i == Integer.MAX_VALUE)
+                System.out.println(i);
         }
         final int[] d = new PrivateData().ints;
         for (int i = 0; i < d.length; i++) {
+            if(i == Integer.MAX_VALUE)
             System.out.println(i);
             boolean a = d.equals("");
 //            Object o = PrivateData.staticObjs[0];

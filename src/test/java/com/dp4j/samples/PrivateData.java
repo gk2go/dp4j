@@ -12,7 +12,7 @@ public class PrivateData {
 
     private int i;
     private static Object[] staticObjs = new Object[4];
-    private int[] ints = {1,2,4};
+    private int[] ints = {1,2};
     public int j;
     public static int gg;
 }

@@ -17,6 +17,7 @@ public class MultipleCallsTest {
         PrivateMethods privateClazzz = new PrivateMethods();
         String className = privateClazzz.getClassName();
         privateClazzz.aPrivateMethod(5, className);
-        System.out.println(className);
+        if(className.contains(""))
+            System.out.println(className);
     }
 }

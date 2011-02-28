@@ -414,7 +414,14 @@ public class PrivateAccessProcessor extends DProcessor {
 
     protected void reflect(Symbol s, final CompilationUnitTree cut, Node n, com.sun.tools.javac.util.List<JCExpression> args, JCBlock encBlock) {
         final java.util.List<? extends Symbol> params;
+        final Name accesseeVarName;
+
         if (s instanceof MethodSymbol) {
+            if (s.isConstructor()) {
+                accesseeVarName = getConstructorVar(s.owner.name, ((MethodSymbol)s).params);
+            } else {
+                accesseeVarName = getMethodVar(s.name, ((MethodSymbol)s).params);
+            }
             final com.sun.tools.javac.util.List<TypeSymbol> formalTypeParams = ((MethodSymbol) s).getTypeParameters();
             if (formalTypeParams.isEmpty()) {
                 params = ((MethodSymbol) s).params;
@@ -422,12 +429,13 @@ public class PrivateAccessProcessor extends DProcessor {
                 params = rs.getArgs(args, cut, n);
             }
         } else {
+            accesseeVarName = getFieldVar(s.name);
             params = Collections.EMPTY_LIST;
         }
-        reflect(s, cut, params, n, encBlock);
+        reflect(s, cut, params, n, encBlock, accesseeVarName);
     }
 
-    public void reflect(Symbol symbol, CompilationUnitTree cut, List<? extends Symbol> params, Node n, JCBlock encBlock) {
+    public void reflect(Symbol symbol, CompilationUnitTree cut, List<? extends Symbol> params, Node n, JCBlock encBlock, Name accesseeVarName) {
         ClassSymbol cs = (ClassSymbol) symbol.owner;
         JCIdent typeId = tm.Ident(cs.fullname); //"com.dp4j.samples.RPrivateArrayMethod"
 
@@ -446,22 +454,18 @@ public class PrivateAccessProcessor extends DProcessor {
 
         final JCExpression javaReflectMethField;
         final Name getterName;
-        final Name accesseeVarName;
         if (symbol instanceof MethodSymbol) {
             if (symbol.isConstructor()) {
-                accesseeVarName = getConstructorVar(symbol.owner.name);
                 getterName = elementUtils.getName("getDeclaredConstructor");
                 javaReflectMethField = getIdAfterImporting("java.lang.reflect.Constructor");
                 args = toList(types);
             } else {
-                accesseeVarName = getMethodVar(symbol.name);
                 getterName = elementUtils.getName("getDeclaredMethod");
                 javaReflectMethField = getIdAfterImporting("java.lang.reflect.Method");
                 JCExpression mName = tm.Literal(symbol.name.toString());
                 args = merge(Collections.singleton(mName), toList(types));
             }
         } else {
-            accesseeVarName = getFieldVar(symbol.name);
             getterName = elementUtils.getName("getDeclaredField");
             javaReflectMethField = getIdAfterImporting("java.lang.reflect.Field");
             args = com.sun.tools.javac.util.List.<JCExpression>of(tm.Literal(symbol.name.toString()));
@@ -507,10 +511,11 @@ public class PrivateAccessProcessor extends DProcessor {
         if (s instanceof MethodSymbol) {
             if (s.isConstructor()) {
                 getterName = elementUtils.getName("newInstance");
-                fieldMethInitId = tm.Ident(getConstructorVar(s.owner.name));
+                fieldMethInitId = tm.Ident(getConstructorVar(s.owner.name, ((MethodSymbol)s).params));
             } else {
                 getterName = elementUtils.getName("invoke");
-                fieldMethInitId = tm.Ident(getMethodVar(s.name));
+
+                fieldMethInitId = tm.Ident(getMethodVar(s.name, ((MethodSymbol) s).params));
             }
 
             if (((MethodSymbol) s).isVarArgs()) {
@@ -570,16 +575,39 @@ public class PrivateAccessProcessor extends DProcessor {
         return elementUtils.getName(objName + "Field");
     }
 
-    Name getMethodVar(Name objName) {
-        return elementUtils.getName(objName + "Method");
+    Name getMethodVar(Name objName, List<? extends Symbol> params) {
+        return getVar(objName, params, "Method");
     }
 
-    //TODO: need to number them
-    Name getConstructorVar(Name initName) {
+    Name getVar(Name objName, List<? extends Symbol> params, final String varType){
+       String with = params.isEmpty() ? StringUtils.EMPTY : "With";
+
+       with += StringUtils.join(getNames(params), "And");
+        return elementUtils.getName(objName + with + varType);
+    }
+
+    Name getConstructorVar(Name initName, List<? extends Symbol> params) {
         initName = rs.getName(initName);
         initName = elementUtils.getName(StringUtils.uncapitalize(initName.toString()));
-        return elementUtils.getName(initName + "Constructor");
+        return getVar(initName, params, "Constructor");
     }
+
+    List<Name> getNames(List<? extends Symbol> params){
+        List<Name> names = new ArrayList<Name>();
+        for (Symbol symbol : params) {
+            final Symbol ts = rs.getTypeSymbol(symbol);
+            final Name n;
+            if(ts instanceof ArrayType){
+                String toString = ((ArrayType)ts).getComponentType().toString();
+                n = elementUtils.getName(toString + ts.getSimpleName());
+            }else{
+                n = ts.getSimpleName();
+            }
+            names.add(n);
+        }
+        return names;
+    }
+
     boolean reflectionInjected = false;
     boolean methodInjected = false;
 
