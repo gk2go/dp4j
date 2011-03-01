@@ -96,5 +96,8 @@
                 <activatedProfile>deploy</activatedProfile>
                 <activatedProfile>sign</activatedProfile>
             </activatedProfiles>
+            <goals>
+                <goal>deploy</goal>
+            </goals>
         </action>
     </actions>
