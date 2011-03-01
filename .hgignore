@@ -3,7 +3,7 @@
 \.chg\..*$
 \.rej$
 \.conflict\~$
-
+.DS_Store
 .classpath
 .project
 .settings
