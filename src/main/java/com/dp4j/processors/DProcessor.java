@@ -5,7 +5,6 @@
 package com.dp4j.processors;
 
 import com.sun.source.util.Trees;
-import com.sun.tools.javac.code.Symbol.TypeSymbol;
 import com.sun.tools.javac.model.JavacElements;
 import com.sun.tools.javac.processing.JavacProcessingEnvironment;
 import com.sun.tools.javac.tree.JCTree.*;
@@ -18,27 +17,21 @@ import com.sun.tools.javac.util.Context;
 import java.util.*;
 import com.dp4j.templateMethod;
 import com.sun.source.tree.CompilationUnitTree;
-import com.sun.source.tree.ImportTree;
-import com.sun.source.tree.Tree;
 import com.sun.tools.javac.code.*;
 import com.sun.tools.javac.code.Symbol.ClassSymbol;
-import com.sun.tools.javac.code.Symbol.MethodSymbol;
-import com.sun.tools.javac.code.Symbol.VarSymbol;
 import com.sun.tools.javac.code.TypeTags;
 import com.sun.tools.javac.util.List;
 import com.sun.tools.javac.util.ListBuffer;
 import com.sun.tools.javac.util.Name;
 import java.util.Map;
 import javax.lang.model.type.DeclaredType;
-import javax.lang.model.type.TypeKind;
 import javax.lang.model.util.Types;
 import javax.tools.Diagnostic.Kind;
 import com.sun.tools.javac.code.Symtab;
-import com.sun.tools.javac.model.FilteredMemberList;
-import javax.lang.model.type.ArrayType;
-import org.apache.commons.lang.StringUtils;
 import com.dp4j.ast.Resolver;
 import com.sun.tools.javac.code.Type.ClassType;
+import java.lang.String;
+import java.util.HashSet;
 
 /**
  *
@@ -57,6 +50,12 @@ public abstract class DProcessor extends AbstractProcessor {
     protected Symtab symTable;
     protected TypeElement encClass;
     protected Resolver rs;
+
+    @Override
+    public Set<String> getSupportedOptions(){
+        return options.keySet();
+    }
+
 
     public JCNewArray getArray(Type t, List<JCExpression> args) {
         JCExpression tExp = tm.Type(t);

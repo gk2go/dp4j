@@ -79,6 +79,7 @@ public class PrivateAccessProcTest {
         runtime.traceMethodCalls(true);
         File targetClasses = getFile(workingdir, "target", "classes");
         final String junit = getFile(System.getProperty("user.home"), ".m2", "repository", "junit", "junit", "4.8.2", "junit-4.8.2.jar").getAbsolutePath();
+        final String testNG = getFile(System.getProperty("user.home"), ".m2", "repository", "testng", "testng", "5.14.6", "testng-5.14.6.jar").getAbsolutePath();
         final String commons = getFile(System.getProperty("user.home"), ".m2", "repository", "commons-lang", "commons-lang", "2.6", "commons-lang-2.6.jar").getAbsolutePath();
         String tools = getFile(System.getProperty("java.home")).getAbsolutePath();
         int lastIndexOf = StringUtils.lastIndexOf(tools, File.separator);
@@ -90,7 +91,7 @@ public class PrivateAccessProcTest {
         final String dp4jCompile = javacCmd + cp + getClassesToCompile(templateMethod.class, InjectReflection.class, Resolve.class, DProcessor.class, PrivateAccessProcessor.class);
 
         System.out.println(dp4jCompile);
-        cp = getCp(targetClasses.getAbsolutePath(), tools, commons, junit);
+        cp = getCp(targetClasses.getAbsolutePath(), tools, commons, junit, testNG);
         javacCmd = "javac -Xlint -d " + targetTestClasses;
         final String[] testSources = getTestSources();
         String testCmd = javacCmd + cp + " -processor " + PrivateAccessProcessor.class.getCanonicalName() + " " + StringUtils.join(testSources);
@@ -178,12 +179,14 @@ public class PrivateAccessProcTest {
         {testResources.getAbsolutePath(), comDp4jSamples,"ArrayCallTest"},
         {testResources.getAbsolutePath(), comDp4jSamples,"PrivateConstructorTest"},
         {testResources.getAbsolutePath(), comDp4jSamples,"GenericsTest"},
-        {testResources.getAbsolutePath(), StringUtils.EMPTY,"Test10"},
-        {testResources.getAbsolutePath(), StringUtils.EMPTY,"PrintTest"},
+        {testSrc.getAbsolutePath(), StringUtils.EMPTY,"Test10"},
+        {testSrc.getAbsolutePath(), StringUtils.EMPTY,"PrintTest"},
         {testResources.getAbsolutePath(), comDp4jSamples,"OverloadTest"},
         {testResources.getAbsolutePath(), comDp4jSamples,"InheritedPrivateTest"},
         {testResources.getAbsolutePath(), comDp4jSamples,"ElseTest"},
-        {testSrc.getAbsolutePath(), comDp4jSamples,"FieldAccessTest"}
+        {testSrc.getAbsolutePath(), comDp4jSamples,"FieldAccessTest"},
+        {testSrc.getAbsolutePath(),StringUtils.EMPTY,"JunitTest11"},
+        {testSrc.getAbsolutePath(),StringUtils.EMPTY,"TestNGTest11"}
     };
 
     static String[] getTestSources() {
