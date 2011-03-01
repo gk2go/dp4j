@@ -87,6 +87,7 @@
             </goals>
             <activatedProfiles>
                 <activatedProfile>sign</activatedProfile>
+                <activatedProfile>deploy</activatedProfile>
             </activatedProfiles>
         </action>
         <action>
