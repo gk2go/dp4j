@@ -58,16 +58,6 @@ public class PrivateAccessProcessor extends DProcessor {
 
         thisExp = tm.This((Type) encClass.asType());
 
-        TypeElement superclass = getTypeElement(encClass.getSuperclass().toString());
-
-        while (superclass != null) {
-            TypeMirror superclass1 = superclass.getSuperclass();
-            if (superclass1 == null) {
-                break;
-            }
-            superclass = getTypeElement(superclass1.toString());
-        }
-
         final TreePath treePath = trees.getPath(e);
         final CompilationUnitTree cut = treePath.getCompilationUnit();
         tree.body = processElement(tree.body, cut, tree);
