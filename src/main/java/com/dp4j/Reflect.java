@@ -11,6 +11,6 @@ import java.lang.annotation.Target;
  * @author simpatico
  */
 @Target(value={ElementType.CONSTRUCTOR,ElementType.METHOD})
-public @interface InjectReflection {
+public @interface Reflect {
 
 }
