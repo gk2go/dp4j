@@ -138,9 +138,6 @@ public class Resolver {
         } else if (invTarget instanceof MethodSymbol) {
             invTarget = getTypeSymbol(invTarget); //cannot invoke on void
         }
-        if(invTarget == null){
-            System.out.println(mi);
-        }
         java.util.List<Symbol> enclosedElements = getEnclosedElements(invTarget);
         Symbol s = contains(enclosedElements, typeParams, mName, args);
         if (s != null) {
@@ -429,16 +426,20 @@ public class Resolver {
                     MethodSymbol me = (MethodSymbol) e;
                     formalArgs = me.getParameters();
                     formalTypeParams = me.getTypeParameters();
+                    if(formalTypeParams.isEmpty()){
+                        formalTypeParams = me.owner.getTypeParameters();
+                    }
+                    if (typeParams.isEmpty() && !formalTypeParams.isEmpty()) { //basic type inference, shouldn't also check same args-size? Yes, but varargs!
+                    formalTypeParams =  null;//me.owner.getTypeParameters();
+                    typeParams = null;
+                }
                     varArgs = me.isVarArgs();
                 } else {
                     formalArgs = null;
                     formalTypeParams = null;
                     varArgs = false;
                 }
-                if (typeParams.isEmpty() && !formalTypeParams.isEmpty() && els.size() == 1) { //basic type inference, shouldn't also check same args-size? Yes, but varargs!
-                    formalTypeParams = null;
-                    typeParams = null;
-                }
+
                 if (!sameMethod(formalArgs, args, formalTypeParams, typeParams, varArgs)) {
                     continue;
                 }

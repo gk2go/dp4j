@@ -4,7 +4,7 @@
  */
 package com.dp4j.samples;
 
-import com.dp4j.InjectReflection;
+import com.dp4j.Reflect;
 import java.util.LinkedList;
 import java.util.List;
 import org.junit.Test;
@@ -15,7 +15,7 @@ import org.junit.Test;
  */
 public class PrivateConstructorTest {
 
-    @InjectReflection
+    @Reflect
     public PrivateConstructorTest() {
         ASingleton singleton = new ASingleton();
         final List<String[]> mengsWithSharedExp = new LinkedList<String[]>();

@@ -186,7 +186,8 @@ public class PrivateAccessProcTest {
         {testResources.getAbsolutePath(), comDp4jSamples,"ElseTest"},
         {testSrc.getAbsolutePath(), comDp4jSamples,"FieldAccessTest"},
         {testSrc.getAbsolutePath(),StringUtils.EMPTY,"JunitTest11"},
-        {testSrc.getAbsolutePath(),StringUtils.EMPTY,"TestNGTest11"}
+        {testSrc.getAbsolutePath(),StringUtils.EMPTY,"TestNGTest11"},
+        {testSrc.getAbsolutePath(),StringUtils.EMPTY,"ReflectionTest"}
     };
 
     static String[] getTestSources() {

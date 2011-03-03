@@ -3,8 +3,6 @@
  * and open the template in the editor.
  */
 package com.dp4j.samples;
-
-import com.dp4j.InjectReflection;
 import org.junit.Test;
 
 /**

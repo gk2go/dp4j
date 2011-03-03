@@ -123,12 +123,12 @@ public abstract class DProcessor extends AbstractProcessor {
         return paramsList;
     }
 
-    public List<JCExpression> toList(final JCExpression... params) {
-        final ListBuffer<JCExpression> lb = ListBuffer.lb();
-        for (JCExpression param : params) {
+    public<T> List<T> toList(final T... params) {
+        final ListBuffer<T> lb = ListBuffer.lb();
+        for (T param : params) {
             lb.append(param);
         }
-        final List<JCExpression> paramsList = lb.toList();
+        final List<T> paramsList = lb.toList();
         return paramsList;
     }
     public final static String javaLangClass = "java.lang.Class";
@@ -158,7 +158,7 @@ public abstract class DProcessor extends AbstractProcessor {
                 JCExpression primitiveClass = tm.QualIdent(symbol);
                 classExp = primitiveClass;
             } else {
-                final JCExpression t = tm.Type(type);
+                final JCExpression t = tm.Type((Type) typeUtils.erasure(type));
                 final com.sun.tools.javac.util.Name c = elementUtils.getName(clazz);
                 final JCFieldAccess fa = tm.Select(t, c);
                 classExp = fa;
