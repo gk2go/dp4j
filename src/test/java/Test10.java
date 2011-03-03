@@ -5,7 +5,7 @@ class T10 {
 public class Test10{
 
 
-    @com.dp4j.InjectReflection
+    @com.dp4j.Reflect
     public void t() {
 	T10.p(1,new Double(2),"hello", "reflection");
     }

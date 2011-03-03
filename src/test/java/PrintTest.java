@@ -9,7 +9,7 @@ class Privater {
 
 public class PrintTest {
 
-    @com.dp4j.InjectReflection
+    @com.dp4j.Reflect
     public void test() {
         Privater pv = new Privater();
         final int[] d = pv.ints;

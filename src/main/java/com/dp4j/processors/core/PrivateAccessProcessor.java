@@ -1,6 +1,6 @@
 package com.dp4j.processors.core;
 
-import com.dp4j.InjectReflection;
+import com.dp4j.Reflect;
 import com.dp4j.ast.Node;
 import com.dp4j.ast.Resolver;
 import com.dp4j.processors.DProcessor;
@@ -26,7 +26,7 @@ import com.sun.source.tree.Tree;
  *
  * @author simpatico
  */
-@SupportedAnnotationTypes(value = {"org.junit.Test", "com.dp4j.InjectReflection", "org.testng.annotations.Test"})
+@SupportedAnnotationTypes(value = {"org.junit.Test", "org.testng.annotations.Test", "com.dp4j.Reflect"})
 @SupportedSourceVersion(SourceVersion.RELEASE_6)
 public class PrivateAccessProcessor extends DProcessor {
 
@@ -40,12 +40,25 @@ public class PrivateAccessProcessor extends DProcessor {
         return t;
     }
 
+    private static String rAll = "ll";
+    @Override
+    public Set<String> getSupportedOptions() {
+        Set<String> supportedOptions = new HashSet<String>(super.getSupportedOptions());
+        supportedOptions.add(rAll);
+        return supportedOptions;
+    }
+
+    boolean reflectAll = false;
+
     @Override
     protected void processElement(Element e, TypeElement ann, boolean warningsOnly) {
         if (options.containsKey("conservative")) {
-            if (!ann.getQualifiedName().toString().equals(InjectReflection.class.getCanonicalName())) {
+            if (!ann.getQualifiedName().toString().equals(Reflect.class.getCanonicalName())) {
                 return;
             }
+        }
+        if(options.containsKey(rAll)){
+            reflectAll = true;
         }
 
         encClass = (TypeElement) e.getEnclosingElement();
@@ -60,7 +73,21 @@ public class PrivateAccessProcessor extends DProcessor {
 
         final TreePath treePath = trees.getPath(e);
         final CompilationUnitTree cut = treePath.getCompilationUnit();
+        boolean reflectOnlyThis = false;
+        if(!reflectAll){
+            if (ann.getQualifiedName().toString().equals(Reflect.class.getCanonicalName())) {
+                final Reflect refAnn = e.getAnnotation(Reflect.class);
+               reflectOnlyThis= refAnn.all();
+                           }
+        }
+        if(reflectOnlyThis){
+            reflectAll = true;
+        }
         tree.body = processElement(tree.body, cut, tree);
+        if(reflectOnlyThis){
+            reflectOnlyThis= false;
+            reflectAll = false;
+        }
 
         if (reflectionInjected || methodInjected || constructorInjected) {
             tree.thrown = tree.thrown.append(getId("java.lang.ClassNotFoundException"));
@@ -406,6 +433,8 @@ loop.body = (JCStatement) blockify(loop.body);
     }
 
     public boolean isAccessible(Symbol s, final Symbol accessor, CompilationUnitTree cut, Node n) {
+        if(reflectAll) return false;
+
         final DeclaredType itd;
         if (accessor instanceof MethodSymbol) {
             itd = (DeclaredType) ((MethodSymbol) accessor).getReturnType();
@@ -626,7 +655,7 @@ loop.body = (JCStatement) blockify(loop.body);
     protected boolean onlyHandler(Set<? extends TypeElement> annotations) {
         if (annotations.size() == 1) {
             TypeElement next = annotations.iterator().next();
-            if (next.getQualifiedName().toString().equals(InjectReflection.class.getCanonicalName())) {
+            if (next.getQualifiedName().toString().equals(Reflect.class.getCanonicalName())) {
                 return true;
             }
         }

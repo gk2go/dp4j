@@ -88,7 +88,7 @@ public class PrivateAccessProcTest {
         String cp = getCp(tools, commons);
         String javacCmd = "javac -Xlint -d " + targetClasses + " ";
 
-        final String dp4jCompile = javacCmd + cp + getClassesToCompile(templateMethod.class, InjectReflection.class, Resolve.class, DProcessor.class, PrivateAccessProcessor.class);
+        final String dp4jCompile = javacCmd + cp + getClassesToCompile(templateMethod.class, Reflect.class, Resolve.class, DProcessor.class, PrivateAccessProcessor.class);
 
         System.out.println(dp4jCompile);
         cp = getCp(targetClasses.getAbsolutePath(), tools, commons, junit, testNG);

@@ -4,7 +4,7 @@
  */
 package com.dp4j.samples;
 
-import com.dp4j.InjectReflection;
+import com.dp4j.Reflect;
 import org.junit.Test;
 
 /**
@@ -13,7 +13,7 @@ import org.junit.Test;
  */
 public class InvokeTest {
 
-    @InjectReflection
+    @Reflect
     public void test() {
         System.console();
         int b = 4;
