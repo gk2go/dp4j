@@ -53,10 +53,10 @@ Let's assume that we design an application with a factory to generate new object
 </body>
 </html>
 
-@see http://www.oodesign.com/singleton-pattern.html
- */
+* @see <a href="http://www.oodesign.com/singleton%2Dpattern.html">Singleton</a>
+**/
 @Documented
 @Target(ElementType.TYPE)
-@Retention(RetentionPolicy.SOURCE)
 public @interface Singleton {
+    boolean lazy() default false;
 }

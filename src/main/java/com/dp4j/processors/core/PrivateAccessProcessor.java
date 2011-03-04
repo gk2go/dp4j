@@ -202,8 +202,6 @@ public class PrivateAccessProcessor extends DProcessor {
             ifStmt.thenpart = processElement((JCBlock)ifStmt.thenpart, cut, ifStmt.cond);
             ifStmt.elsepart = (JCStatement) blockify(ifStmt.elsepart);
             ifStmt.elsepart = processElement((JCBlock)ifStmt.elsepart, cut, ifStmt.cond);
-            //hanlde else!!, note that JCBlock is an instance of JCStatement, generalize ProcessElement to receive to accept stmts and if not block them and then process as usual
-
         } else if (stmt instanceof JCExpressionStatement) {
             JCExpressionStatement expStmt = (JCExpressionStatement) stmt;
             expStmt.expr = processCond(expStmt.expr, cut, n, encBlock);

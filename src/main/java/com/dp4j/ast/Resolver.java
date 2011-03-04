@@ -302,8 +302,6 @@ public class Resolver {
             }
             arr.elemtype = tm.Type(type);
         }
-        arr.type = arr.elemtype.type;
-        assert (arr.type != null);
         return arr;
     }
 

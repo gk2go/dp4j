@@ -5,6 +5,8 @@
 package com.dp4j.processors;
 
 import com.dp4j.Singleton;
+import com.sun.source.tree.ExpressionTree;
+import com.sun.source.tree.VariableTree;
 import java.util.*;
 import javax.annotation.processing.*;
 import javax.lang.model.*;
@@ -50,6 +52,13 @@ public class InstanceProcessor extends DProcessor {
 
         final Singleton singletonAnn = singleton.getAnnotation(Singleton.class);
         if (singletonAnn == null) {
+            if (singletonAnn.lazy()) {
+                VariableTree tree = (VariableTree) trees.getTree(e);
+                ExpressionTree initializer = tree.getInitializer();
+                if (initializer != null) {
+                    msgr.printMessage(Kind.ERROR, "For lazy Singleton initialization you must not inline initialize " + e.getSimpleName(), e);
+                }
+            }
             new SingletonProcessor().processElement(singleton, ann, true);
             //TODO: figure out if successful processing and if so report that it's indeed a Singleton and should be so annotated.
 //            msgr.printMessage(Kind.WARNING, "enclosing class should be annotated with Singleton", e);

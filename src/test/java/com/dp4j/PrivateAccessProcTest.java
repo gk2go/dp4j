@@ -92,7 +92,7 @@ public class PrivateAccessProcTest {
 
         System.out.println(dp4jCompile);
         cp = getCp(targetClasses.getAbsolutePath(), tools, commons, junit, testNG);
-        javacCmd = "javac -Xlint -d " + targetTestClasses;
+        javacCmd = "javac -J-ea -Xlint -d " + targetTestClasses;
         final String[] testSources = getTestSources();
         String testCmd = javacCmd + cp + " -processor " + PrivateAccessProcessor.class.getCanonicalName() + " " + StringUtils.join(testSources);
         System.out.println(testCmd);
@@ -187,7 +187,8 @@ public class PrivateAccessProcTest {
         {testSrc.getAbsolutePath(), comDp4jSamples,"FieldAccessTest"},
         {testSrc.getAbsolutePath(),StringUtils.EMPTY,"JunitTest11"},
         {testSrc.getAbsolutePath(),StringUtils.EMPTY,"TestNGTest11"},
-        {testSrc.getAbsolutePath(),StringUtils.EMPTY,"ReflectionTest"}
+        {testSrc.getAbsolutePath(),StringUtils.EMPTY,"ReflectionTest"},
+        {testSrc.getAbsolutePath(),StringUtils.EMPTY,"LazySingleton"}
     };
 
     static String[] getTestSources() {
