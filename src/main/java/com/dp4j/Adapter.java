@@ -14,7 +14,7 @@ import java.lang.annotation.Target;
 
 <h4>Intent:</h4>
 <ul>
-  <li>Convert the interface of a class into another interface clients expect.</li>
+  <li>Convert the interface of a class into an interface clients expect.</li>
   <li>Adapter lets classes work together, that could not otherwise because of incompatible interfaces.</li>
 </ul>
 
@@ -22,7 +22,7 @@ import java.lang.annotation.Target;
 
 <h4>Motivation</h4>
 <p>
-The adapter pattern is adapting between classes and objects. Like any adapter in the real world it is used to be an interface, a bridge between two objects. In real world we have adapters for power supplies, adapters for camera memory cards, and so on. Probably everyone have seen some adapters for memory cards. If you can not plug in the camera memory in your laptop you can use and adapter. You plug the camera memory in the adapter and the adapter in to laptop slot. That's it, it's really simple.
+The adapter pattern adapts between classes and objects. Like any adapter in the real world it is used to be an interface, a bridge between two objects. In real world we have adapters for power supplies, adapters for camera memory cards, and so on. Probably everyone have seen some adapters for memory cards. If you can not plug in the camera memory in your laptop you can use and adapter. You plug the camera memory in the adapter and the adapter in to laptop slot. That's it, it's really simple.
 </p><p>
 What about software development? It's the same. Can you imagine an situation when you have some class expecting some type of object and you have an object offering the same features, but exposing a different interface? Of course, you want to use both of them so you don't to implement again one of them, and you don't want to change existing classes, so why not create an adapter...
 </p>
@@ -40,6 +40,7 @@ Software Examples of Adapter Patterns: Wrappers used to adopt 3rd parties librar
 </html>
 
 @see <a href="http://www.oodesign.com/adapter%2pattern.html">Adapter</a>
+@see <a href="http://www.netobjectives.com/resources/webinars/encapsulate-entities-adapter-proxy-facade-design-patterns">Encapsulation of Entities (Adapter, Proxy, Facade)</a>
  */
 @Documented
 @Target(ElementType.TYPE)

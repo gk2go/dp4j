@@ -16,7 +16,7 @@ import java.lang.annotation.Target;
   <li>The intent of this pattern is to add additional responsibilities dynamically to an object.</li>
 </ul>
 
-<img src="http://www.oodesign.com/images/design_patterns/structural/decorator-design-pattern-implementation-uml-class-diagram.png" alt="Design Pattern Implementation UML Class Diagram"/>
+<img src="http://www.oodesign.com/images/design_patterns/structural/decorator-design-pattern-implementation-uml-class-diagram.png" alt="Decorator Pattern Implementation UML Class Diagram"/>
 
 <h4>Motivation</h4>
 <p>
@@ -30,12 +30,12 @@ Consider the typical example of a graphical window. To extend the functionality 
 <h5>Example - Extending capabilities of a Graphical Window at runtime</h5>
 <p>In Graphical User Interface toolkits windows behaviors can be added dynamically by using the decorator design pattern.</p>
 
-<img src="http://www.oodesign.com/images/design_patterns/structural/decorator-design-pattern-example-uml-class-diagram.png" alt="Design Pattern Example UML Class Diagram"/>
+<img src="http://www.oodesign.com/images/design_patterns/structural/decorator-design-pattern-example-uml-class-diagram.png" alt="Decorator Pattern Example UML Class Diagram"/>
 
 </body>
 </html>
 
-@see http://www.oodesign.com/decorator%2Dpattern.html
+@see <a href="http://www.oodesign.com/decorator%2Dpattern.html">Decorator</a>
  */
 
 //FIXME: could not create @component in Windows
