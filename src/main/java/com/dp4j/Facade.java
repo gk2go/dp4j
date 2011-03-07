@@ -8,15 +8,9 @@ package com.dp4j;
 import java.lang.annotation.Documented;
 import java.lang.annotation.ElementType;
 import java.lang.annotation.Target;
-/** Facade is a single object that represent an entire subsystem.
+/** Facade is a single object that represent an entire subsystem. <b>Intent:</b> Provide a unified interface  to a set of interfaces in a subsystem. Facade defines a higher-level interface that makes the subsystem easier to use. [GoF, p185]
 <html>
 <body>
-
-<h4>Intent:</h4>
-<ul>
-  <li># Provide a unified interface  to a set of interfaces in a subsystem. Facade defines a higher-level interface that makes the subsystem easier to use. [GoF, p185]  </li>
-</ul>
-
 <img src="http://home.earthlink.net/~huston2/images/gof10.jpg" alt="Facade UML Class Diagram"/>
 
 
