@@ -1,0 +1,33 @@
+<?xml version="1.0" encoding="ISO-8859-1"?>
+<project name="dp4j">
+	<!--	
+	<skin>
+		<groupId>org.apache.maven.skins</groupId>
+		<artifactId>maven-stylus-skin</artifactId>
+		<version>1.2</version>
+	</skin>
+	-->
+	<version position="right"/>
+	<publishDate position="right"/>
+	<bannerLeft>
+    	<name>dp4j - Injects Reflection and Design Patterns</name>
+    	<src>https://sites.google.com/a/mysimpatico.com/home/config/app/images/logo.gif</src>
+    	<href>http://maven.apache.org/</href>
+  	</bannerLeft>
+	<!--
+  	<bannerRight>
+    	<src>http://maven.apache.org/images/maven-small.gif</src>
+  	</bannerRight>
+	-->
+  	<body>
+		<!--
+    	<links>
+      		<item name="Maven" href="http://maven.apache.org/"/>
+      		<item name="Apache" href="http://www.apache.org/"/>
+    	</links>
+		-->
+
+		<menu ref="reports"/>
+
+  </body>
+</project>

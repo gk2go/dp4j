@@ -13,5 +13,6 @@ import java.lang.annotation.Target;
 @Target(value={ElementType.CONSTRUCTOR,ElementType.METHOD})
 public @interface Reflect {
     boolean all() default false;
-            }
+    boolean catchExceptions() default false;
+}
 

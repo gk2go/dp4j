@@ -30,8 +30,6 @@ import javax.tools.Diagnostic.Kind;
 import com.sun.tools.javac.code.Symtab;
 import com.dp4j.ast.Resolver;
 import com.sun.tools.javac.code.Type.ClassType;
-import java.lang.String;
-import java.util.HashSet;
 
 /**
  *

@@ -1,0 +1,32 @@
+test_file="Test10.java"
+jar_file="dp4j-$v-jar-with-dependencies.jar"
+
+cmd="curl -O --fail -L http://downloads.sourceforge.net/project/dp4j/$v/$jar_file"
+echo $cmd
+$cmd
+echo
+
+# Start
+cat > $test_file << __EOF__
+class T10 {
+    private static void p(int i, Double d, String... s){}
+}
+public class Test10{
+    @com.dp4j.Reflect
+    public void t() {
+  T10.p(1,new Double(2),"hello", "reflection");
+    }
+}
+__EOF__
+cmd="cat $test_file"
+echo $cmd
+$cmd
+
+echo
+cmd="javac -Averbose=true -cp $jar_file $test_file"
+echo $cmd
+$cmd
+echo
+echo "TEST PASSED: $test_file was compiled with Reflection Injected."
+echo "When JUnit/TestNG.jar is in the classpath you may use @Test in lieu of @Reflect."
+echo "Javadoc, sources, and other artifacts maybe downloaded from http://repo2.maven.org/maven2/com/dp4j/dp4j/"$v"/"

@@ -21,6 +21,9 @@ import org.apache.commons.lang.*;
 import com.sun.tools.javac.util.Name;
 import com.sun.source.tree.Scope;
 import com.sun.source.tree.Tree;
+import com.sun.tools.javac.util.ListBuffer;
+import java.util.logging.Level;
+import java.util.logging.Logger;
 
 /**
  *
@@ -29,6 +32,7 @@ import com.sun.source.tree.Tree;
 @SupportedAnnotationTypes(value = {"org.junit.Test", "org.testng.annotations.Test", "com.dp4j.Reflect"})
 @SupportedSourceVersion(SourceVersion.RELEASE_6)
 public class PrivateAccessProcessor extends DProcessor {
+    private boolean fieldInjected = false;
 
     public Type getType(Symbol s) {
         Type t;
@@ -41,6 +45,7 @@ public class PrivateAccessProcessor extends DProcessor {
     }
 
     private static String rAll = "ll";
+
     @Override
     public Set<String> getSupportedOptions() {
         Set<String> supportedOptions = new HashSet<String>(super.getSupportedOptions());
@@ -52,6 +57,15 @@ public class PrivateAccessProcessor extends DProcessor {
 
     @Override
     protected void processElement(Element e, TypeElement ann, boolean warningsOnly) {
+        final boolean catchExceptions;
+
+        if (ann.getQualifiedName().toString().equals(Reflect.class.getCanonicalName())) {
+            final Reflect reflect = e.getAnnotation(Reflect.class);
+            catchExceptions = reflect.catchExceptions();
+        }else{
+            catchExceptions=false;
+        }
+
         if (options.containsKey("conservative")) {
             if (!ann.getQualifiedName().toString().equals(Reflect.class.getCanonicalName())) {
                 return;
@@ -89,27 +103,59 @@ public class PrivateAccessProcessor extends DProcessor {
             reflectAll = false;
         }
 
-        if (reflectionInjected || methodInjected || constructorInjected) {
-            tree.thrown = tree.thrown.append(getId("java.lang.ClassNotFoundException"));
-            tree.thrown = tree.thrown.append(getId("java.lang.NoSuchFieldException"));
-            tree.thrown = tree.thrown.append(getId("java.lang.IllegalAccessException"));
+        final List<JCExpression> exps = new LinkedList<JCExpression>();
+
+        if (reflectionInjected || methodInjected || constructorInjected || fieldInjected) {
+            exps.add(getId("java.lang.ClassNotFoundException"));
+
+            if(fieldInjected){
+                exps.add(getId("java.lang.NoSuchFieldException"));
+                fieldInjected=false;
+            }
+
+            exps.add(getId("java.lang.IllegalAccessException"));
+
             if (constructorInjected || methodInjected) {
-                tree.thrown = tree.thrown.append(getId("java.lang.NoSuchMethodException"));
-                tree.thrown = tree.thrown.append(getId("java.lang.reflect.InvocationTargetException"));
+                exps.add(getId("java.lang.NoSuchMethodException"));
+                exps.add(getId("java.lang.reflect.InvocationTargetException"));
                 if (constructorInjected) {
-                    tree.thrown = tree.thrown.append(getId("java.lang.InstantiationException"));
+                    exps.add(getId("java.lang.InstantiationException"));
                     constructorInjected = false;
                 }
             }
             if (methodInjected) {
-                tree.thrown = tree.thrown.append(getId("java.lang.IllegalArgumentException"));
+                exps.add(getId("java.lang.IllegalArgumentException"));
                 methodInjected = false;
             }
             reflectionInjected = false;
+
+                    if(catchExceptions){
+            final ListBuffer<JCCatch> lb = ListBuffer.lb();
+            final Scope validScope = trees.getScope(treePath);
+            final Node n = new Node(validScope, tree);
+            int i=0;
+            for (JCExpression exp : exps) {
+                lb.append(getCatch(exp.toString(), cut, n, "e"+i++));
+            }
+            com.sun.tools.javac.util.List<JCCatch> exceptionsList = lb.toList();
+            final JCStatement tryCatch = tm.Try(tree.body, exceptionsList, null);
+            tree.body = tm.Block(0l,com.sun.tools.javac.util.List.of(tryCatch));
+        }else{
+            for (JCExpression exp : exps) {
+                tree.thrown = tree.thrown.append(exp);
+            }
+        }
         }
         printVerbose(cut, e);
     }
+
     boolean constructorInjected = false;
+
+    private JCCatch getCatch(final String exception, final CompilationUnitTree cut, final Node n, final String varName){
+        final JCVariableDecl cnfe = tm.VarDef(tm.Modifiers(Flags.FINAL), elementUtils.getName(varName), getId(exception), null);
+        final com.sun.tools.javac.util.List<JCStatement> emptyList = emptyList();
+        return tm.Catch(cnfe, tm.Block(0l, emptyList));
+    }
 
     protected JCBlock processElement(final JCBlock tree, final CompilationUnitTree cut, Scope validScope) {
         if (tree == null) return null;
@@ -139,10 +185,29 @@ public class PrivateAccessProcessor extends DProcessor {
         return validScope;
     }
 
-    protected JCBlock processElement(BlockTree tree, final CompilationUnitTree cut, Tree getScope) {
+    protected JCBlock processElement(BlockTree tree, final CompilationUnitTree cut, Tree scopeTree) {
         if(tree == null) return null;
-        TreePath path = trees.getPath(cut, getScope);
-        return processElement((JCBlock) tree, cut, trees.getScope(path));
+        boolean dummyInjected = false;
+        Scope scope=null;
+        if(scopeTree instanceof MethodTree){
+            if(!((MethodTree) scopeTree).getParameters().isEmpty()){ //work-around
+               final JCMethodInvocation dummyMi = getMethodInvoc("System.out.print", StringUtils.EMPTY);
+               final JCStatement dummyStmt = tm.Exec(dummyMi);
+               final JCMethodDecl mt = (JCMethodDecl) scopeTree;
+               mt.body.stats = injectBefore(mt.body.stats.head, mt.body.stats, dummyStmt);
+               scopeTree = mt.body.stats.head;
+               dummyInjected = true;
+               final TreePath path = trees.getPath(cut, scopeTree);
+               scope = trees.getScope(path);
+               mt.body.stats = rs.injectBefore(mt.body.stats.head, mt.body.stats, true);
+            }
+        }
+
+        if(!dummyInjected){
+           final TreePath path = trees.getPath(cut, scopeTree);
+           scope = trees.getScope(path);
+        }
+        return processElement((JCBlock) tree, cut, scope);
     }
 
 
@@ -255,6 +320,7 @@ loop.body = (JCStatement) blockify(loop.body);
                     accessor = fa.selected;
                 }
                 ifExp = getReflectedAccess(fa, cut, n, null, accessor);
+                fieldInjected=true;
                 reflectionInjected = true;
             }
         } else if (ifExp instanceof JCMethodInvocation) {
@@ -379,6 +445,11 @@ loop.body = (JCStatement) blockify(loop.body);
 
     public boolean isAccessible(JCExpression exp, CompilationUnitTree cut, Node n) {
         Symbol s = rs.getSymbol(exp, cut, n);
+        if(s == null){
+            RuntimeException e = new RuntimeException("could not find the symbol for " + exp);
+            Logger.getLogger(PrivateAccessProcessor.class.getName()).log(Level.SEVERE, "cut:" + cut, e);
+            throw e;
+        }
         Symbol accessor = null;
         if (exp instanceof JCFieldAccess) {
             accessor = rs.getAccessor((JCFieldAccess) exp, cut, n);
@@ -503,6 +574,7 @@ loop.body = (JCStatement) blockify(loop.body);
             getterName = elementUtils.getName("getDeclaredField");
             javaReflectMethField = getIdAfterImporting("java.lang.reflect.Field");
             args = com.sun.tools.javac.util.List.<JCExpression>of(tm.Literal(symbol.name.toString()));
+
         }
 
         Symbol fieldMethSym = rs.getSymbol(cut, n, null, accesseeVarName, null);
@@ -590,8 +662,8 @@ loop.body = (JCStatement) blockify(loop.body);
 
         final JCExpression getMethField = tm.Select(fieldMethInitId, getterName);
         JCMethodInvocation mi = tm.Apply(com.sun.tools.javac.util.List.<JCExpression>nil(), getMethField, args);
-        reflectionInjected = true; //call this method to actually use it!
-
+        reflectionInjected = true;
+        fieldInjected=true;
         return mi;
     }
 
@@ -602,6 +674,7 @@ loop.body = (JCStatement) blockify(loop.body);
         String typeName = s.name.toString();
         typeName = StringUtils.capitalize(typeName);
         JCMethodInvocation set = getMethodInvoc(field + ".set" + typeName, fa.selected, value);
+        fieldInjected=true;
         return set;
     }
 
