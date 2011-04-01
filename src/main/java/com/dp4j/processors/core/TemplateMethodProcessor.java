@@ -17,7 +17,6 @@ import javax.tools.Diagnostic.Kind;
  * @author simpatico
  */
 @SupportedAnnotationTypes(value={"com.dp4j.templateMethod", "org.jpatterns.gof.TemplateMethodPattern"}) //singleton instance
-@SupportedSourceVersion(SourceVersion.RELEASE_6)
 public class TemplateMethodProcessor extends DProcessor{
 
     @Override

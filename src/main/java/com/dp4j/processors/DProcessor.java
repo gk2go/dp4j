@@ -35,7 +35,6 @@ import com.sun.tools.javac.code.Type.ClassType;
  *
  * @author simpatico
  */
-@SupportedSourceVersion(SourceVersion.RELEASE_6)
 public abstract class DProcessor extends AbstractProcessor {
 
     public static final String clazz = "class";
@@ -54,6 +53,10 @@ public abstract class DProcessor extends AbstractProcessor {
         return options.keySet();
     }
 
+    @Override
+    public SourceVersion getSupportedSourceVersion(){
+        return SourceVersion.latest();
+    }
 
     public JCNewArray getArray(Type t, List<JCExpression> args) {
         JCExpression tExp = tm.Type(t);

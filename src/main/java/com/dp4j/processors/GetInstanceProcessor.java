@@ -19,7 +19,6 @@ import javax.tools.Diagnostic.Kind;
  * - returns instance
  */
 @SupportedAnnotationTypes("com.mysimpatico.se.dp4java.annotations.singleton.getInstance") //singleton instance
-@SupportedSourceVersion(SourceVersion.RELEASE_6)
 public class GetInstanceProcessor extends DProcessor {
 
     @Override

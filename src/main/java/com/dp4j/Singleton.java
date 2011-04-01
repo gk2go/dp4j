@@ -38,4 +38,6 @@ import java.lang.annotation.Target;
 @Target(ElementType.TYPE)
 public @interface Singleton {
     boolean lazy() default false;
+    String getInstance() default "getInstance";
+    String instance() default "instance";
 }

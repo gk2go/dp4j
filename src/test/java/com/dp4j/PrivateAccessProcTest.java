@@ -4,6 +4,8 @@
  */
 package com.dp4j;
 
+import com.dp4j.ast.Node;
+import com.dp4j.ast.Resolver;
 import java.io.FilenameFilter;
 import com.dp4j.processors.core.PrivateAccessProcessor;
 import com.dp4j.processors.*;
@@ -69,7 +71,7 @@ public class PrivateAccessProcTest {
     }
     static File targetTestClasses = getFile(workingdir, "target", "test-classes");
 
-    @Test()
+    @Test
     public void mostComprehensiveTest() throws IOException {
         if (tests.length == 0) {
             return;
@@ -79,7 +81,7 @@ public class PrivateAccessProcTest {
         runtime.traceMethodCalls(true);
         File targetClasses = getFile(workingdir, "target", "classes");
         final String junit = getFile(System.getProperty("user.home"), ".m2", "repository", "junit", "junit", "4.8.2", "junit-4.8.2.jar").getAbsolutePath();
-        final String testNG = getFile(System.getProperty("user.home"), ".m2", "repository", "testng", "testng", "5.14.6", "testng-5.14.6.jar").getAbsolutePath();
+        final String testNG = getFile(System.getProperty("user.home"), ".m2", "repository", "org", "testng", "testng", "6.0.1", "testng-6.0.1.jar").getAbsolutePath();
         final String commons = getFile(System.getProperty("user.home"), ".m2", "repository", "commons-lang", "commons-lang", "2.6", "commons-lang-2.6.jar").getAbsolutePath();
         String tools = getFile(System.getProperty("java.home")).getAbsolutePath();
         int lastIndexOf = StringUtils.lastIndexOf(tools, File.separator);
@@ -88,7 +90,7 @@ public class PrivateAccessProcTest {
         String cp = getCp(tools, commons);
         String javacCmd = "javac -Xlint -d " + targetClasses + " ";
 
-        final String dp4jCompile = javacCmd + cp + getClassesToCompile(templateMethod.class, Reflect.class, Resolve.class, DProcessor.class, PrivateAccessProcessor.class);
+        final String dp4jCompile = javacCmd + cp + getClassesToCompile(templateMethod.class, Reflect.class, Node.class, Resolver.class, DProcessor.class, PrivateAccessProcessor.class);
 
         System.out.println(dp4jCompile);
         cp = getCp(targetClasses.getAbsolutePath(), tools, commons, junit, testNG);
@@ -169,6 +171,7 @@ public class PrivateAccessProcTest {
         {testSrc.getAbsolutePath(), comDp4jSamples, "WithAccessibleVarArgsInstance"},
         {testSrc.getAbsolutePath(), comDp4jSamples, "ASingleton"},
         {testSrc.getAbsolutePath(), comDp4jSamples, "Genericer"},
+        {testSrc.getAbsolutePath(), comDp4jSamples,"LazySingleton"},
         {testResources.getAbsolutePath(), comDp4jSamples, "EqualsTest"},
         {testResources.getAbsolutePath(), comDp4jSamples,"Test"},
         {testResources.getAbsolutePath(), comDp4jSamples,"VarArgsCallTest"},
@@ -178,7 +181,7 @@ public class PrivateAccessProcTest {
         {testResources.getAbsolutePath(), comDp4jSamples,"ForEachTest"},
         {testResources.getAbsolutePath(), comDp4jSamples,"ArrayCallTest"},
         {testResources.getAbsolutePath(), comDp4jSamples,"PrivateConstructorTest"},
-        {testResources.getAbsolutePath(), comDp4jSamples,"GenericsTest"},
+        {testSrc.getAbsolutePath(), comDp4jSamples,"GenericsTest"},
         {testSrc.getAbsolutePath(), StringUtils.EMPTY,"Test10"},
         {testSrc.getAbsolutePath(), StringUtils.EMPTY,"PrintTest"},
         {testResources.getAbsolutePath(), comDp4jSamples,"OverloadTest"},
@@ -188,7 +191,7 @@ public class PrivateAccessProcTest {
         {testSrc.getAbsolutePath(),StringUtils.EMPTY,"JunitTest11"},
         {testSrc.getAbsolutePath(),StringUtils.EMPTY,"TestNGTest11"},
         {testSrc.getAbsolutePath(),StringUtils.EMPTY,"ReflectionTest"},
-        {testSrc.getAbsolutePath(),StringUtils.EMPTY,"LazySingleton"}
+
     };
 
     static String[] getTestSources() {

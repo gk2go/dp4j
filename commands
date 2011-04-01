@@ -1,0 +1,3 @@
+javac -cp target/dp4j-1.2-SNAPSHOT-jar-with-dependencies.jar:/Users/simpatico/.m2/repository/junit/junit/4.8.2/junit-4.8.2.jar -All -Averbose=true /Users/simpatico/ws/dp4j/src/test/java/com/dp4j/samples/GenericsTest.java
+
+test-classes simpatico$ java -cp /Users/simpatico/ws/dp4j/target/test-classes:/Users/simpatico/.m2/repository/junit/junit/4.8.2/junit-4.8.2.jar:. org.junit.runner.JUnitCore com.dp4j.samples.ParsingTest

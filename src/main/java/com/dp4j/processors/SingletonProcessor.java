@@ -25,7 +25,6 @@ import com.sun.tools.javac.util.Name;
  * @author simpatico
  */
 @SupportedAnnotationTypes(value = {"com.dp4j.Singleton", "org.jpatterns.gof.SingletonPattern", "com.google.code.annotation.pattern.design.creational.Singleton"}) //singleton
-@SupportedSourceVersion(SourceVersion.RELEASE_6)
 public class SingletonProcessor extends DProcessor {
 
     @Override
@@ -37,8 +36,19 @@ public class SingletonProcessor extends DProcessor {
         java.util.List<? extends Element> enclosedElements = e.getEnclosedElements();
         boolean getInstanceFound = false;
         boolean instanceFound = false;
-        Name instanceName = elementUtils.getName(instance.class.getSimpleName()); //just to say: instance as variable name
         Element instanceElement = null;
+        Name getInstanceMethName;
+        Name instanceVarName;
+        boolean lazy = false;//default
+        if (ann.getQualifiedName().toString().equals(Singleton.class.getCanonicalName())) {
+            final Singleton singleton = e.getAnnotation(Singleton.class);
+            lazy = singleton.lazy();
+            getInstanceMethName = elementUtils.getName(singleton.getInstance());
+             instanceVarName = elementUtils.getName(singleton.instance());
+        }else{
+            getInstanceMethName = elementUtils.getName(getInstance.class.getSimpleName());
+            instanceVarName = elementUtils.getName(getInstance.class.getSimpleName());
+        }
         for (final Element element : enclosedElements) {
             if (element.getAnnotation(instance.class) != null) {
                 if (instanceFound == true) {
@@ -46,7 +56,7 @@ public class SingletonProcessor extends DProcessor {
                 }
                 instanceFound = true;
                 instanceElement = element;
-                instanceName = elementUtils.getName(element.getSimpleName());
+                instanceVarName = elementUtils.getName(element.getSimpleName());
             }
 
             if (element.getAnnotation(getInstance.class) != null) {
@@ -57,11 +67,6 @@ public class SingletonProcessor extends DProcessor {
             }
         }
 
-        boolean lazy = false;//default
-        if (ann.getQualifiedName().toString().equals(Singleton.class.getCanonicalName())) {
-            final Singleton singleton = e.getAnnotation(Singleton.class);
-            lazy = singleton.lazy();
-        }
         if(instanceFound){
             VariableTree tree = (VariableTree) trees.getTree(instanceElement);
             ExpressionTree initializer = tree.getInitializer();
@@ -119,14 +124,14 @@ public class SingletonProcessor extends DProcessor {
                                 mod += Flags.FINAL;
                             }
                             final JCModifiers instanceMods = tm.Modifiers(mod, List.of(instanceAnn));
-                            final JCVariableDecl instance = tm.VarDef(instanceMods, instanceName, instanceType, initVal);
+                            final JCVariableDecl instance = tm.VarDef(instanceMods, instanceVarName, instanceType, initVal);
                             singletonClass.defs = singletonClass.defs.append(instance);
                             instanceFound = true;
                         }
                     }
 
                     if(!getInstanceFound){
-                        final JCIdent instance = tm.Ident(instanceName);
+                        final JCIdent instance = tm.Ident(instanceVarName);
                         final JCStatement retType = tm.Return(instance);
                         final JCBlock body;
                         long mod = Flags.PUBLIC + Flags.STATIC;
@@ -142,11 +147,11 @@ public class SingletonProcessor extends DProcessor {
                         }
                         final List<JCVariableDecl> parameters = com.sun.tools.javac.util.List.nil();
                         final List<JCExpression> throwsClauses = com.sun.tools.javac.util.List.nil();
-                        final Name getInstanceAnnName = elementUtils.getName(getInstance.class.getSimpleName());
                         final JCTree getInstanceAnnTree = getIdentAfterImporting(getInstance.class);//tm.Ident(getInstanceAnnName);
                         final JCAnnotation getInstanceAnn = tm.Annotation(getInstanceAnnTree, List.<JCExpression>nil());
                         final JCExpression methodType = instanceType;
-                        final JCMethodDecl getInstanceM = tm.MethodDef(tm.Modifiers(mod, List.of(getInstanceAnn)), getInstanceAnnName, methodType, List.<JCTypeParameter>nil(), parameters, throwsClauses, body, null);
+
+                        final JCMethodDecl getInstanceM = tm.MethodDef(tm.Modifiers(mod, List.of(getInstanceAnn)), getInstanceMethName, methodType, List.<JCTypeParameter>nil(), parameters, throwsClauses, body, null);
 
                         singletonClass.defs = singletonClass.defs.append(getInstanceM);
                     }

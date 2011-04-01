@@ -29,49 +29,49 @@
             </roles>
         </developer>
     </developers>
-       <issueManagement>
-      	<system>SourceForge.net</system>
-      	<url>https://sourceforge.net/tracker/?atid=2052004&amp;group_id=504574</url>
-   	</issueManagement>
+    <issueManagement>
+        <system>SourceForge.net</system>
+        <url>https://sourceforge.net/tracker/?atid=2052004&amp;group_id=504574</url>
+    </issueManagement>
 
-	<mailingLists>
-		<mailingList>
-			<name>dp4j project mailing list</name>
-			<subscribe>users-subscribe@dp4j.com</subscribe>
-			<unsubscribe>users-unsubscribe@dp4j.com</unsubscribe>
-			<post>dp4j-users@lists.sourceforge.net</post>
-			<archive>http://mail-archives.dp4j.com/</archive>
-		</mailingList>
-	</mailingLists>
+    <mailingLists>
+        <mailingList>
+            <name>dp4j project mailing list</name>
+            <subscribe>users-subscribe@dp4j.com</subscribe>
+            <unsubscribe>users-unsubscribe@dp4j.com</unsubscribe>
+            <post>dp4j-users@lists.sourceforge.net</post>
+            <archive>http://mail-archives.dp4j.com/</archive>
+        </mailingList>
+    </mailingLists>
     <scm>
         <connection>scm:hg:https://dp4j.googlecode.com/hg/</connection>
         <developerConnection>scm:hg:https://dp4j.googlecode.com/hg/</developerConnection>
         <url>http://code.google.com/p/dp4j/source/browse/</url>
     </scm>
 
-    	<reporting>
-		<plugins>
-			<plugin>
-				<groupId>org.apache.maven.plugins</groupId>
-				<artifactId>maven-project-info-reports-plugin</artifactId>
-				<version>2.3.1</version>
-				<reportSets>
-					<reportSet>
-						<reports>
-							<report>summary</report>
-							<report>dependencies</report>
-							<report>distribution-management</report>
+    <reporting>
+        <plugins>
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-project-info-reports-plugin</artifactId>
+                <version>2.3.1</version>
+                <reportSets>
+                    <reportSet>
+                        <reports>
+                            <report>summary</report>
+                            <report>dependencies</report>
+                            <report>distribution-management</report>
 <!--							<report>project-team</report>-->
-							<report>mailing-list</report>
-							<report>issue-tracking</report>
-							<report>license</report>
-							<report>scm</report>
-						</reports>
-					</reportSet>
-        		</reportSets>
-			</plugin>
-		</plugins>
-  	</reporting>
+                            <report>mailing-list</report>
+                            <report>issue-tracking</report>
+                            <report>license</report>
+                            <report>scm</report>
+                        </reports>
+                    </reportSet>
+                </reportSets>
+            </plugin>
+        </plugins>
+    </reporting>
     <build>
         <testResources>
             <testResource>
@@ -83,7 +83,28 @@
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-surefire-plugin</artifactId>
-                <version>2.7.2</version>
+                <version>2.8</version>
+                <executions>
+                    <execution>
+                        <phase>test</phase>
+                        <goals>
+                            <goal>test</goal>
+                        </goals>
+                        <configuration>
+                            <testNGArtifactName>none:none</testNGArtifactName>
+                        </configuration>
+                    </execution>
+                    <execution>
+                        <id>test-testng</id>
+                        <phase>test</phase>
+                        <goals>
+                            <goal>test</goal>
+                        </goals>
+                        <configuration>
+                            <junitArtifactName>none:none</junitArtifactName>
+                        </configuration>
+                    </execution>
+                </executions>
             </plugin>
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
@@ -223,9 +244,8 @@
         <dependency>
             <groupId>org.testng</groupId>
             <artifactId>testng</artifactId>
-            <version>5.14.6</version>
+            <version>6.0.1</version>
             <scope>test</scope>
-            <type>jar</type>
         </dependency>
     </dependencies>
 
@@ -343,16 +363,16 @@
                         </dependencies>
                         <configuration>
                             <tasks>
-								<echo>
+                                <echo>
                                     Generating TESTDRIVE for ${project.version} version
                                 </echo>
-								<exec executable="chmod">
-									<arg value="777"/>
-									<arg value="tools/gen_testdrive.sh"/>
-								</exec>
-								<exec executable="tools/gen_testdrive.sh">
-									<arg value="${project.version}"/>
-								</exec>
+                                <exec executable="chmod">
+                                    <arg value="777"/>
+                                    <arg value="tools/gen_testdrive.sh"/>
+                                </exec>
+                                <exec executable="tools/gen_testdrive.sh">
+                                    <arg value="${project.version}"/>
+                                </exec>
                                 <echo>
                                     Uploading http://downloads.sourceforge.net/project/dp4j/${project.version}/dp4j-${project.version}-jar-with-dependencies.jar
                                 </echo>
@@ -362,46 +382,46 @@
                                     <arg value="target/dp4j-${project.version}-jar-with-dependencies.jar"/>
                                     <arg value="simpatico1,dp4j@frs.sourceforge.net:/home/frs/project/d/dp/dp4j/${project.version}/"/>
                                 </exec>
-								<echo>
+                                <echo>
                                     Uploading http://downloads.sourceforge.net/project/dp4j/${project.version}/TESTDRIVE
                                 </echo>
-								<exec executable="rsync">
+                                <exec executable="rsync">
                                     <arg value="-e"/>
                                     <arg value="ssh -i ${user.home}/.ssh/id_dsa"/>
                                     <arg value="target/TESTDRIVE"/>
                                     <arg value="simpatico1,dp4j@frs.sourceforge.net:/home/frs/project/d/dp/dp4j/${project.version}/"/>
                                 </exec>
-								<exec executable="chmod">
-									<arg value="777"/>
-									<arg value="target/TESTDRIVE"/>
-								</exec>
-								<echo>
+                                <exec executable="chmod">
+                                    <arg value="777"/>
+                                    <arg value="target/TESTDRIVE"/>
+                                </exec>
+                                <echo>
                                     Starting TESTDRIVE
                                 </echo>
-								<exec executable="target/TESTDRIVE">
-								</exec>
-								<echo>
+                                <exec executable="target/TESTDRIVE">
+                                </exec>
+                                <echo>
                                     Cleaning after TESTDRIVE
                                 </echo>
-								<exec executable="rm">
-									<arg value="dp4j-${project.version}-jar-with-dependencies.jar"/>
-								</exec>
-								<exec executable="rm">
-									<arg value="Test10.java"/>
-								</exec>
-								<echo>
+                                <exec executable="rm">
+                                    <arg value="dp4j-${project.version}-jar-with-dependencies.jar"/>
+                                </exec>
+                                <exec executable="rm">
+                                    <arg value="Test10.java"/>
+                                </exec>
+                                <echo>
                                     Uploading javadoc
                                 </echo>
-								<exec executable="rsync">
+                                <exec executable="rsync">
                                     <arg value="-re"/>
                                     <arg value="ssh -i ${user.home}/.ssh/id_dsa"/>
                                     <arg value="target/site/apidocs/"/>
-                                     <arg value="simpatico1@web.sourceforge.net:/home/project-web/dp4j/htdocs/apidocs/"/>
+                                    <arg value="simpatico1@web.sourceforge.net:/home/project-web/dp4j/htdocs/apidocs/"/>
                                 </exec>
-								<echo>
+                                <echo>
                                     Uploading site
                                 </echo>
-								<exec executable="rsync">
+                                <exec executable="rsync">
                                     <arg value="-re"/>
                                     <arg value="ssh -i ${user.home}/.ssh/id_dsa"/>
                                     <arg value="target/site/"/>

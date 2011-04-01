@@ -29,7 +29,6 @@ import javax.tools.Diagnostic.Kind;
  * @author simpatico
  */
 @SupportedAnnotationTypes("com.mysimpatico.se.dp4java.annotations.singleton.instance") //singleton instance
-@SupportedSourceVersion(SourceVersion.RELEASE_6)
 public class InstanceProcessor extends DProcessor {
 
     @Override

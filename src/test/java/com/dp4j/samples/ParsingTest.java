@@ -15,9 +15,6 @@ import org.junit.Test;
 
 public class ParsingTest {
 
-
-
-    @Test
     @Reflect(catchExceptions=true, all=true)
     public void setValue(PrivateData pd, int value, int a){
         pd.i = value;
@@ -26,5 +23,11 @@ public class ParsingTest {
     @Reflect(catchExceptions=false)
     public void setVal(Object o, int value){
         int j = value;
+    }
+
+    @Test
+    public void test(){
+        setValue(new PrivateData(), 4, 5);
+        setVal(null,5);
     }
 }

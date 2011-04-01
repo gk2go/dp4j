@@ -14,7 +14,6 @@ import javax.lang.model.element.*;
  * @author simpatico
  */
 @SupportedAnnotationTypes(value={"com.dp4j.Builder", "org.jpatterns.gof.BuilderPattern"}) //singleton instance
-@SupportedSourceVersion(SourceVersion.RELEASE_6)
 public class BuilderProcessor extends DProcessor{
 
     @Override

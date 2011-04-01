@@ -24,13 +24,13 @@ import com.sun.source.tree.Tree;
 import com.sun.tools.javac.util.ListBuffer;
 import java.util.logging.Level;
 import java.util.logging.Logger;
+import javax.tools.Diagnostic.Kind;
 
 /**
  *
  * @author simpatico
  */
 @SupportedAnnotationTypes(value = {"org.junit.Test", "org.testng.annotations.Test", "com.dp4j.Reflect"})
-@SupportedSourceVersion(SourceVersion.RELEASE_6)
 public class PrivateAccessProcessor extends DProcessor {
     private boolean fieldInjected = false;
 
@@ -446,9 +446,7 @@ loop.body = (JCStatement) blockify(loop.body);
     public boolean isAccessible(JCExpression exp, CompilationUnitTree cut, Node n) {
         Symbol s = rs.getSymbol(exp, cut, n);
         if(s == null){
-            RuntimeException e = new RuntimeException("could not find the symbol for " + exp);
-            Logger.getLogger(PrivateAccessProcessor.class.getName()).log(Level.SEVERE, "cut:" + cut, e);
-            throw e;
+            msgr.printMessage(Kind.ERROR, "could not find the symbol for " + exp);
         }
         Symbol accessor = null;
         if (exp instanceof JCFieldAccess) {
@@ -599,6 +597,10 @@ loop.body = (JCStatement) blockify(loop.body);
     }
 
     JCMethodInvocation getReflectedAccess(JCFieldAccess fa, final CompilationUnitTree cut, Node n, com.sun.tools.javac.util.List<JCExpression> args, JCExpression accessor) {
+        if(fa.name.contentEquals(clazz)){
+            Symbol sym = rs.getSymbol(cut, n, null, elementUtils.getName(fa.selected.toString()), null);
+            return rs.forName(sym, cut, n);
+        }
         final Symbol s = rs.getSymbol(fa, cut, n);
         return getReflectedAccess(s, cut, accessor, args, n);
     }
@@ -663,7 +665,6 @@ loop.body = (JCStatement) blockify(loop.body);
         final JCExpression getMethField = tm.Select(fieldMethInitId, getterName);
         JCMethodInvocation mi = tm.Apply(com.sun.tools.javac.util.List.<JCExpression>nil(), getMethField, args);
         reflectionInjected = true;
-        fieldInjected=true;
         return mi;
     }
 

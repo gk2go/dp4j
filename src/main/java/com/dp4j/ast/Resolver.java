@@ -28,6 +28,8 @@ import java.util.ArrayList;
 import javax.lang.model.util.Types;
 import org.apache.commons.lang.StringUtils;
 import com.sun.source.tree.Tree;
+import java.util.logging.Level;
+import java.util.logging.Logger;
 
 /**
  *
@@ -90,6 +92,18 @@ public class Resolver {
 //        }
 //        throw new RuntimeException(accessibleTree.toString());
 //    }
+    public JCMethodInvocation forName(Symbol accessor, CompilationUnitTree cut, Node n) {
+        return forName(accessor.toString(), cut, n);
+    }
+
+    private JCMethodInvocation forName(String fullyQualifiedName, CompilationUnitTree cut, Node n) {
+        Symbol javaLangClassSym = getSymbol(cut, n, null, elementUtils.getName("java.lang.Class"), null);
+        JCIdent id = tm.Ident(javaLangClassSym);
+        JCExpression mName = tm.Select(id, elementUtils.getName("forName"));
+        JCLiteral idLiteral = tm.Literal(fullyQualifiedName);
+        JCMethodInvocation mi = tm.Apply(List.<JCExpression>nil(), mName, List.<JCExpression>of(idLiteral));
+        return mi;
+    }
 
     public Symbol getSymbol(CompilationUnitTree cut, Node n, List<JCExpression> typeParams, Name varName, List<JCExpression> args) {
         java.util.List<Type> typeSyms = getArgTypes(typeParams, cut, n);
@@ -108,11 +122,7 @@ public class Resolver {
 
     public Symbol getSymbol(Name varName, Symbol accessor, CompilationUnitTree cut, Node n) {
         if (varName.contentEquals("class")) {
-            Symbol javaLangClassSym = getSymbol(cut, n, null, elementUtils.getName("java.lang.Class"), null);
-            JCIdent id = tm.Ident(javaLangClassSym);
-            JCExpression mName = tm.Select(id, elementUtils.getName("forName"));
-            JCLiteral idLiteral = tm.Literal(accessor.toString());
-            JCMethodInvocation mi = tm.Apply(List.<JCExpression>nil(), mName, List.<JCExpression>of(idLiteral));
+            final JCMethodInvocation mi = forName(accessor, cut, n);
             Symbol s = getSymbol(mi, cut, n);
             return s;
         }
@@ -129,10 +139,10 @@ public class Resolver {
      * @return
      */
     public MethodSymbol getSymbol(final JCMethodInvocation mi, CompilationUnitTree cut, Node n) {
-        Symbol invTarget = getInvokationTarget(mi, cut, n);
         Name mName = getName(mi);
         java.util.List<Type> args = getArgTypes(mi.args, cut, n);
         java.util.List<Type> typeParams = getArgTypes(mi.typeargs, cut, n);
+        Symbol invTarget = getInvokationTarget(mi, cut, n);
         if (invTarget instanceof VarSymbol) {//this, super,
             invTarget = invTarget.type.tsym;
         } else if (invTarget instanceof MethodSymbol) {
@@ -334,6 +344,10 @@ public class Resolver {
                 JCExpression thisExp = tm.This((Type) encClass.asType());
                 return getSymbol(thisExp, cut, n);
             } else { //static import
+                if (symbol == null) {
+//                    Logger.getLogger(Resolver.class.getName()).log(Level.SEVERE, );
+                    throw new NullPointerException("could not find the symbol for " + mi + " in " + n.actual);
+                }
                 return symbol.owner;
             }
         }
@@ -424,13 +438,14 @@ public class Resolver {
                     MethodSymbol me = (MethodSymbol) e;
                     formalArgs = me.getParameters();
                     formalTypeParams = me.getTypeParameters();
-                    if(formalTypeParams.isEmpty()){
+                    if (formalTypeParams.isEmpty()) {
                         formalTypeParams = me.owner.getTypeParameters();
                     }
-                    if (typeParams.isEmpty() && !formalTypeParams.isEmpty()) { //basic type inference, shouldn't also check same args-size? Yes, but varargs!
-                    formalTypeParams =  null;//me.owner.getTypeParameters();
-                    typeParams = null;
-                }
+                    final boolean formalButActual = !formalTypeParams.isEmpty() && (typeParams == null || typeParams.isEmpty()); //basic type inference, shouldn't also check same args-size? Yes, but varargs!
+                    if (formalButActual) {
+                        formalTypeParams = null;//me.owner.getTypeParameters();
+                        typeParams = null;
+                    }
                     varArgs = me.isVarArgs();
                 } else {
                     formalArgs = null;
@@ -657,10 +672,13 @@ public class Resolver {
     }
 
     public static <T> com.sun.tools.javac.util.List<T> injectBefore(T stmt, final com.sun.tools.javac.util.List<? extends T> stats, final boolean skipStmt, T... newStmts) {
-        if (stmt == null || !stats.contains(stmt)) {
-            throw new IllegalArgumentException("" + stmt + " doesn't belong to " + stats);
-        }
         final ListBuffer<T> lb = ListBuffer.lb();
+
+        if(stmt == null && (stats == null || stats.isEmpty())){
+            lb.appendArray(newStmts);
+            return lb.toList();
+        }
+        
         java.util.List<? extends T> pre = stats.subList(0, stats.indexOf(stmt));
         for (T p : pre) {
             lb.append(p);
