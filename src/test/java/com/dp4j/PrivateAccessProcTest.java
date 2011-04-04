@@ -9,15 +9,10 @@ import com.dp4j.ast.Resolver;
 import java.io.FilenameFilter;
 import com.dp4j.processors.core.PrivateAccessProcessor;
 import com.dp4j.processors.*;
-import com.sun.tools.javac.comp.Resolve;
-
 import java.io.File;
 import java.io.IOException;
-import java.util.Arrays;
-import java.util.Collection;
 import java.util.logging.Level;
 import java.util.logging.Logger;
-import javax.annotation.processing.Processor;
 
 import org.apache.commons.lang.StringUtils;
 import org.junit.Test;
@@ -52,6 +47,7 @@ public class PrivateAccessProcTest {
         }
         return ret;
     }
+    
     File src = getFile(System.getProperty("user.dir"), "src", "main", "java");
     final String procSrc = getFile(src.getAbsolutePath(), "com", "dp4j", "processors", "core").getAbsolutePath();
     static final File workingdir = new File(System.getProperty("user.dir"));

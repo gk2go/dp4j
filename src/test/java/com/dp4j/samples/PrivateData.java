@@ -14,5 +14,7 @@ public class PrivateData {
     private static Object[] staticObjs = new Object[4];
     private int[] ints = {1,2};
     public int j;
+    private final Object CONSTANT_O=null;
     public static int gg;
+    private static final int CONSTANT = 0;
 }
