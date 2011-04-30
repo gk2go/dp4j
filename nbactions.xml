@@ -5,9 +5,6 @@
             <goals>
                 <goal>install</goal>
             </goals>
-            <properties>
-                <jpda.listen>maven</jpda.listen>
-            </properties>
         </action>
         <action>
             <actionName>rebuild</actionName>
@@ -98,6 +95,8 @@
                 <activatedProfile>sign</activatedProfile>
             </activatedProfiles>
             <goals>
+                <goal>org.apache.maven.plugins:maven-javadoc-plugin:javadoc</goal>
+                <goal>site</goal>
                 <goal>deploy</goal>
             </goals>
         </action>

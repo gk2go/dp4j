@@ -18,7 +18,7 @@ public class EqualsTest {
         boolean b = new Object().equals(null);
         Object[] arr = {null, ""};
         Object o = arr[1];
-        d.equals("");
+//        d.equals("");
     }
 
 }

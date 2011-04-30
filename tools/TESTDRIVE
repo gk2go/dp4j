@@ -1,10 +1,19 @@
+fail () 
+{
+    echo "$@" >&2
+    exit 1
+}
+
 test_file="Test10.java"
 jar_file="dp4j-$v-jar-with-dependencies.jar"
 
 cmd="curl -O --fail -L http://downloads.sourceforge.net/project/dp4j/$v/$jar_file"
+if [ ! -f $jar_file ] 
+then
 echo $cmd
-$cmd
+$cmd || fail "Download has failed. Try running the TESTDRIVE script again or downloading the JAR manually from http://downloads.sourceforge.net/project/dp4j/$v/$jar_file"
 echo
+fi
 
 # Start
 cat > $test_file << __EOF__
@@ -20,12 +29,12 @@ public class Test10{
 __EOF__
 cmd="cat $test_file"
 echo $cmd
-$cmd
+$cmd 
 
 echo
 cmd="javac -Averbose=true -cp $jar_file $test_file"
 echo $cmd
-$cmd
+$cmd || fail "TESTDRIVE has failed."
 echo
 echo "TEST PASSED: $test_file was compiled with Reflection Injected."
 echo "When JUnit/TestNG.jar is in the classpath you may use @Test in lieu of @Reflect."
