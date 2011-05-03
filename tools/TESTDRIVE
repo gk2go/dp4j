@@ -1,5 +1,4 @@
-fail () 
-{
+fail (){
     echo "$@" >&2
     exit 1
 }
@@ -7,13 +6,10 @@ fail ()
 test_file="Test10.java"
 jar_file="dp4j-$v-jar-with-dependencies.jar"
 
-cmd="curl -O --fail -L http://downloads.sourceforge.net/project/dp4j/$v/$jar_file"
-if [ ! -f $jar_file ] 
-then
+cmd="curl -D log -O --fail -L http://downloads.sourceforge.net/project/dp4j/$v/$jar_file"
 echo $cmd
 $cmd || fail "Download has failed. Try running the TESTDRIVE script again or downloading the JAR manually from http://downloads.sourceforge.net/project/dp4j/$v/$jar_file"
 echo
-fi
 
 # Start
 cat > $test_file << __EOF__
