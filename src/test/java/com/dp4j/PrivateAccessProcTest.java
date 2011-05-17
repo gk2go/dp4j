@@ -4,6 +4,9 @@
  */
 package com.dp4j;
 
+import org.apache.commons.exec.CommandLine;
+import org.apache.commons.exec.PumpStreamHandler;
+import org.apache.commons.exec.DefaultExecutor;
 import com.dp4j.ast.Node;
 import com.dp4j.ast.Resolver;
 import java.io.FilenameFilter;
@@ -47,7 +50,7 @@ public class PrivateAccessProcTest {
         }
         return ret;
     }
-    
+
     File src = getFile(System.getProperty("user.dir"), "src", "main", "java");
     final String procSrc = getFile(src.getAbsolutePath(), "com", "dp4j", "processors", "core").getAbsolutePath();
     static final File workingdir = new File(System.getProperty("user.dir"));
@@ -72,9 +75,6 @@ public class PrivateAccessProcTest {
         if (tests.length == 0) {
             return;
         }
-        final Runtime runtime = Runtime.getRuntime();
-        runtime.traceInstructions(true);
-        runtime.traceMethodCalls(true);
         File targetClasses = getFile(workingdir, "target", "classes");
         final String junit = getFile(System.getProperty("user.home"), ".m2", "repository", "junit", "junit", "4.8.2", "junit-4.8.2.jar").getAbsolutePath();
         final String testNG = getFile(System.getProperty("user.home"), ".m2", "repository", "org", "testng", "testng", "6.0.1", "testng-6.0.1.jar").getAbsolutePath();
@@ -89,33 +89,27 @@ public class PrivateAccessProcTest {
         final String dp4jCompile = javacCmd + cp + getClassesToCompile(templateMethod.class, Reflect.class, Node.class, Resolver.class, DProcessor.class, PrivateAccessProcessor.class);
 
         System.out.println(dp4jCompile);
+
         cp = getCp(targetClasses.getAbsolutePath(), tools, commons, junit, testNG);
         javacCmd = "javac -J-ea -Xlint -d " + targetTestClasses;
         final String[] testSources = getTestSources();
         String testCmd = javacCmd + cp + " -processor " + PrivateAccessProcessor.class.getCanonicalName() + " " + StringUtils.join(testSources);
         System.out.println(testCmd);
         cleanClasses(tests);
-        runtime.exec(dp4jCompile, null, src);
-        Process proc = runtime.exec(testCmd, null, workingdir);
 
-        // any error message?
-        StreamGobbler errorGobbler = new StreamGobbler(proc.getErrorStream(), "ERROR");
+        DefaultExecutor exec = new DefaultExecutor();
+        final PumpStreamHandler streamHandler = new PumpStreamHandler();
+        exec.setStreamHandler(streamHandler);
+        exec.setExitValue(0);
+//        exec.setWorkingDirectory(src);
 
-        // any output?
-        StreamGobbler outputGobbler = new StreamGobbler(proc.getInputStream(), "OUTPUT");
+        int  exitVal =exec.execute(new CommandLine(dp4jCompile));
+        assertEquals(0, exitVal);
 
-        // kick them off
-        errorGobbler.start();
-        outputGobbler.start();
+        exec.setWorkingDirectory(workingdir);
+        exitVal = exec.execute(new CommandLine(testCmd));
+        assertEquals(0, exitVal);
 
-        // any error???
-        try {
-            int exitVal = proc.waitFor();
-            assertEquals(0, exitVal);
-        } catch (InterruptedException ex) {
-            Logger.getLogger(PrivateAccessProcTest.class.getName()).log(Level.SEVERE, null, ex);
-            fail();
-        }
         assertClassExists(tests);
     }
 
@@ -174,7 +168,7 @@ public class PrivateAccessProcTest {
         {testResources.getAbsolutePath(), comDp4jSamples,"CallTest"},
         {testResources.getAbsolutePath(), comDp4jSamples,"IfTest"},
         {testResources.getAbsolutePath(), comDp4jSamples,"MultipleCallsTest"},
-        {testResources.getAbsolutePath(), comDp4jSamples,"ForEachTest"},
+        {testSrc.getAbsolutePath(), comDp4jSamples,"ForEachTest"},
         {testResources.getAbsolutePath(), comDp4jSamples,"ArrayCallTest"},
         {testResources.getAbsolutePath(), comDp4jSamples,"PrivateConstructorTest"},
         {testSrc.getAbsolutePath(), comDp4jSamples,"GenericsTest"},
