@@ -136,10 +136,9 @@ public class SingletonProcessor extends DProcessor {
                         final JCBlock body;
                         long mod = Flags.PUBLIC + Flags.STATIC;
                         if(lazy){
-                            JCBinary ifNull = tm.Binary(JCTree.EQ, instance, tm.Literal(TypeTags.BOT, null));
                             JCAssign init = tm.Assign(instance, defConInit);
                             JCExpressionStatement thenStmt = tm.Exec(init);
-                            JCIf initIf = tm.If(ifNull, thenStmt, null);
+                            JCIf initIf = getIfNull(instance, thenStmt);
                             body = tm.Block(0,List.of(initIf,retType));
                             mod += Flags.SYNCHRONIZED;
                         }else{

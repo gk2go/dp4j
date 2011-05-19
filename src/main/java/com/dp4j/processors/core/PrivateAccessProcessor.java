@@ -54,6 +54,7 @@ public class PrivateAccessProcessor extends DProcessor {
     }
     boolean reflectAll = false;
     boolean catchExceptions;
+    JCMethodDecl methTree;
 
     @Override
     protected void processElement(Element e, TypeElement ann, boolean warningsOnly) {
@@ -80,7 +81,7 @@ public class PrivateAccessProcessor extends DProcessor {
 
         rs = new Resolver(elementUtils, trees, tm, encClass, typeUtils, symTable, pkgClasses);
 
-        final JCMethodDecl tree = (JCMethodDecl) elementUtils.getTree(e);
+        methTree = (JCMethodDecl) elementUtils.getTree(e);
 
         thisExp = tm.This((Type) encClass.asType());
 
@@ -96,7 +97,7 @@ public class PrivateAccessProcessor extends DProcessor {
         if (reflectOnlyThis) {
             reflectAll = true;
         }
-        tree.body = processElement(tree.body, cut, tree);
+        methTree.body = processElement(methTree.body, cut, methTree);
         if (reflectOnlyThis) {
             reflectOnlyThis = false;
             reflectAll = false;
@@ -129,19 +130,9 @@ public class PrivateAccessProcessor extends DProcessor {
             reflectionInjected = false;
 
             if (catchExceptions) {
-                final ListBuffer<JCCatch> lb = ListBuffer.lb();
-                final Scope validScope = trees.getScope(treePath);
-                final Node n = new Node(validScope, tree);
-                int i = 0;
-                for (JCExpression exp : exps) {
-                    lb.append(getCatch(exp.toString(), cut, n, "e" + i++));
-                }
-                com.sun.tools.javac.util.List<JCCatch> exceptionsList = lb.toList();
-                final JCStatement tryCatch = tm.Try(tree.body, exceptionsList, null);
-                tree.body = tm.Block(0l, com.sun.tools.javac.util.List.of(tryCatch));
             } else {
                 for (JCExpression exp : exps) {
-                    tree.thrown = tree.thrown.append(exp);
+                    methTree.thrown = methTree.thrown.append(exp);
                 }
             }
         }
@@ -149,11 +140,7 @@ public class PrivateAccessProcessor extends DProcessor {
     }
     boolean constructorInjected = false;
 
-    private JCCatch getCatch(final String exception, final CompilationUnitTree cut, final Node n, final String varName) {
-        final JCVariableDecl cnfe = tm.VarDef(tm.Modifiers(Flags.FINAL), elementUtils.getName(varName), getId(exception), null);
-        final com.sun.tools.javac.util.List<JCStatement> emptyList = emptyList();
-        return tm.Catch(cnfe, tm.Block(0l, emptyList));
-    }
+
 
     protected JCBlock processElement(final JCBlock tree, final CompilationUnitTree cut, Scope validScope) {
         if (tree == null) {
@@ -281,6 +268,15 @@ public class PrivateAccessProcessor extends DProcessor {
         } else if (stmt instanceof JCExpressionStatement) {
             JCExpressionStatement expStmt = (JCExpressionStatement) stmt;
             expStmt.expr = processCond(expStmt.expr, cut, n, encBlock);
+            String[] exceptions = {"java.lang.IllegalAccessException", "java.lang.IllegalArgumentException"};
+            if(catchExceptions){
+            encBlock.stats = replace((JCStatement)stmt, encBlock.stats, tm.Try(getBlock(expStmt), getCatches(cut, n, exceptions), null));
+
+            }else{
+                throwExceptions(exceptions);
+            }
+
+
         } else if (stmt instanceof JCBlock) {
             n.actual = processElement((JCBlock) stmt, cut, n.scope);
         } else if (stmt instanceof JCWhileLoop) {
@@ -341,7 +337,7 @@ public class PrivateAccessProcessor extends DProcessor {
                 for (JCExpression arg : mi.args) {
                     JCExpression newArg = processCond(arg, cut, n, encBlock);
                     if (!newArg.equals(arg)) {
-                        mi.args = Resolver.injectBefore(arg, mi.args, true, newArg);
+                        mi.args = replace(arg, mi.args, newArg);
                     }
                 }
             }
@@ -467,7 +463,7 @@ public class PrivateAccessProcessor extends DProcessor {
     }
 
     public boolean isAccessible(JCVariableDecl varDecl, CompilationUnitTree cut, Node n) {
-        if(varDecl.init != null){
+        if (varDecl.init != null) {
             return isAccessible(varDecl.init, cut, n);
         }
         return true;//just a declaration is always accessible
@@ -583,8 +579,8 @@ public class PrivateAccessProcessor extends DProcessor {
         JCExpression className = tm.Literal(typeId.toString());
         JCMethodInvocation classGetter = tm.Apply(com.sun.tools.javac.util.List.<JCExpression>nil(), forNameAccessor, com.sun.tools.javac.util.List.<JCExpression>of(className));
 //        JCVariableDecl classDecl = tm.VarDef(tm.Modifiers(Flags.FINAL), classVarName, javaLangClassId, classGetter);
-        final List<JCExpression> exceptions = new LinkedList<JCExpression>();
-        exceptions.add(getId("java.lang.ClassNotFoundException")); //for forName
+        final List<String> exceptions = new LinkedList<String>();
+        exceptions.add("java.lang.ClassNotFoundException"); //for forName
 
         JCExpression[] types = getTypes(params);
         final com.sun.tools.javac.util.List<JCExpression> args;
@@ -592,23 +588,25 @@ public class PrivateAccessProcessor extends DProcessor {
         final JCExpression javaReflectMethField;
         final Name getterName;
         if (symbol instanceof MethodSymbol) {
+
             if (symbol.isConstructor()) {
                 getterName = elementUtils.getName("getDeclaredConstructor");
                 javaReflectMethField = getIdAfterImporting("java.lang.reflect.Constructor");
                 args = toList(types);
-                exceptions.add(getId("java.lang.InstantiationException"));
-
+                exceptions.add("java.lang.InstantiationException");
+                exceptions.add("java.lang.IllegalAccessException");
             } else {
                 getterName = elementUtils.getName("getDeclaredMethod");
                 javaReflectMethField = getIdAfterImporting("java.lang.reflect.Method");
                 JCExpression mName = tm.Literal(symbol.name.toString());
                 args = merge(Collections.singleton(mName), toList(types));
+                exceptions.add("java.lang.NoSuchMethodException");
             }
         } else {
             getterName = elementUtils.getName("getDeclaredField");
             javaReflectMethField = getIdAfterImporting("java.lang.reflect.Field");
             args = com.sun.tools.javac.util.List.<JCExpression>of(tm.Literal(symbol.name.toString()));
-            exceptions.add(getId("java.lang.NoSuchFieldException"));
+            exceptions.add("java.lang.NoSuchFieldException");
         }
 
         Symbol fieldMethSym = rs.getSymbol(cut, n, null, accesseeVarName, null);
@@ -622,20 +620,37 @@ public class PrivateAccessProcessor extends DProcessor {
 
             final JCMethodInvocation setAccInvoc = getMethodInvoc(accesseeVarName + ".setAccessible", true);
             final JCStatement setAccessibleExec = tm.Exec(setAccInvoc); //should there be a dereflect / or just setinaccessible just after access? Would be better to set true only at access/set time and set-false after it. So reflect injects only one stmt while access/set 3
-            exceptions.add(getId("java.lang.IllegalAccessException"));
 
-            final JCStatement[] refStmts = new JCStatement[3];
+            final LinkedList<JCStatement> refStmts = new LinkedList<JCStatement>();
 
             if (refDecl != null) {
-                refStmts[0] = refDecl;
-                refStmts[1] = refDeclInit;
-                refStmts[2] = setAccessibleExec;
-                encBlock.stats = injectBefore((JCStatement) n.actual, encBlock.stats, refStmts);
-                TreePath refPath = trees.getPath(cut, refStmts[2]);
+                refStmts.add(refDecl);
+                if (catchExceptions) {
+                    com.sun.tools.javac.util.List<JCCatch> exceptionsList = getCatches(cut, n, exceptions);
+                    JCBlock throwingStmts = tm.Block(0l, com.sun.tools.javac.util.List.of(refDeclInit, setAccessibleExec));
+                    refStmts.add(tm.Try(throwingStmts, exceptionsList,getBlock(getIfNull(refDecl.name, tm.Throw(getId("java.lang.NullPointerException"))))));
+                } else {
+                    refStmts.add(refDeclInit);
+                    refStmts.add(setAccessibleExec);
+                    throwExceptions(exceptions);
+                }
+                encBlock.stats = injectBefore((JCStatement) n.actual, encBlock.stats, refStmts.toArray(new JCStatement[0]));
+
+                TreePath refPath = trees.getPath(cut, refStmts.getLast());
                 n.scope = getScope(n.actual, cut, trees.getScope(refPath));
             }
 
             reflectionInjected = true;
+        }
+    }
+
+    private void throwExceptions(final List<String> exceptions) {
+        throwExceptions(exceptions.toArray(new String[0]));
+    }
+
+    private void throwExceptions(final String... exceptions){
+        for (String exception : exceptions) {
+            methTree.thrown = methTree.thrown.append(getId(exception));
         }
     }
 

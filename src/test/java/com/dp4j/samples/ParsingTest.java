@@ -15,19 +15,35 @@ import org.junit.Test;
 
 public class ParsingTest {
 
-    @Reflect(catchExceptions=true, all=true)
-    public void setValue(PrivateData pd, int value, int a){
-        pd.i = value;
-    }
+//    @Reflect(catchExceptions=true, all=true)
+//    public void setValue(PrivateData pd, int value, int a){
+//        pd.i = value;
+//    }
 
     @Reflect(catchExceptions=false)
     public void setVal(Object o, int value){
         int j = value;
     }
-
+//
+//    @Test
+//    public void test(){
+//        setValue(new PrivateData(), 4, 5);
+//        setVal(null,5);
+//    }
+//
     @Test
-    public void test(){
-        setValue(new PrivateData(), 4, 5);
-        setVal(null,5);
+    @Reflect(all=true)
+    public void reflectAllSetterTest(){
+        final PrivateData pd = new PrivateData();
+        final int value = 5;
+        pd.i = value;
     }
+
+//    @Test
+//    @Reflect(catchExceptions=true)
+//    public void reflectAllSetterCatchTest(){
+//        final PrivateData pd = new PrivateData();
+//        final int value = 5;
+//        pd.i = value;
+//    }
 }

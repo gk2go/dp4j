@@ -4,6 +4,7 @@
  */
 package com.dp4j.processors;
 
+import com.dp4j.ast.Node;
 import com.sun.source.util.Trees;
 import com.sun.tools.javac.model.JavacElements;
 import com.sun.tools.javac.processing.JavacProcessingEnvironment;
@@ -30,6 +31,7 @@ import javax.tools.Diagnostic.Kind;
 import com.sun.tools.javac.code.Symtab;
 import com.dp4j.ast.Resolver;
 import com.sun.tools.javac.code.Type.ClassType;
+import com.sun.tools.javac.tree.JCTree;
 
 /**
  *
@@ -49,12 +51,12 @@ public abstract class DProcessor extends AbstractProcessor {
     protected Resolver rs;
 
     @Override
-    public Set<String> getSupportedOptions(){
+    public Set<String> getSupportedOptions() {
         return options.keySet();
     }
 
     @Override
-    public SourceVersion getSupportedSourceVersion(){
+    public SourceVersion getSupportedSourceVersion() {
         return SourceVersion.latest();
     }
 
@@ -124,7 +126,7 @@ public abstract class DProcessor extends AbstractProcessor {
         return paramsList;
     }
 
-    public<T> List<T> toList(final T... params) {
+    public <T> List<T> toList(final T... params) {
         final ListBuffer<T> lb = ListBuffer.lb();
         for (T param : params) {
             lb.append(param);
@@ -144,11 +146,11 @@ public abstract class DProcessor extends AbstractProcessor {
         for (Symbol param : params) {
             Symbol boxedS = rs.getBoxedSymbol(param);
             Type type = param.type;
-            if(type.isParameterized()){
-                if (type instanceof ClassType){
-                    type = ((ClassType)type).supertype_field;
+            if (type.isParameterized()) {
+                if (type instanceof ClassType) {
+                    type = ((ClassType) type).supertype_field;
                 }
-                if(type == null){
+                if (type == null) {
                     type = param.type.removeBounds();
                 }
             }
@@ -185,7 +187,6 @@ public abstract class DProcessor extends AbstractProcessor {
         }
         return ret;
     }
-
 
     public JCMethodInvocation getMethodInvoc(final String methodName, final JCExpression param, final List<JCExpression> otherParams, Map<String, JCExpression> vars, CompilationUnitTree cut, Object packageName, com.sun.source.tree.Scope scope, JCStatement stmt, Collection<Symbol> varSyms) {
         final JCExpression methodN = getIdAfterImporting(methodName);
@@ -261,7 +262,6 @@ public abstract class DProcessor extends AbstractProcessor {
         return getId(typeName.toString());
     }
     protected JCExpression thisExp;
-
     protected boolean verbose = false;
     protected Map<String, String> options;
 
@@ -276,7 +276,7 @@ public abstract class DProcessor extends AbstractProcessor {
         tm = TreeMaker.instance(((JavacProcessingEnvironment) processingEnv).getContext());
         typeUtils = processingEnv.getTypeUtils();
         options = processingEnv.getOptions();
-        if(options.containsKey("verbose")){
+        if (options.containsKey("verbose")) {
             verbose = true;
         }
     }
@@ -326,13 +326,17 @@ public abstract class DProcessor extends AbstractProcessor {
         return e;
     }
 
-    public<T> List<T> emptyList() {
+    public <T> List<T> emptyList() {
         final ListBuffer<T> lb = ListBuffer.lb();
         return lb.toList();
     }
 
     protected <T> com.sun.tools.javac.util.List<T> injectBefore(T stmt, final com.sun.tools.javac.util.List<? extends T> stats, T... newStmts) {
         return rs.injectBefore(stmt, stats, false, newStmts);
+    }
+
+     protected <T> com.sun.tools.javac.util.List<T> replace(T stmt, final com.sun.tools.javac.util.List<? extends T> stats, T... newStmts) {
+        return rs.injectBefore(stmt, stats, true, newStmts);
     }
 
     protected static <T> com.sun.tools.javac.util.List<T> merge(final Collection<T> stats, Collection<T> newStmts) {
@@ -369,7 +373,6 @@ public abstract class DProcessor extends AbstractProcessor {
         return typ;
     }
 
-
     public boolean differentArg(Type arg, Type varSymbol) {
         return !rs.sameArg(arg, varSymbol);
     }
@@ -404,4 +407,39 @@ public abstract class DProcessor extends AbstractProcessor {
 //        }
 //        return args;
 //    }
+
+    public JCLiteral getNull() {
+        return tm.Literal(TypeTags.BOT, null);
+    }
+
+    public JCIf getIfNull(JCIdent id, JCStatement thenStmt) {
+        return tm.If(tm.Binary(JCTree.EQ, id, getNull()), thenStmt, null);
+    }
+
+    public JCIf getIfNull(Name name, JCStatement thenStmt) {
+        return tm.If(tm.Binary(JCTree.EQ, getId(name), getNull()), thenStmt, null);
+    }
+
+    public JCBlock getBlock(JCStatement... stats) {
+        return tm.Block(0, List.from(stats));
+    }
+
+    public List<JCCatch> getCatches(final CompilationUnitTree cut, final Node n, final String... exceptions) {
+        final ListBuffer<JCCatch> lb = ListBuffer.lb();
+        int i = 0;
+        for (String exception : exceptions) {
+            lb.append(getCatch(exception, cut, n, "e" + i++));
+        }
+        return lb.toList();
+    }
+
+    public List<JCCatch> getCatches(final CompilationUnitTree cut, final Node n, final java.util.List<String> exceptions) {
+        return getCatches(cut, n, exceptions.toArray(new String[0]));
+    }
+
+    private JCCatch getCatch(final String exception, final CompilationUnitTree cut, final Node n, final String varName) {
+        final JCVariableDecl cnfe = tm.VarDef(tm.Modifiers(Flags.FINAL), elementUtils.getName(varName), getId(exception), null);
+        final com.sun.tools.javac.util.List<JCStatement> emptyList = emptyList();
+        return tm.Catch(cnfe, tm.Block(0l, emptyList));
+    }
 }
