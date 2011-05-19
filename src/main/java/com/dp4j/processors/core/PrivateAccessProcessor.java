@@ -613,7 +613,7 @@ public class PrivateAccessProcessor extends DProcessor {
         if (fieldMethSym == null) {
             final JCExpression getMethField = tm.Select(classGetter, getterName);
 
-            final JCVariableDecl refDecl = tm.VarDef(tm.Modifiers(Flags.FINAL), accesseeVarName, javaReflectMethField, null);
+            final JCVariableDecl refDecl = tm.VarDef(tm.Modifiers(0l), accesseeVarName, javaReflectMethField, getNull());
 
             final JCMethodInvocation mi = tm.Apply(com.sun.tools.javac.util.List.<JCExpression>nil(), getMethField, args);
             final JCStatement refDeclInit = tm.Exec(tm.Assign(tm.Ident(refDecl.name), mi)); //separate initialization from declaration to make it easier to catch exceptions
@@ -628,7 +628,7 @@ public class PrivateAccessProcessor extends DProcessor {
                 if (catchExceptions) {
                     com.sun.tools.javac.util.List<JCCatch> exceptionsList = getCatches(cut, n, exceptions);
                     JCBlock throwingStmts = tm.Block(0l, com.sun.tools.javac.util.List.of(refDeclInit, setAccessibleExec));
-                    refStmts.add(tm.Try(throwingStmts, exceptionsList,getBlock(getIfNull(refDecl.name, tm.Throw(getId("java.lang.NullPointerException"))))));
+                    refStmts.add(tm.Try(throwingStmts, exceptionsList,null));
                 } else {
                     refStmts.add(refDeclInit);
                     refStmts.add(setAccessibleExec);

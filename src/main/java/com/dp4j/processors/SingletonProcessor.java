@@ -105,7 +105,7 @@ public class SingletonProcessor extends DProcessor {
                             //it wasn't a method
                         }
                     }
-                    final JCExpression defConInit = tm.Create(defCon.sym, List.<JCExpression>nil());
+                    final JCExpression defConInit = getEmptyArgsConstructor(defCon.sym);
                     final JCExpression instanceType = getId(singletonClassName);
                     tm.TypeApply(instanceType, null);
 

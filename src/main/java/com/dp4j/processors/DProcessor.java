@@ -30,6 +30,7 @@ import javax.lang.model.util.Types;
 import javax.tools.Diagnostic.Kind;
 import com.sun.tools.javac.code.Symtab;
 import com.dp4j.ast.Resolver;
+import com.sun.tools.javac.code.Symbol.MethodSymbol;
 import com.sun.tools.javac.code.Type.ClassType;
 import com.sun.tools.javac.tree.JCTree;
 
@@ -270,6 +271,7 @@ public abstract class DProcessor extends AbstractProcessor {
         super.init(processingEnv);
         final Context context = ((JavacProcessingEnvironment) processingEnv).getContext();
         symTable = Symtab.instance(context);
+        
         trees = Trees.instance(processingEnv);
         elementUtils = JavacElements.instance(context);
         msgr = processingEnv.getMessager();
@@ -335,7 +337,7 @@ public abstract class DProcessor extends AbstractProcessor {
         return rs.injectBefore(stmt, stats, false, newStmts);
     }
 
-     protected <T> com.sun.tools.javac.util.List<T> replace(T stmt, final com.sun.tools.javac.util.List<? extends T> stats, T... newStmts) {
+    protected <T> com.sun.tools.javac.util.List<T> replace(T stmt, final com.sun.tools.javac.util.List<? extends T> stats, T... newStmts) {
         return rs.injectBefore(stmt, stats, true, newStmts);
     }
 
@@ -441,5 +443,14 @@ public abstract class DProcessor extends AbstractProcessor {
         final JCVariableDecl cnfe = tm.VarDef(tm.Modifiers(Flags.FINAL), elementUtils.getName(varName), getId(exception), null);
         final com.sun.tools.javac.util.List<JCStatement> emptyList = emptyList();
         return tm.Catch(cnfe, tm.Block(0l, emptyList));
+    }
+
+    protected JCExpression getEmptyArgsConstructor(MethodSymbol sym) {
+        return tm.Create(sym, List.<JCExpression>nil());
+    }
+
+    public JCThrow throwException(final String exception) {
+        JCNewClass exCon = tm.NewClass(null, null, getId(elementUtils.getName(exception)),List.<JCExpression> nil(), null);
+        return tm.Throw(exCon);
     }
 }
