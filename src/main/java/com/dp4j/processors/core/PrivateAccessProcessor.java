@@ -1,8 +1,10 @@
 package com.dp4j.processors.core;
 
 import com.dp4j.Reflect;
+import com.dp4j.ast.ExpNode;
 import com.dp4j.ast.Node;
 import com.dp4j.ast.Resolver;
+import com.dp4j.ast.StmtNode;
 import com.dp4j.processors.DProcessor;
 import com.sun.source.tree.*;
 import com.sun.source.util.TreePath;
@@ -35,15 +37,6 @@ public class PrivateAccessProcessor extends DProcessor {
 
     private boolean fieldInjected = false;
 
-    public Type getType(Symbol s) {
-        Type t;
-        if (s instanceof MethodSymbol) {
-            t = ((MethodSymbol) s).getReturnType();
-        } else {
-            t = s.type;
-        }
-        return t;
-    }
     private static String rAll = "ll";
 
     @Override
@@ -144,7 +137,7 @@ public class PrivateAccessProcessor extends DProcessor {
         if (tree == null) {
             return null;
         }
-        for (Tree stmt : tree.stats) {
+        for (StatementTree stmt : tree.stats) {
             validScope = getScope(stmt, cut, validScope);
             tree.stats = (com.sun.tools.javac.util.List<JCStatement>) processStmt(stmt, cut, tree, validScope);
             if (tree.stats.indexOf(stmt) < tree.stats.size() - 1) {
@@ -206,9 +199,9 @@ public class PrivateAccessProcessor extends DProcessor {
         return tm.Block(0l, com.sun.tools.javac.util.List.of((JCStatement) stmt));
     }
 
-    protected com.sun.tools.javac.util.List<? extends Tree> processStmt(Tree stmt, final CompilationUnitTree cut, JCBlock encBlock, Scope validScope) {
+    protected com.sun.tools.javac.util.List<? extends StatementTree> processStmt(StatementTree stmt, final CompilationUnitTree cut, JCBlock encBlock, Scope validScope) {
         validScope = getScope(stmt, cut, validScope);
-        final Node n = new Node(validScope, stmt);
+        final StmtNode n = new StmtNode(validScope, stmt, cut, this);
         encBlock.stats = (com.sun.tools.javac.util.List<JCStatement>) processStmt(n, cut, encBlock);
         return encBlock.stats;
     }
@@ -223,15 +216,15 @@ public class PrivateAccessProcessor extends DProcessor {
      * @param varSyms
      * @return
      */
-    protected com.sun.tools.javac.util.List<? extends Tree> processStmt(Node n, final CompilationUnitTree cut, JCBlock encBlock) {
-        final Tree stmt = n.actual;
+    protected com.sun.tools.javac.util.List<? extends StatementTree> processStmt(StmtNode n, final CompilationUnitTree cut, JCBlock encBlock) {
+        final StatementTree stmt = n.actual;
         if (stmt instanceof JCVariableDecl) {
             JCVariableDecl varDec = (JCVariableDecl) stmt;
             final boolean accessible = isAccessible(varDec, cut, n);
             if (!accessible) {
-                ((JCVariableDecl) stmt).init = processCond(varDec.init, cut, n, encBlock);
+                ((JCVariableDecl) stmt).init = processCond(varDec.init, cut, new ExpNode(varDec.init, n), encBlock);
                 Symbol s = rs.getSymbol(varDec.init, cut, n);
-                final Type t = getType(s);
+                final Type t = rs.getType(s);
                 varDec.sym = (VarSymbol) rs.getSymbol(cut, n, null, varDec.name, null);
                 varDec.type = varDec.sym.type;
                 if (varDec.init.type == null) {
@@ -301,7 +294,7 @@ public class PrivateAccessProcessor extends DProcessor {
                 loop.expr = processCond(loop.expr, cut, n, encBlock);
                 loop.var.sym = (VarSymbol) rs.getSymbol(cut, n, null, loop.var.name, null);
                 final Symbol s = rs.getSymbol(loop.expr, cut, n);
-                final Type t = getType(s);
+                final Type t = rs.getType(s);
                 ArrayType arrayType = typeUtils.getArrayType(loop.var.sym.type);
                 if (differentArg(t, (Type) arrayType)) {
                     loop.expr = tm.TypeCast((Type) arrayType, loop.expr);
@@ -404,7 +397,7 @@ public class PrivateAccessProcessor extends DProcessor {
             if (!accessible) {
                 ifB.lhs = processCond(ifB.lhs, cut, n, encBlock);
                 Symbol s = rs.getSymbol(ifB.lhs, cut, n);
-                final Type t = getType(s);
+                final Type t = rs.getType(s);
                 if (!typeUtils.getNullType().equals(ifB.rhs.type)) {
                     if (differentArg(t, ifB.rhs.type)) {
                         ifB.lhs = tm.Parens(tm.TypeCast(rs.getBoxedType(ifB.rhs.type), ifB.lhs));
@@ -462,7 +455,7 @@ protected JCExpression processCond(JCArrayAccess ifExp, final CompilationUnitTre
     return ifExp;
 }
 
-    protected JCExpression processCond(JCExpression ifExp, final CompilationUnitTree cut, Node n, JCBlock encBlock) {
+    public JCExpression processCond(JCExpression ifExp, final CompilationUnitTree cut, Node n, JCBlock encBlock) {
         if (ifExp instanceof JCFieldAccess) {
             return processCond((JCFieldAccess) ifExp, cut, n, encBlock);
         } else if (ifExp instanceof JCMethodInvocation) {
@@ -727,7 +720,7 @@ protected JCExpression processCond(JCArrayAccess ifExp, final CompilationUnitTre
                 com.sun.tools.javac.util.List<JCExpression> reverse = args.reverse();
                 for (JCExpression arg : reverse) {
                     Symbol argSym = rs.getSymbol(arg, cut, n);
-                    Type type = getType(argSym);
+                    Type type = rs.getType(argSym);
                     if (differentArg(type, varArgType)) {
                         break;
                     } else {

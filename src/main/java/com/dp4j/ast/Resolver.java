@@ -278,6 +278,8 @@ public class Resolver {
         return fa.selected;
     }
 
+
+
     public Type getType(JCLiteral ifExp) {
         final int typetag = (ifExp).typetag;
         final Object value = (ifExp).value;
