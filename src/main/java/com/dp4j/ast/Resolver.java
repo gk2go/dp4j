@@ -120,7 +120,7 @@ public class Resolver {
         return t;
     }
 
-    public Symbol getSymbol(Name varName, Symbol accessor, CompilationUnitTree cut, Node n) {
+    public Symbol getSymbol(Name varName, Symbol accessor, CompilationUnitTree cut, Node n, boolean lookingUp) {
         if (varName.contentEquals("class")) {
             final JCMethodInvocation mi = forName(accessor, cut, n);
             Symbol s = getSymbol(mi, cut, n);
@@ -129,6 +129,14 @@ public class Resolver {
         accessor = getTypeSymbol(accessor);
         java.util.List<Symbol> enclosedElements = getEnclosedElements(accessor);
         Symbol s = contains(enclosedElements, null, varName, null);
+//        if (s == null) { //look-up protected fields
+//            Type superclass = ((ClassSymbol) accessor).getSuperclass();
+//            if (superclass != null) {
+//
+//                final Symbol scSym = superclass.tsym;
+//                return getSymbol(varName, scSym, cut, n, false);
+//            }
+//        } TODO: cannot look-up?
         return s;
     }
 
@@ -169,7 +177,7 @@ public class Resolver {
                 return symbol;
             }
             Symbol acc = getAccessor((JCFieldAccess) exp, cut, n);
-            return getSymbol(((JCFieldAccess) exp).name, acc, cut, n);
+            return getSymbol(((JCFieldAccess) exp).name, acc, cut, n, false);
         } else if (exp instanceof JCNewClass) {
             final JCNewClass nc = (JCNewClass) exp;
             final Name name = getName(nc.clazz);
@@ -223,7 +231,7 @@ public class Resolver {
         } else if (exp instanceof JCTypeApply) {
             return getSymbol(((JCTypeApply) exp).clazz, cut, n);
         }
-        throw new RuntimeException(exp.toString());
+        throw new RuntimeException(n.actual.toString());
     }
 
     public Symbol getAccessor(JCFieldAccess fa, CompilationUnitTree cut, Node n) {
@@ -237,7 +245,7 @@ public class Resolver {
                 return accessor;
             }
             accessor = getAccessor((JCFieldAccess) fa.selected, cut, n);
-            return getSymbol(((JCFieldAccess) fa.selected).name, accessor, cut, n);
+            return getSymbol(((JCFieldAccess) fa.selected).name, accessor, cut, n, false);
         }
         if (fa.selected instanceof JCMethodInvocation) {
             MethodSymbol s = (MethodSymbol) getSymbol(fa.selected, cut, n);
@@ -674,11 +682,11 @@ public class Resolver {
     public static <T> com.sun.tools.javac.util.List<T> injectBefore(T stmt, final com.sun.tools.javac.util.List<? extends T> stats, final boolean skipStmt, T... newStmts) {
         final ListBuffer<T> lb = ListBuffer.lb();
 
-        if(stmt == null && (stats == null || stats.isEmpty())){
+        if (stmt == null && (stats == null || stats.isEmpty())) {
             lb.appendArray(newStmts);
             return lb.toList();
         }
-        
+
         java.util.List<? extends T> pre = stats.subList(0, stats.indexOf(stmt));
         for (T p : pre) {
             lb.append(p);

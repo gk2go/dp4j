@@ -24,11 +24,11 @@ public class ForEachTest {
         for (int i = 0; i < d.length; i++) {
             if(i == Integer.MAX_VALUE)
             System.out.println(i);
-            boolean a = d.equals("");
+//            boolean a = d.equals("");
 //            Object o = PrivateData.staticObjs[0];
             Object[] arr = {null,""};
-            Object o = arr[1];
-            o.equals("");
+            Object oo = arr[1];
+            oo.equals("");
         }
     }
 }

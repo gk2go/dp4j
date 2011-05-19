@@ -31,7 +31,7 @@ class K {
     }
 }
 
-public class Test extends K {
+public class CompTest extends K {
 
     int jj;
     int g;

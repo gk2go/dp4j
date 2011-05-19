@@ -33,6 +33,8 @@ import javax.tools.Diagnostic.Kind;
 @SupportedAnnotationTypes(value = {"org.junit.Test", "org.testng.annotations.Test", "com.dp4j.Reflect"})
 public class PrivateAccessProcessor extends DProcessor {
 
+    private boolean fieldInjected = false;
+
     public Type getType(Symbol s) {
         Type t;
         if (s instanceof MethodSymbol) {
@@ -94,14 +96,56 @@ public class PrivateAccessProcessor extends DProcessor {
         if (reflectOnlyThis) {
             reflectAll = true;
         }
-        tree.body = processElement(tree.body, cut, tree, new Node(tree.body, trees.getScope(treePath), tree));
+        tree.body = processElement(tree.body, cut, tree);
         if (reflectOnlyThis) {
             reflectOnlyThis = false;
             reflectAll = false;
         }
 
         final List<JCExpression> exps = new LinkedList<JCExpression>();
-		printVerbose(cut, e);
+
+        if (reflectionInjected || methodInjected || constructorInjected || fieldInjected) {
+            exps.add(getId("java.lang.ClassNotFoundException"));
+
+            if (fieldInjected) {
+                exps.add(getId("java.lang.NoSuchFieldException"));
+                fieldInjected = false;
+            }
+
+            exps.add(getId("java.lang.IllegalAccessException"));
+
+            if (constructorInjected || methodInjected) {
+                exps.add(getId("java.lang.NoSuchMethodException"));
+                exps.add(getId("java.lang.reflect.InvocationTargetException"));
+                if (constructorInjected) {
+                    exps.add(getId("java.lang.InstantiationException"));
+                    constructorInjected = false;
+                }
+            }
+            if (methodInjected) {
+                exps.add(getId("java.lang.IllegalArgumentException"));
+                methodInjected = false;
+            }
+            reflectionInjected = false;
+
+            if (catchExceptions) {
+                final ListBuffer<JCCatch> lb = ListBuffer.lb();
+                final Scope validScope = trees.getScope(treePath);
+                final Node n = new Node(validScope, tree);
+                int i = 0;
+                for (JCExpression exp : exps) {
+                    lb.append(getCatch(exp.toString(), cut, n, "e" + i++));
+                }
+                com.sun.tools.javac.util.List<JCCatch> exceptionsList = lb.toList();
+                final JCStatement tryCatch = tm.Try(tree.body, exceptionsList, null);
+                tree.body = tm.Block(0l, com.sun.tools.javac.util.List.of(tryCatch));
+            } else {
+                for (JCExpression exp : exps) {
+                    tree.thrown = tree.thrown.append(exp);
+                }
+            }
+        }
+        printVerbose(cut, e);
     }
     boolean constructorInjected = false;
 
@@ -111,14 +155,13 @@ public class PrivateAccessProcessor extends DProcessor {
         return tm.Catch(cnfe, tm.Block(0l, emptyList));
     }
 
-    protected JCBlock processElement(final JCBlock tree, final CompilationUnitTree cut, Scope validScope, Node n) {
+    protected JCBlock processElement(final JCBlock tree, final CompilationUnitTree cut, Scope validScope) {
         if (tree == null) {
             return null;
         }
         for (Tree stmt : tree.stats) {
             validScope = getScope(stmt, cut, validScope);
-            n.scope = validScope;
-            tree.stats = (com.sun.tools.javac.util.List<JCStatement>) processStmt(stmt, cut, tree, n.scope, n.annotatedTree);
+            tree.stats = (com.sun.tools.javac.util.List<JCStatement>) processStmt(stmt, cut, tree, validScope);
             if (tree.stats.indexOf(stmt) < tree.stats.size() - 1) {
                 validScope = trees.getScope(trees.getPath(cut, stmt));
             }
@@ -141,7 +184,7 @@ public class PrivateAccessProcessor extends DProcessor {
         return validScope;
     }
 
-    protected JCBlock processElement(BlockTree tree, final CompilationUnitTree cut, Tree scopeTree, Node n) {
+    protected JCBlock processElement(BlockTree tree, final CompilationUnitTree cut, Tree scopeTree) {
         if (tree == null) {
             return null;
         }
@@ -165,7 +208,7 @@ public class PrivateAccessProcessor extends DProcessor {
             final TreePath path = trees.getPath(cut, scopeTree);
             scope = trees.getScope(path);
         }
-        return processElement((JCBlock) tree, cut, scope, n);
+        return processElement((JCBlock) tree, cut, scope);
     }
 
     protected BlockTree blockify(StatementTree stmt) {
@@ -178,9 +221,9 @@ public class PrivateAccessProcessor extends DProcessor {
         return tm.Block(0l, com.sun.tools.javac.util.List.of((JCStatement) stmt));
     }
 
-    protected com.sun.tools.javac.util.List<? extends Tree> processStmt(Tree stmt, final CompilationUnitTree cut, JCBlock encBlock, Scope validScope, JCMethodDecl annotatedTree) {
+    protected com.sun.tools.javac.util.List<? extends Tree> processStmt(Tree stmt, final CompilationUnitTree cut, JCBlock encBlock, Scope validScope) {
         validScope = getScope(stmt, cut, validScope);
-        final Node n = new Node(stmt, validScope,annotatedTree);
+        final Node n = new Node(validScope, stmt);
         encBlock.stats = (com.sun.tools.javac.util.List<JCStatement>) processStmt(n, cut, encBlock);
         return encBlock.stats;
     }
@@ -216,45 +259,45 @@ public class PrivateAccessProcessor extends DProcessor {
         } else if (stmt instanceof JCTry) {
             JCTry tryStmt = (JCTry) stmt;
             if (tryStmt.body != null && tryStmt.body.stats != null && !tryStmt.body.stats.isEmpty()) {
-                tryStmt.body = processElement(tryStmt.body, cut, n.scope, n);
+                tryStmt.body = processElement(tryStmt.body, cut, n.scope);
             }
             List<JCCatch> catchers = tryStmt.catchers;
             for (JCCatch jCCatch : catchers) {
                 if (jCCatch.body != null && jCCatch.body.stats != null && !jCCatch.body.stats.isEmpty()) {
-                    jCCatch.body = processElement(jCCatch.body, cut, jCCatch.param, n);
+                    jCCatch.body = processElement(jCCatch.body, cut, jCCatch.param);
                 }
             }
             if (tryStmt.finalizer != null && tryStmt.finalizer.stats != null && !tryStmt.finalizer.stats.isEmpty()) {
-                tryStmt.finalizer = processElement(tryStmt.finalizer, cut, n.scope, n);
+                tryStmt.finalizer = processElement(tryStmt.finalizer, cut, n.scope);
             }
 
         } else if (stmt instanceof JCIf) {
             JCIf ifStmt = (JCIf) stmt;
             ifStmt.cond = processCond(ifStmt.cond, cut, n, encBlock);
             ifStmt.thenpart = (JCStatement) blockify(ifStmt.thenpart);
-            ifStmt.thenpart = processElement((JCBlock) ifStmt.thenpart, cut, ifStmt.cond, n);
+            ifStmt.thenpart = processElement((JCBlock) ifStmt.thenpart, cut, ifStmt.cond);
             ifStmt.elsepart = (JCStatement) blockify(ifStmt.elsepart);
-            ifStmt.elsepart = processElement((JCBlock) ifStmt.elsepart, cut, ifStmt.cond, n);
+            ifStmt.elsepart = processElement((JCBlock) ifStmt.elsepart, cut, ifStmt.cond);
         } else if (stmt instanceof JCExpressionStatement) {
             JCExpressionStatement expStmt = (JCExpressionStatement) stmt;
             expStmt.expr = processCond(expStmt.expr, cut, n, encBlock);
         } else if (stmt instanceof JCBlock) {
-            n.actual = processElement((JCBlock) stmt, cut, n.scope, n);
+            n.actual = processElement((JCBlock) stmt, cut, n.scope);
         } else if (stmt instanceof JCWhileLoop) {
             JCWhileLoop loop = (JCWhileLoop) stmt;
             loop.cond = processCond(loop.cond, cut, n, encBlock);
             loop.body = (JCStatement) blockify(loop.body);
-            loop.body = processElement((JCBlock) loop.body, cut, n.scope, n);
+            loop.body = processElement((JCBlock) loop.body, cut, n.scope);
         } else if (stmt instanceof JCForLoop) {
             JCForLoop loop = (JCForLoop) stmt;
             loop.cond = processCond(loop.cond, cut, n, encBlock);
             loop.body = (JCStatement) blockify(loop.body);
-            loop.body = processElement((JCBlock) loop.body, cut, loop.cond, n);
+            loop.body = processElement((JCBlock) loop.body, cut, loop.cond);
         } else if (stmt instanceof JCDoWhileLoop) {
             JCDoWhileLoop loop = (JCDoWhileLoop) stmt;
             loop.cond = processCond(loop.cond, cut, n, encBlock);
             loop.body = (JCStatement) blockify(loop.body);
-            loop.body = processElement(((JCBlock) loop.body), cut, n.scope, n);
+            loop.body = processElement(((JCBlock) loop.body), cut, n.scope);
         } else if (stmt instanceof JCEnhancedForLoop) {
             JCEnhancedForLoop loop = (JCEnhancedForLoop) stmt;
             boolean accessible = isAccessible(loop.expr, cut, n);
@@ -269,7 +312,7 @@ public class PrivateAccessProcessor extends DProcessor {
                 }
             }
             loop.body = (JCStatement) blockify(loop.body);
-            loop.body = processElement((JCBlock) loop.body, cut, loop.expr, n);
+            loop.body = processElement((JCBlock) loop.body, cut, loop.expr);
         }
         return encBlock.stats;
     }
@@ -288,6 +331,7 @@ public class PrivateAccessProcessor extends DProcessor {
                     accessor = fa.selected;
                 }
                 ifExp = getReflectedAccess(fa, cut, n, null, accessor);
+                fieldInjected = true;
                 reflectionInjected = true;
             }
         } else if (ifExp instanceof JCMethodInvocation) {
@@ -397,7 +441,7 @@ public class PrivateAccessProcessor extends DProcessor {
                         JCExpressionStatement constChangeStmt = tm.Exec(constChange);
                         encBlock.stats = injectBefore((JCStatement) n.actual, encBlock.stats, constChangeStmt);
                         Scope validScope = trees.getScope(trees.getPath(cut, constChangeStmt));
-                        encBlock.stats = (com.sun.tools.javac.util.List<JCStatement>) processStmt(constChangeStmt, cut, encBlock, validScope, n.annotatedTree);
+                        encBlock.stats = (com.sun.tools.javac.util.List<JCStatement>) processStmt(constChangeStmt, cut, encBlock, validScope);
                     }
                     ifExp = reflectedFieldSetter;
                 }
@@ -423,7 +467,7 @@ public class PrivateAccessProcessor extends DProcessor {
     }
 
     public boolean isAccessible(JCVariableDecl varDecl, CompilationUnitTree cut, Node n) {
-        if (varDecl.init != null) {
+        if(varDecl.init != null){
             return isAccessible(varDecl.init, cut, n);
         }
         return true;//just a declaration is always accessible
@@ -536,7 +580,6 @@ public class PrivateAccessProcessor extends DProcessor {
         JCIdent javaLangClassId = tm.Ident(javaLangClassSym.getReturnType().tsym);
         //        Name classVarName = getClassVarName(className);
         JCExpression forNameAccessor = tm.Select(javaLangClassId, javaLangClassSym.name);
-
         JCExpression className = tm.Literal(typeId.toString());
         JCMethodInvocation classGetter = tm.Apply(com.sun.tools.javac.util.List.<JCExpression>nil(), forNameAccessor, com.sun.tools.javac.util.List.<JCExpression>of(className));
 //        JCVariableDecl classDecl = tm.VarDef(tm.Modifiers(Flags.FINAL), classVarName, javaLangClassId, classGetter);
@@ -560,10 +603,7 @@ public class PrivateAccessProcessor extends DProcessor {
                 javaReflectMethField = getIdAfterImporting("java.lang.reflect.Method");
                 JCExpression mName = tm.Literal(symbol.name.toString());
                 args = merge(Collections.singleton(mName), toList(types));
-                exceptions.add(getId("java.lang.IllegalArgumentException"));
             }
-            exceptions.add(getId("java.lang.NoSuchMethodException"));
-            exceptions.add(getId("java.lang.reflect.InvocationTargetException"));
         } else {
             getterName = elementUtils.getName("getDeclaredField");
             javaReflectMethField = getIdAfterImporting("java.lang.reflect.Field");
@@ -587,27 +627,12 @@ public class PrivateAccessProcessor extends DProcessor {
             final JCStatement[] refStmts = new JCStatement[3];
 
             if (refDecl != null) {
-                if (catchExceptions) {
-                    final ListBuffer<JCCatch> lb = ListBuffer.lb();
-                    int i = 0;
-                    for (JCExpression exception : exceptions) {
-                        lb.append(getCatch(exception.toString(), cut, n, "e" + i++));
-                    }
-                    com.sun.tools.javac.util.List<JCCatch> exceptionsList = lb.toList();
-                    final JCStatement tryCatch = tm.Try(encBlock, exceptionsList, null);
-                    encBlock = tm.Block(0l, com.sun.tools.javac.util.List.of(tryCatch));
-                } else {
-                    for (JCExpression exception : exceptions) {
-                        n.annotatedTree.thrown = n.annotatedTree.thrown.append(exception);
-                    }
-                }
-
                 refStmts[0] = refDecl;
                 refStmts[1] = refDeclInit;
                 refStmts[2] = setAccessibleExec;
                 encBlock.stats = injectBefore((JCStatement) n.actual, encBlock.stats, refStmts);
                 TreePath refPath = trees.getPath(cut, refStmts[2]);
-                n.scope = getScope(refStmts[2], cut, trees.getScope(refPath));
+                n.scope = getScope(n.actual, cut, trees.getScope(refPath));
             }
 
             reflectionInjected = true;
@@ -722,6 +747,7 @@ public class PrivateAccessProcessor extends DProcessor {
             accessor = fa.selected;
         }
         JCMethodInvocation set = getMethodInvoc(field + ".set" + typeName, accessor, value);
+        fieldInjected = true;
         return set;
     }
 
@@ -762,7 +788,7 @@ public class PrivateAccessProcessor extends DProcessor {
         return names;
     }
     boolean reflectionInjected = false;
-    private boolean methodInjected = false;
+    boolean methodInjected = false;
 
     /**
      * Junit or someone else might want to handle it

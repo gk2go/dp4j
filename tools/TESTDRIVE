@@ -5,10 +5,25 @@ fail (){
 
 test_file="Test10.java"
 jar_file="dp4j-$v-jar-with-dependencies.jar"
+md5_file="dp4j-$v-jar-with-dependencies.md5"
+md5_local="dp4j-$v-jar-with-dependencies.md5.local"
 
 cmd="curl -D log -O --fail -L http://downloads.sourceforge.net/project/dp4j/$v/$jar_file"
 echo $cmd
-$cmd || fail "Download has failed. Try running the TESTDRIVE script again or downloading the JAR manually from http://downloads.sourceforge.net/project/dp4j/$v/$jar_file"
+$cmd || fail "JAR download has failed. Try running the TESTDRIVE script again or downloading the JAR manually from http://downloads.sourceforge.net/project/dp4j/$v/$jar_file"
+echo
+
+cmd="curl -D log -O --fail -L http://downloads.sourceforge.net/project/dp4j/$v/$md5_file"
+echo $cmd
+$cmd || fail "MD5 download has failed. Try running the TESTDRIVE script again or downloading the JAR manually from http://downloads.sourceforge.net/project/dp4j/$v/$md5_file"
+echo
+
+openssl md5 < $jar_file >> $md5_local
+echo
+
+cmd="grep -f $md5_local $md5_file"
+echo $cmd
+$cmd || fail "MD5 checksum verification failed. Try running the TESTDRIVE script again or downloading the JAR manually from http://downloads.sourceforge.net/project/dp4j/$v/$jar_file"
 echo
 
 # Start

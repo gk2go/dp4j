@@ -169,7 +169,7 @@ public class PrivateAccessProcTest {
         {testSrc.getAbsolutePath(), comDp4jSamples, "Genericer"},
         {testSrc.getAbsolutePath(), comDp4jSamples,"LazySingleton"},
         {testResources.getAbsolutePath(), comDp4jSamples, "EqualsTest"},
-        {testResources.getAbsolutePath(), comDp4jSamples,"Test"},
+        {testSrc.getAbsolutePath(), comDp4jSamples,"CompTest"},
         {testResources.getAbsolutePath(), comDp4jSamples,"VarArgsCallTest"},
         {testResources.getAbsolutePath(), comDp4jSamples,"CallTest"},
         {testResources.getAbsolutePath(), comDp4jSamples,"IfTest"},
