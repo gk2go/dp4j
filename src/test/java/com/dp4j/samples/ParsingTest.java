@@ -42,9 +42,16 @@ public class ParsingTest {
 
     @Test
     @Reflect(catchExceptions=true)
-    public void reflectAllSetterCatchTest(){
+    public void reflectSetterCatchTest(){
         final PrivateData pd = new PrivateData();
         final int value = 5;
         pd.i = value;
+    }
+
+    @Test
+    @Reflect(catchExceptions=true)
+    public void reflectInvokeCatchTest(){
+        final PrivateMethods pm = new PrivateMethods();
+//        pm.getClassName();
     }
 }

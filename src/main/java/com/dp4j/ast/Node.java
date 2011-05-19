@@ -22,7 +22,6 @@ public class Node implements Tree{
     public Node(Scope scope, Tree actual){
         this.scope = scope;
         this.actual = actual;
-
     }
 
     @Override
