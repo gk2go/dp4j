@@ -4,11 +4,8 @@
  */
 package com.dp4j.ast;
 
-import com.dp4j.processors.core.PrivateAccessProcessor;
-import com.sun.source.tree.CompilationUnitTree;
 import com.sun.source.tree.Scope;
 import com.sun.source.tree.StatementTree;
-import com.sun.tools.javac.tree.JCTree.JCBlock;
 
 /**
  *
@@ -16,16 +13,9 @@ import com.sun.tools.javac.tree.JCTree.JCBlock;
  */
 public class StmtNode extends Node{
     public StatementTree actual;
-    protected final PrivateAccessProcessor pap;
 
-    public StmtNode(Scope scope, StatementTree actual, CompilationUnitTree cut, PrivateAccessProcessor pap){
-        super(scope, actual, cut);
-        this.pap = pap;
+    public StmtNode(Scope scope, StatementTree actual){
+        super(scope, actual);
+        this.actual = actual;
     }
-
-    public void process(JCBlock encBlock){
-
-    }
-
-
 }

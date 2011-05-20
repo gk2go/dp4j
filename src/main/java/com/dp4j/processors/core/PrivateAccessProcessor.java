@@ -1,7 +1,7 @@
 package com.dp4j.processors.core;
 
+import com.dp4j.Hack;
 import com.dp4j.Reflect;
-import com.dp4j.ast.ExpNode;
 import com.dp4j.ast.Node;
 import com.dp4j.ast.Resolver;
 import com.dp4j.ast.StmtNode;
@@ -32,11 +32,18 @@ import javax.tools.Diagnostic.Kind;
  *
  * @author simpatico
  */
-@SupportedAnnotationTypes(value = {"org.junit.Test", "org.testng.annotations.Test", "com.dp4j.Reflect"})
+@SupportedAnnotationTypes(value = {"org.junit.Test", "org.testng.annotations.Test", "com.dp4j.Reflect", "com.dp4j.Hack"})
 public class PrivateAccessProcessor extends DProcessor {
 
-    private boolean fieldInjected = false;
-
+    public Type getType(Symbol s) {
+        Type t;
+        if (s instanceof MethodSymbol) {
+            t = ((MethodSymbol) s).getReturnType();
+        } else {
+            t = s.type;
+        }
+        return t;
+    }
     private static String rAll = "ll";
 
     @Override
@@ -47,20 +54,22 @@ public class PrivateAccessProcessor extends DProcessor {
     }
     boolean reflectAll = false;
     boolean catchExceptions;
-    JCMethodDecl methTree;
 
     @Override
     protected void processElement(Element e, TypeElement ann, boolean warningsOnly) {
+        final String annName = ann.getQualifiedName().toString();
 
-        if (ann.getQualifiedName().toString().equals(Reflect.class.getCanonicalName())) {
+        if (annName.equals(Reflect.class.getCanonicalName())) {
             final Reflect reflect = e.getAnnotation(Reflect.class);
             catchExceptions = reflect.catchExceptions();
+        } else if (annName.equals(Hack.class.getCanonicalName())){
+            catchExceptions = true;
         } else {
             catchExceptions = false;
         }
 
         if (options.containsKey("conservative")) {
-            if (!ann.getQualifiedName().toString().equals(Reflect.class.getCanonicalName())) {
+            if (!annName.equals(Reflect.class.getCanonicalName())) {
                 return;
             }
         }
@@ -82,7 +91,7 @@ public class PrivateAccessProcessor extends DProcessor {
         final CompilationUnitTree cut = treePath.getCompilationUnit();
         boolean reflectOnlyThis = false;
         if (!reflectAll) {
-            if (ann.getQualifiedName().toString().equals(Reflect.class.getCanonicalName())) {
+            if (annName.equals(Reflect.class.getCanonicalName())) {
                 final Reflect refAnn = e.getAnnotation(Reflect.class);
                 reflectOnlyThis = refAnn.all();
             }
@@ -95,43 +104,8 @@ public class PrivateAccessProcessor extends DProcessor {
             reflectOnlyThis = false;
             reflectAll = false;
         }
-
-        final List<JCExpression> exps = new LinkedList<JCExpression>();
-
-        if (reflectionInjected || methodInjected || constructorInjected || fieldInjected) {
-            exps.add(getId("java.lang.ClassNotFoundException"));
-
-            if (fieldInjected) {
-                exps.add(getId("java.lang.NoSuchFieldException"));
-                fieldInjected = false;
-            }
-
-            exps.add(getId("java.lang.IllegalAccessException"));
-
-            if (constructorInjected || methodInjected) {
-                exps.add(getId("java.lang.NoSuchMethodException"));
-                exps.add(getId("java.lang.reflect.InvocationTargetException"));
-                if (constructorInjected) {
-                    exps.add(getId("java.lang.InstantiationException"));
-                    constructorInjected = false;
-                }
-            }
-            if (methodInjected) {
-                exps.add(getId("java.lang.IllegalArgumentException"));
-                methodInjected = false;
-            }
-            reflectionInjected = false;
-
-            if (catchExceptions) {
-            } else {
-                for (JCExpression exp : exps) {
-                    methTree.thrown = methTree.thrown.append(exp);
-                }
-            }
-        }
         printVerbose(cut, e);
     }
-    boolean constructorInjected = false;
 
     protected JCBlock processElement(final JCBlock tree, final CompilationUnitTree cut, Scope validScope) {
         if (tree == null) {
@@ -199,14 +173,12 @@ public class PrivateAccessProcessor extends DProcessor {
         return tm.Block(0l, com.sun.tools.javac.util.List.of((JCStatement) stmt));
     }
 
-    protected com.sun.tools.javac.util.List<? extends StatementTree> processStmt(StatementTree stmt, final CompilationUnitTree cut, JCBlock encBlock, Scope validScope) {
-        validScope = getScope(stmt, cut, validScope);
-        final StmtNode n = new StmtNode(validScope, stmt, cut, this);
-        encBlock.stats = (com.sun.tools.javac.util.List<JCStatement>) processStmt(n, cut, encBlock);
+    protected com.sun.tools.javac.util.List<? extends Tree> processStmt(StatementTree stmt, final CompilationUnitTree cut, JCBlock encBlock, Scope validScope) {
+        encBlock.stats = (com.sun.tools.javac.util.List<JCStatement>) processStmt(new StmtNode(getScope(stmt, cut, validScope), stmt), cut, encBlock);
         return encBlock.stats;
     }
 
-    /**
+        /**
      * @param stmt
      * @param vars
      * @param cut
@@ -216,23 +188,25 @@ public class PrivateAccessProcessor extends DProcessor {
      * @param varSyms
      * @return
      */
-    protected com.sun.tools.javac.util.List<? extends StatementTree> processStmt(StmtNode n, final CompilationUnitTree cut, JCBlock encBlock) {
+    protected List<? extends Tree> processStmt(StmtNode n, final CompilationUnitTree cut, JCBlock encBlock) {
         final StatementTree stmt = n.actual;
         if (stmt instanceof JCVariableDecl) {
             JCVariableDecl varDec = (JCVariableDecl) stmt;
             final boolean accessible = isAccessible(varDec, cut, n);
             if (!accessible) {
-                ((JCVariableDecl) stmt).init = processCond(varDec.init, cut, new ExpNode(varDec.init, n), encBlock);
-                Symbol s = rs.getSymbol(varDec.init, cut, n);
-                final Type t = rs.getType(s);
+                JCExpression reflectedAccess = processCond(varDec.init, cut, n, encBlock);
+                Symbol s = rs.getSymbol(reflectedAccess, cut, n);
+                final Type t = getType(s);
+                ((JCVariableDecl) stmt).init = null;
                 varDec.sym = (VarSymbol) rs.getSymbol(cut, n, null, varDec.name, null);
                 varDec.type = varDec.sym.type;
-                if (varDec.init.type == null) {
-                    varDec.init.type = varDec.sym.type;
+                if (reflectedAccess.type == null) {
+                    reflectedAccess.type = varDec.sym.type;
                 }
                 if (differentArg(t, varDec.sym.type)) {
-                    varDec.init = tm.TypeCast(rs.getBoxedType(varDec.sym), varDec.init);
+                    reflectedAccess = tm.TypeCast(rs.getBoxedType(varDec.sym), reflectedAccess);
                 }
+                encBlock.stats = Resolver.injectAfter((JCStatement) stmt, encBlock.stats, false, tm.Exec(tm.Assign(tm.Ident(varDec.name), reflectedAccess)));
             }
         } else if (stmt instanceof JCTry) {
             JCTry tryStmt = (JCTry) stmt;
@@ -248,7 +222,6 @@ public class PrivateAccessProcessor extends DProcessor {
             if (tryStmt.finalizer != null && tryStmt.finalizer.stats != null && !tryStmt.finalizer.stats.isEmpty()) {
                 tryStmt.finalizer = processElement(tryStmt.finalizer, cut, n.scope);
             }
-
         } else if (stmt instanceof JCIf) {
             JCIf ifStmt = (JCIf) stmt;
             ifStmt.cond = processCond(ifStmt.cond, cut, n, encBlock);
@@ -259,17 +232,6 @@ public class PrivateAccessProcessor extends DProcessor {
         } else if (stmt instanceof JCExpressionStatement) {
             JCExpressionStatement expStmt = (JCExpressionStatement) stmt;
             expStmt.expr = processCond(expStmt.expr, cut, n, encBlock);
-            String[] exceptions = {"java.lang.IllegalAccessException", "java.lang.IllegalArgumentException"};
-
-
-            if (catchExceptions) {
-                encBlock.stats = replace((JCStatement) stmt, encBlock.stats, tm.Try(getBlock(expStmt), getCatches(cut, n, exceptions), null));
-
-            } else {
-                throwExceptions(exceptions);
-            }
-
-
         } else if (stmt instanceof JCBlock) {
             n.actual = processElement((JCBlock) stmt, cut, n.scope);
         } else if (stmt instanceof JCWhileLoop) {
@@ -286,7 +248,7 @@ public class PrivateAccessProcessor extends DProcessor {
             JCDoWhileLoop loop = (JCDoWhileLoop) stmt;
             loop.cond = processCond(loop.cond, cut, n, encBlock);
             loop.body = (JCStatement) blockify(loop.body);
-            loop.body = processElement(((JCBlock) loop.body), cut, n.scope);
+            loop.body = processElement((JCBlock) loop.body, cut, n.scope);
         } else if (stmt instanceof JCEnhancedForLoop) {
             JCEnhancedForLoop loop = (JCEnhancedForLoop) stmt;
             boolean accessible = isAccessible(loop.expr, cut, n);
@@ -294,7 +256,7 @@ public class PrivateAccessProcessor extends DProcessor {
                 loop.expr = processCond(loop.expr, cut, n, encBlock);
                 loop.var.sym = (VarSymbol) rs.getSymbol(cut, n, null, loop.var.name, null);
                 final Symbol s = rs.getSymbol(loop.expr, cut, n);
-                final Type t = rs.getType(s);
+                final Type t = getType(s);
                 ArrayType arrayType = typeUtils.getArrayType(loop.var.sym.type);
                 if (differentArg(t, (Type) arrayType)) {
                     loop.expr = tm.TypeCast((Type) arrayType, loop.expr);
@@ -302,6 +264,13 @@ public class PrivateAccessProcessor extends DProcessor {
             }
             loop.body = (JCStatement) blockify(loop.body);
             loop.body = processElement((JCBlock) loop.body, cut, loop.expr);
+        }
+        if (!n.exceptions.isEmpty()) {
+            if (catchExceptions) {
+                encBlock.stats = replace((JCStatement) stmt, encBlock.stats, tm.Try(getBlock((JCStatement) n.actual), getCatches(cut, n, n.exceptions), null));
+            } else {
+                throwExceptions(n.exceptions);
+            }
         }
         return encBlock.stats;
     }
@@ -320,8 +289,6 @@ public class PrivateAccessProcessor extends DProcessor {
         } else {
             accessor = fa.selected;
         }
-        fieldInjected = true;
-        reflectionInjected = true;
         return getReflectedAccess(fa, cut, n, null, accessor);
     }
 
@@ -342,8 +309,6 @@ public class PrivateAccessProcessor extends DProcessor {
             reflect(mSym, cut, n, mi.args, encBlock);
             JCExpression accessor = rs.getInvokationExp(mi, cut, n);
             mi = getReflectedAccess(mSym, cut, accessor, mi.args, n);
-            //FIXME: here add invoke exceptions
-            methodInjected = true;
         } else {
             mi.type = mSym.getReturnType();
         }
@@ -367,8 +332,6 @@ public class PrivateAccessProcessor extends DProcessor {
         }
 
         reflect(initSym, cut, n, init.args, encBlock);
-        constructorInjected = true;
-        //FIXME: constructor exception
         return getReflectedAccess(initSym, cut, null, init.args, n);
     }
 
@@ -384,26 +347,26 @@ public class PrivateAccessProcessor extends DProcessor {
     }
 
     protected JCExpression processCond(JCLiteral ifExp, final CompilationUnitTree cut, Node n, JCBlock encBlock) {
-            ifExp.type = rs.getType(ifExp);
+        ifExp.type = rs.getType(ifExp);
         return ifExp;
     }
 
     protected JCExpression processCond(JCBinary ifB, final CompilationUnitTree cut, Node n, JCBlock encBlock) {
 //            if (ifB.lhs instanceof JCFieldAccess) {
 //                final JCFieldAccess fa = (JCFieldAccess) ifB.lhs;
-            ifB.rhs = processCond(ifB.rhs, cut, n, encBlock);
+        ifB.rhs = processCond(ifB.rhs, cut, n, encBlock);
 
-            final boolean accessible = isAccessible(ifB.lhs, cut, n);
-            if (!accessible) {
-                ifB.lhs = processCond(ifB.lhs, cut, n, encBlock);
-                Symbol s = rs.getSymbol(ifB.lhs, cut, n);
-                final Type t = rs.getType(s);
-                if (!typeUtils.getNullType().equals(ifB.rhs.type)) {
-                    if (differentArg(t, ifB.rhs.type)) {
-                        ifB.lhs = tm.Parens(tm.TypeCast(rs.getBoxedType(ifB.rhs.type), ifB.lhs));
-                    }
+        final boolean accessible = isAccessible(ifB.lhs, cut, n);
+        if (!accessible) {
+            ifB.lhs = processCond(ifB.lhs, cut, n, encBlock);
+            Symbol s = rs.getSymbol(ifB.lhs, cut, n);
+            final Type t = getType(s);
+            if (!typeUtils.getNullType().equals(ifB.rhs.type)) {
+                if (differentArg(t, ifB.rhs.type)) {
+                    ifB.lhs = tm.Parens(tm.TypeCast(rs.getBoxedType(ifB.rhs.type), ifB.lhs));
                 }
             }
+        }
 //            }
 
 //            if (ifB.rhs instanceof JCFieldAccess) {
@@ -416,46 +379,46 @@ public class PrivateAccessProcessor extends DProcessor {
 //                    reflectionInjected = true;
 //                }
 //            }
-            return ifB;
+        return ifB;
     }
 
     protected JCExpression processCond(JCAssign assignExp, final CompilationUnitTree cut, Node n, JCBlock encBlock) {
-            if (!isAccessible(assignExp.rhs, cut, n)) {
-                final Type rhsTypeBeforeReflection = rs.getType(assignExp.rhs, cut, n);
-                final JCMethodInvocation reflectedAccess = (JCMethodInvocation) processCond(assignExp.rhs, cut, n, encBlock);
-                assignExp.rhs = cast(reflectedAccess, rhsTypeBeforeReflection);
-            }
-            if (assignExp.lhs instanceof JCFieldAccess) {
-                final JCFieldAccess fa = (JCFieldAccess) assignExp.lhs;
-                final boolean accessible = isAccessible(fa, cut, n);
-                if (!accessible) {
-                    Symbol s = rs.getSymbol(fa, cut, n);
-                    reflect(s, cut, n, null, encBlock);
+        if (!isAccessible(assignExp.rhs, cut, n)) {
+            final Type rhsTypeBeforeReflection = rs.getType(assignExp.rhs, cut, n);
+            final JCMethodInvocation reflectedAccess = (JCMethodInvocation) processCond(assignExp.rhs, cut, n, encBlock);
+            assignExp.rhs = cast(reflectedAccess, rhsTypeBeforeReflection);
+        }
+        if (assignExp.lhs instanceof JCFieldAccess) {
+            final JCFieldAccess fa = (JCFieldAccess) assignExp.lhs;
+            final boolean accessible = isAccessible(fa, cut, n);
+            if (!accessible) {
+                Symbol s = rs.getSymbol(fa, cut, n);
+                reflect(s, cut, n, null, encBlock);
 
-                    JCMethodInvocation reflectedFieldSetter = getReflectedFieldSetter(fa, assignExp.rhs, cut, s.type.isPrimitive(), n, s.isStatic());
-                    if (s.getModifiers().contains(Modifier.FINAL)) {
-                        final JCExpression fieldMods = getId(getFieldVar(fa.name) + ".modifiers");
+                JCMethodInvocation reflectedFieldSetter = getReflectedFieldSetter(fa, assignExp.rhs, cut, s.type.isPrimitive(), n, s.isStatic());
+                if (s.getModifiers().contains(Modifier.FINAL)) {
+                    final JCExpression fieldMods = getId(getFieldVar(fa.name) + ".modifiers");
 
-                        final int varMods = (int) (s.flags_field) & ~java.lang.reflect.Modifier.FINAL;
-                        final JCLiteral mod = tm.Literal(varMods);
-                        final JCAssign constChange = tm.Assign(fieldMods, mod);
-                        JCExpressionStatement constChangeStmt = tm.Exec(constChange);
-                        encBlock.stats = injectBefore((JCStatement) n.actual, encBlock.stats, constChangeStmt);
-                        Scope validScope = trees.getScope(trees.getPath(cut, constChangeStmt));
-                        encBlock.stats = (com.sun.tools.javac.util.List<JCStatement>) processStmt(constChangeStmt, cut, encBlock, validScope);
-                    }
-                    return reflectedFieldSetter;
+                    final int varMods = (int) (s.flags_field) & ~java.lang.reflect.Modifier.FINAL;
+                    final JCLiteral mod = tm.Literal(varMods);
+                    final JCAssign constChange = tm.Assign(fieldMods, mod);
+                    JCExpressionStatement constChangeStmt = tm.Exec(constChange);
+                    encBlock.stats = injectBefore((JCStatement) n.actual, encBlock.stats, constChangeStmt);
+                    Scope validScope = trees.getScope(trees.getPath(cut, constChangeStmt));
+                    encBlock.stats = (com.sun.tools.javac.util.List<JCStatement>) processStmt(constChangeStmt, cut, encBlock, validScope);
                 }
+                return reflectedFieldSetter;
             }
-            return assignExp;
+        }
+        return assignExp;
     }
 
-protected JCExpression processCond(JCArrayAccess ifExp, final CompilationUnitTree cut, Node n, JCBlock encBlock) {
-     //TODO: reflect array
-    return ifExp;
-}
+    protected JCExpression processCond(JCArrayAccess ifExp, final CompilationUnitTree cut, Node n, JCBlock encBlock) {
+        //TODO: reflect array
+        return ifExp;
+    }
 
-    public JCExpression processCond(JCExpression ifExp, final CompilationUnitTree cut, Node n, JCBlock encBlock) {
+    protected JCExpression processCond(JCExpression ifExp, final CompilationUnitTree cut, Node n, JCBlock encBlock) {
         if (ifExp instanceof JCFieldAccess) {
             return processCond((JCFieldAccess) ifExp, cut, n, encBlock);
         } else if (ifExp instanceof JCMethodInvocation) {
@@ -629,8 +592,8 @@ protected JCExpression processCond(JCArrayAccess ifExp, final CompilationUnitTre
                 javaReflectMethField = getIdAfterImporting("java.lang.reflect.Method");
                 JCExpression mName = tm.Literal(symbol.name.toString());
                 args = merge(Collections.singleton(mName), toList(types));
-                exceptions.add("java.lang.NoSuchMethodException");
             }
+            exceptions.add("java.lang.NoSuchMethodException"); //thrown for both methods and constructors
         } else {
             getterName = elementUtils.getName("getDeclaredField");
             javaReflectMethField = getIdAfterImporting("java.lang.reflect.Field");
@@ -668,18 +631,6 @@ protected JCExpression processCond(JCArrayAccess ifExp, final CompilationUnitTre
                 TreePath refPath = trees.getPath(cut, refStmts.getLast());
                 n.scope = getScope(n.actual, cut, trees.getScope(refPath));
             }
-
-            reflectionInjected = true;
-        }
-    }
-
-    private void throwExceptions(final List<String> exceptions) {
-        throwExceptions(exceptions.toArray(new String[0]));
-    }
-
-    private void throwExceptions(final String... exceptions) {
-        for (String exception : exceptions) {
-            methTree.thrown = methTree.thrown.append(getId(exception));
         }
     }
 
@@ -707,9 +658,9 @@ protected JCExpression processCond(JCArrayAccess ifExp, final CompilationUnitTre
             if (s.isConstructor()) {
                 getterName = elementUtils.getName("newInstance");
                 fieldMethInitId = tm.Ident(getConstructorVar(s.owner.name, ((MethodSymbol) s).params));
+                n.exceptions.add("java.lang.InstantiationException");
             } else {
                 getterName = elementUtils.getName("invoke");
-
                 fieldMethInitId = tm.Ident(getMethodVar(s.name, ((MethodSymbol) s).params));
             }
 
@@ -720,7 +671,7 @@ protected JCExpression processCond(JCArrayAccess ifExp, final CompilationUnitTre
                 com.sun.tools.javac.util.List<JCExpression> reverse = args.reverse();
                 for (JCExpression arg : reverse) {
                     Symbol argSym = rs.getSymbol(arg, cut, n);
-                    Type type = rs.getType(argSym);
+                    Type type = getType(argSym);
                     if (differentArg(type, varArgType)) {
                         break;
                     } else {
@@ -743,6 +694,7 @@ protected JCExpression processCond(JCArrayAccess ifExp, final CompilationUnitTre
             if (!s.isConstructor()) {
                 args = merge(Collections.singleton(accessor), args);
             }
+            n.exceptions.add("java.lang.reflect.InvocationTargetException"); //thrown by both method and constructor
         } else {
             fieldMethInitId = tm.Ident(getFieldVar(s.name));
             final String typeName;
@@ -758,8 +710,14 @@ protected JCExpression processCond(JCArrayAccess ifExp, final CompilationUnitTre
 
         final JCExpression getMethField = tm.Select(fieldMethInitId, getterName);
         JCMethodInvocation mi = tm.Apply(com.sun.tools.javac.util.List.<JCExpression>nil(), getMethField, args);
-        reflectionInjected = true;
+        addAnyReflectionAccessExceptions(n);
+
         return mi;
+    }
+
+    public void addAnyReflectionAccessExceptions(final Node n){
+       n.exceptions.add("java.lang.IllegalAccessException");
+        n.exceptions.add("java.lang.IllegalArgumentException");
     }
 
     /**
@@ -791,7 +749,7 @@ protected JCExpression processCond(JCArrayAccess ifExp, final CompilationUnitTre
             accessor = fa.selected;
         }
         JCMethodInvocation set = getMethodInvoc(field + ".set" + typeName, accessor, value);
-        fieldInjected = true;
+        addAnyReflectionAccessExceptions(n);
         return set;
     }
 
@@ -831,8 +789,6 @@ protected JCExpression processCond(JCArrayAccess ifExp, final CompilationUnitTre
         }
         return names;
     }
-    boolean reflectionInjected = false;
-    boolean methodInjected = false;
 
     /**
      * Junit or someone else might want to handle it

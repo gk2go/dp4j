@@ -47,7 +47,6 @@ public class PrivateAccessProcTest {
         }
         return ret;
     }
-
     File src = getFile(System.getProperty("user.dir"), "src", "main", "java");
     final String procSrc = getFile(src.getAbsolutePath(), "com", "dp4j", "processors", "core").getAbsolutePath();
     static final File workingdir = new File(System.getProperty("user.dir"));
@@ -160,6 +159,7 @@ public class PrivateAccessProcTest {
     }
     final static String comDp4jSamples = "com" + File.separator + "dp4j" + File.separator + "samples";
     final static String tests[][] = {
+        {testSrc.getAbsolutePath(), comDp4jSamples, "ParsingTest"},
         {testSrc.getAbsolutePath(), comDp4jSamples, "PrivateData"},
         {testSrc.getAbsolutePath(), comDp4jSamples, "PrivateMethods"},
         {testSrc.getAbsolutePath(), comDp4jSamples, "PrivateVarArgs"},
@@ -167,28 +167,26 @@ public class PrivateAccessProcTest {
         {testSrc.getAbsolutePath(), comDp4jSamples, "WithAccessibleVarArgsInstance"},
         {testSrc.getAbsolutePath(), comDp4jSamples, "ASingleton"},
         {testSrc.getAbsolutePath(), comDp4jSamples, "Genericer"},
-        {testSrc.getAbsolutePath(), comDp4jSamples,"LazySingleton"},
+        {testSrc.getAbsolutePath(), comDp4jSamples, "LazySingleton"},
         {testResources.getAbsolutePath(), comDp4jSamples, "EqualsTest"},
-        {testSrc.getAbsolutePath(), comDp4jSamples,"CompTest"},
-        {testResources.getAbsolutePath(), comDp4jSamples,"VarArgsCallTest"},
-        {testResources.getAbsolutePath(), comDp4jSamples,"CallTest"},
-        {testResources.getAbsolutePath(), comDp4jSamples,"IfTest"},
-        {testResources.getAbsolutePath(), comDp4jSamples,"MultipleCallsTest"},
-        {testSrc.getAbsolutePath(), comDp4jSamples,"ForEachTest"},
-        {testResources.getAbsolutePath(), comDp4jSamples,"ArrayCallTest"},
-        {testResources.getAbsolutePath(), comDp4jSamples,"PrivateConstructorTest"},
-        {testSrc.getAbsolutePath(), comDp4jSamples,"GenericsTest"},
-        {testSrc.getAbsolutePath(), StringUtils.EMPTY,"Test10"},
-        {testSrc.getAbsolutePath(), StringUtils.EMPTY,"PrintTest"},
-        {testResources.getAbsolutePath(), comDp4jSamples,"OverloadTest"},
-        {testResources.getAbsolutePath(), comDp4jSamples,"InheritedPrivateTest"},
-        {testResources.getAbsolutePath(), comDp4jSamples,"ElseTest"},
-        {testSrc.getAbsolutePath(), comDp4jSamples,"FieldAccessTest"},
-        {testSrc.getAbsolutePath(),StringUtils.EMPTY,"JunitTest11"},
-        {testSrc.getAbsolutePath(),StringUtils.EMPTY,"TestNGTest11"},
-        {testSrc.getAbsolutePath(),StringUtils.EMPTY,"ReflectionTest"},
-
-    };
+        {testSrc.getAbsolutePath(), comDp4jSamples, "CompTest"},
+        {testResources.getAbsolutePath(), comDp4jSamples, "VarArgsCallTest"},
+        {testResources.getAbsolutePath(), comDp4jSamples, "CallTest"},
+        {testResources.getAbsolutePath(), comDp4jSamples, "IfTest"},
+        {testResources.getAbsolutePath(), comDp4jSamples, "MultipleCallsTest"},
+        {testSrc.getAbsolutePath(), comDp4jSamples, "ForEachTest"},
+        {testResources.getAbsolutePath(), comDp4jSamples, "ArrayCallTest"},
+        {testResources.getAbsolutePath(), comDp4jSamples, "PrivateConstructorTest"},
+        {testSrc.getAbsolutePath(), comDp4jSamples, "GenericsTest"},
+        {testSrc.getAbsolutePath(), StringUtils.EMPTY, "Test10"},
+        {testSrc.getAbsolutePath(), StringUtils.EMPTY, "PrintTest"},
+        {testResources.getAbsolutePath(), comDp4jSamples, "OverloadTest"},
+        {testResources.getAbsolutePath(), comDp4jSamples, "InheritedPrivateTest"},
+        {testResources.getAbsolutePath(), comDp4jSamples, "ElseTest"},
+        {testSrc.getAbsolutePath(), comDp4jSamples, "FieldAccessTest"},
+        {testSrc.getAbsolutePath(), StringUtils.EMPTY, "JunitTest11"},
+        {testSrc.getAbsolutePath(), StringUtils.EMPTY, "TestNGTest11"},
+        {testSrc.getAbsolutePath(), StringUtils.EMPTY, "ReflectionTest"},};
 
     static String[] getTestSources() {
         String[] ret = new String[tests.length];

@@ -25,7 +25,6 @@ public class ParsingTest {
         int j = value;
     }
 
-
     @Test
     public void test(){
         setValue(new PrivateData(), 4, 5);
@@ -52,6 +51,21 @@ public class ParsingTest {
     @Reflect(catchExceptions=true)
     public void reflectInvokeCatchTest(){
         final PrivateMethods pm = new PrivateMethods();
-//        pm.getClassName();
+        pm.getClassName();
+    }
+
+    @Test
+    @Reflect(catchExceptions=true)
+    public void reflectInvokeCatchTest2(){
+        final PrivateMethods pm = new PrivateMethods();
+        String className;
+        className = pm.getClassName();
+        final byte[] bytes = null;
+        final int[] ints;
+            if (bytes == null) {
+                ints = null;
+            } else {
+                ints = new int[5];
+            }
     }
 }

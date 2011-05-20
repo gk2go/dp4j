@@ -278,8 +278,6 @@ public class Resolver {
         return fa.selected;
     }
 
-
-
     public Type getType(JCLiteral ifExp) {
         final int typetag = (ifExp).typetag;
         final Object value = (ifExp).value;
@@ -682,6 +680,14 @@ public class Resolver {
     }
 
     public static <T> com.sun.tools.javac.util.List<T> injectBefore(T stmt, final com.sun.tools.javac.util.List<? extends T> stats, final boolean skipStmt, T... newStmts) {
+        return inject(stmt, true, stats, skipStmt, newStmts);
+    }
+
+    public static <T> com.sun.tools.javac.util.List<T> injectAfter(T stmt, final com.sun.tools.javac.util.List<? extends T> stats, final boolean skipStmt, T... newStmts) {
+        return inject(stmt, false, stats, skipStmt, newStmts);
+    }
+
+    public static <T> com.sun.tools.javac.util.List<T> inject(T stmt, final boolean before, final com.sun.tools.javac.util.List<? extends T> stats, final boolean skipStmt, T... newStmts) {
         final ListBuffer<T> lb = ListBuffer.lb();
 
         if (stmt == null && (stats == null || stats.isEmpty())) {
@@ -689,18 +695,24 @@ public class Resolver {
             return lb.toList();
         }
 
+
         java.util.List<? extends T> pre = stats.subList(0, stats.indexOf(stmt));
         for (T p : pre) {
             lb.append(p);
         }
+        if(!before && !skipStmt){
+           lb.append(stmt);
+        }
+
         for (T newStmt : newStmts) {
             if (newStmt != null) {
                 lb.append(newStmt);
             }
         }
-        if (!skipStmt) {
+        if (before && !skipStmt) {
             lb.append(stmt);
         }
+
         java.util.List<? extends T> remStats = stats.subList(stats.indexOf(stmt) + 1, stats.size());
         for (T stat : remStats) {
             lb.append(stat);

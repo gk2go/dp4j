@@ -5,7 +5,11 @@
 package com.dp4j.processors;
 
 import com.dp4j.ast.Node;
+import com.dp4j.ast.StmtNode;
+import com.sun.source.tree.StatementTree;
+import com.sun.source.tree.Tree;
 import com.sun.source.util.Trees;
+import com.sun.tools.javac.code.Symbol.VarSymbol;
 import com.sun.tools.javac.model.JavacElements;
 import com.sun.tools.javac.processing.JavacProcessingEnvironment;
 import com.sun.tools.javac.tree.JCTree.*;
@@ -25,6 +29,7 @@ import com.sun.tools.javac.util.List;
 import com.sun.tools.javac.util.ListBuffer;
 import com.sun.tools.javac.util.Name;
 import java.util.Map;
+import javax.lang.model.type.ArrayType;
 import javax.lang.model.type.DeclaredType;
 import javax.lang.model.util.Types;
 import javax.tools.Diagnostic.Kind;
@@ -50,6 +55,7 @@ public abstract class DProcessor extends AbstractProcessor {
     protected Symtab symTable;
     protected TypeElement encClass;
     protected Resolver rs;
+    protected JCMethodDecl methTree;
 
     @Override
     public Set<String> getSupportedOptions() {
@@ -271,7 +277,7 @@ public abstract class DProcessor extends AbstractProcessor {
         super.init(processingEnv);
         final Context context = ((JavacProcessingEnvironment) processingEnv).getContext();
         symTable = Symtab.instance(context);
-        
+
         trees = Trees.instance(processingEnv);
         elementUtils = JavacElements.instance(context);
         msgr = processingEnv.getMessager();
@@ -435,7 +441,7 @@ public abstract class DProcessor extends AbstractProcessor {
         return lb.toList();
     }
 
-    public List<JCCatch> getCatches(final CompilationUnitTree cut, final Node n, final java.util.List<String> exceptions) {
+    public List<JCCatch> getCatches(final CompilationUnitTree cut, final Node n, final java.util.Collection<String> exceptions) {
         return getCatches(cut, n, exceptions.toArray(new String[0]));
     }
 
@@ -452,5 +458,15 @@ public abstract class DProcessor extends AbstractProcessor {
     public JCThrow throwException(final String exception) {
         JCNewClass exCon = tm.NewClass(null, null, getId(elementUtils.getName(exception)),List.<JCExpression> nil(), null);
         return tm.Throw(exCon);
+    }
+
+    public void throwExceptions(final Collection<String> exceptions) {
+        throwExceptions(exceptions.toArray(new String[0]));
+    }
+
+    public void throwExceptions(final String... exceptions) {
+        for (String exception : exceptions) {
+            methTree.thrown = methTree.thrown.append(getId(exception));
+        }
     }
 }
