@@ -17,20 +17,6 @@ class PriClass {
     }
 }
 
-class K {
-
-    protected int m;
-    PriClass pc = new PriClass();
-
-    private String getClassName() {
-        return this.getClass().getCanonicalName();
-    }
-
-    private int get(int i){
-        return i;
-    }
-}
-
 public class CompTest extends K {
 
     int jj;

@@ -300,6 +300,11 @@ public abstract class DProcessor extends AbstractProcessor {
         return annotatatedElements;
     }
 
+    protected void perElementInit(final Element e) {
+        PackageElement packageOf = elementUtils.getPackageOf(e);
+        rs = new Resolver(elementUtils, trees, tm, encClass, typeUtils, symTable, packageOf.getEnclosedElements());
+    }
+
     @templateMethod
     @Override
     public boolean process(Set<? extends TypeElement> annotations, RoundEnvironment roundEnv) {
@@ -307,7 +312,9 @@ public abstract class DProcessor extends AbstractProcessor {
         final Set<Entry<Element, TypeElement>> entrySet = elementsAnnotated.entrySet();
         try {
             for (Entry<? extends Element, ? extends TypeElement> entry : entrySet) {
-                processElement(entry.getKey(), entry.getValue(), false);
+                final Element e = entry.getKey();
+                perElementInit(e);
+                processElement(e, entry.getValue().getQualifiedName().toString(), trees.getPath(e).getCompilationUnit(), false);
             }
         } catch (Exception e) {
             e.printStackTrace();
@@ -368,7 +375,7 @@ public abstract class DProcessor extends AbstractProcessor {
         return lb.toList();
     }
 
-    protected abstract void processElement(final Element e, TypeElement ann, boolean warningsOnly);
+    protected abstract void processElement(final Element e, String annName, CompilationUnitTree cut, boolean warningsOnly);
 
     public DeclaredType getDeclaredType(String className) {
         ClassSymbol typ = getTypeElement(className);
@@ -456,7 +463,7 @@ public abstract class DProcessor extends AbstractProcessor {
     }
 
     public JCThrow throwException(final String exception) {
-        JCNewClass exCon = tm.NewClass(null, null, getId(elementUtils.getName(exception)),List.<JCExpression> nil(), null);
+        JCNewClass exCon = tm.NewClass(null, null, getId(elementUtils.getName(exception)), List.<JCExpression>nil(), null);
         return tm.Throw(exCon);
     }
 

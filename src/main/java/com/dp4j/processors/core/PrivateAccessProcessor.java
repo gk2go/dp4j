@@ -6,6 +6,7 @@ import com.dp4j.ast.Node;
 import com.dp4j.ast.Resolver;
 import com.dp4j.ast.StmtNode;
 import com.dp4j.processors.DProcessor;
+import com.dp4j.processors.MethProcessor;
 import com.sun.source.tree.*;
 import com.sun.source.util.TreePath;
 import com.sun.tools.javac.code.*;
@@ -33,7 +34,7 @@ import javax.tools.Diagnostic.Kind;
  * @author simpatico
  */
 @SupportedAnnotationTypes(value = {"org.junit.Test", "org.testng.annotations.Test", "com.dp4j.Reflect", "com.dp4j.Hack"})
-public class PrivateAccessProcessor extends DProcessor {
+public class PrivateAccessProcessor extends MethProcessor {
 
     public Type getType(Symbol s) {
         Type t;
@@ -56,9 +57,7 @@ public class PrivateAccessProcessor extends DProcessor {
     boolean catchExceptions;
 
     @Override
-    protected void processElement(Element e, TypeElement ann, boolean warningsOnly) {
-        final String annName = ann.getQualifiedName().toString();
-
+    protected void processElement(Element e, String annName, final CompilationUnitTree cut, boolean warningsOnly) {
         if (annName.equals(Reflect.class.getCanonicalName())) {
             final Reflect reflect = e.getAnnotation(Reflect.class);
             catchExceptions = reflect.catchExceptions();
@@ -77,18 +76,6 @@ public class PrivateAccessProcessor extends DProcessor {
             reflectAll = true;
         }
 
-        encClass = (TypeElement) e.getEnclosingElement();
-        PackageElement packageOf = elementUtils.getPackageOf(e);
-        List<? extends Element> pkgClasses = packageOf.getEnclosedElements();
-
-        rs = new Resolver(elementUtils, trees, tm, encClass, typeUtils, symTable, pkgClasses);
-
-        methTree = (JCMethodDecl) elementUtils.getTree(e);
-
-        thisExp = tm.This((Type) encClass.asType());
-
-        final TreePath treePath = trees.getPath(e);
-        final CompilationUnitTree cut = treePath.getCompilationUnit();
         boolean reflectOnlyThis = false;
         if (!reflectAll) {
             if (annName.equals(Reflect.class.getCanonicalName())) {

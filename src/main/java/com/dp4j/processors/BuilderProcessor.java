@@ -5,6 +5,7 @@
 
 package com.dp4j.processors;
 
+import com.sun.source.tree.CompilationUnitTree;
 import javax.annotation.processing.*;
 import javax.lang.model.*;
 import javax.lang.model.element.*;
@@ -17,7 +18,7 @@ import javax.lang.model.element.*;
 public class BuilderProcessor extends DProcessor{
 
     @Override
-    protected void processElement(Element e, TypeElement ann, boolean warningsOnly) {
+    protected void processElement(Element e, String annName, CompilationUnitTree cut, boolean warningsOnly) {
         //TODO: make sure @product, @getResult are present
     }
 
