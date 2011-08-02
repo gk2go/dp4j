@@ -22,10 +22,6 @@ public class PrivateMethods {
 
     }
 
-    private void aPrivateMethod(Comparable ii){
-
-    }
-
     private int get(int i){
         return i;
     }

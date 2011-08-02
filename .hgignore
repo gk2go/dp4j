@@ -9,3 +9,11 @@
 .settings
 target
 build
+^dp4j\.nmind$
+^dp4j-1\.2-SNAPSHOT-jar-with-dependencies\.md5$
+^dp4j-1\.2-SNAPSHOT-jar-with-dependencies\.md5\.local$
+^dp4j\.iml$
+^dp4j\.ipr$
+^dp4j\.iws$
+^dp4j\.jar$
+^log$

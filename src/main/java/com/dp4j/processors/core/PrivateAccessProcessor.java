@@ -6,7 +6,6 @@ import com.dp4j.ast.Node;
 import com.dp4j.ast.Resolver;
 import com.dp4j.ast.StmtNode;
 import com.dp4j.processors.DProcessor;
-import com.dp4j.processors.MethProcessor;
 import com.sun.source.tree.*;
 import com.sun.source.util.TreePath;
 import com.sun.tools.javac.code.*;
@@ -34,7 +33,7 @@ import javax.tools.Diagnostic.Kind;
  * @author simpatico
  */
 @SupportedAnnotationTypes(value = {"org.junit.Test", "org.testng.annotations.Test", "com.dp4j.Reflect", "com.dp4j.Hack"})
-public class PrivateAccessProcessor extends MethProcessor {
+public class PrivateAccessProcessor extends DProcessor {
 
     public Type getType(Symbol s) {
         Type t;
@@ -57,7 +56,9 @@ public class PrivateAccessProcessor extends MethProcessor {
     boolean catchExceptions;
 
     @Override
-    protected void processElement(Element e, String annName, final CompilationUnitTree cut, boolean warningsOnly) {
+    protected void processElement(Element e, TypeElement ann, boolean warningsOnly) {
+        final String annName = ann.getQualifiedName().toString();
+
         if (annName.equals(Reflect.class.getCanonicalName())) {
             final Reflect reflect = e.getAnnotation(Reflect.class);
             catchExceptions = reflect.catchExceptions();
@@ -76,6 +77,18 @@ public class PrivateAccessProcessor extends MethProcessor {
             reflectAll = true;
         }
 
+        encClass = (TypeElement) e.getEnclosingElement();
+        PackageElement packageOf = elementUtils.getPackageOf(e);
+        List<? extends Element> pkgClasses = packageOf.getEnclosedElements();
+
+        rs = new Resolver(elementUtils, trees, tm, encClass, typeUtils, symTable, pkgClasses);
+
+        methTree = (JCMethodDecl) elementUtils.getTree(e);
+
+        thisExp = tm.This((Type) encClass.asType());
+
+        final TreePath treePath = trees.getPath(e);
+        final CompilationUnitTree cut = treePath.getCompilationUnit();
         boolean reflectOnlyThis = false;
         if (!reflectAll) {
             if (annName.equals(Reflect.class.getCanonicalName())) {
@@ -283,9 +296,10 @@ public class PrivateAccessProcessor extends MethProcessor {
         final MethodSymbol mSym = rs.getSymbol(mi, cut, n);
         if (!mi.args.isEmpty()) {
             for (JCExpression arg : mi.args) {
+                final Type argType = rs.getType(arg, cut, n);
                 JCExpression newArg = processCond(arg, cut, n, encBlock);
                 if (!newArg.equals(arg)) {
-                    mi.args = replace(arg, mi.args, newArg);
+                    mi.args = replace(arg, mi.args, cast((JCMethodInvocation)newArg, argType));
                 }
             }
         }
@@ -306,9 +320,10 @@ public class PrivateAccessProcessor extends MethProcessor {
         Symbol initSym = rs.getSymbol(init, cut, n);
         if (!init.args.isEmpty()) {
             for (JCExpression arg : init.args) {
+                final Type argType = rs.getType(arg, cut, n);
                 JCExpression newArg = processCond(arg, cut, n, encBlock);
                 if (!newArg.equals(arg)) {
-                    init.args = rs.injectBefore(arg, init.args, true, newArg);
+                    init.args = rs.injectBefore(arg, init.args, true, cast((JCMethodInvocation)newArg, argType));
                 }
             }
         }
@@ -425,6 +440,8 @@ public class PrivateAccessProcessor extends MethProcessor {
             return processCond((JCAssign) ifExp, cut, n, encBlock);
         } else if (ifExp instanceof JCArrayAccess) {
             return processCond((JCArrayAccess) ifExp, cut, n, encBlock);
+        } else if (ifExp instanceof JCUnary){
+            return processCond(((JCUnary)ifExp).arg, cut, n, encBlock);
         }
         return ifExp;
     }
@@ -572,15 +589,13 @@ public class PrivateAccessProcessor extends MethProcessor {
                 getterName = elementUtils.getName("getDeclaredConstructor");
                 javaReflectMethField = getIdAfterImporting("java.lang.reflect.Constructor");
                 args = toList(types);
-                exceptions.add("java.lang.InstantiationException");
-                exceptions.add("java.lang.IllegalAccessException");
             } else {
                 getterName = elementUtils.getName("getDeclaredMethod");
                 javaReflectMethField = getIdAfterImporting("java.lang.reflect.Method");
                 JCExpression mName = tm.Literal(symbol.name.toString());
                 args = merge(Collections.singleton(mName), toList(types));
             }
-            exceptions.add("java.lang.NoSuchMethodException"); //thrown for both methods and constructors
+            exceptions.add("java.lang.NoSuchMethodException"); //thrown for both methods and constructors when calling getDeclared..
         } else {
             getterName = elementUtils.getName("getDeclaredField");
             javaReflectMethField = getIdAfterImporting("java.lang.reflect.Field");

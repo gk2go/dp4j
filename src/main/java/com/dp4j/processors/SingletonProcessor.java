@@ -5,7 +5,6 @@
 package com.dp4j.processors;
 
 import com.dp4j.*;
-import com.sun.source.tree.CompilationUnitTree;
 import com.sun.source.tree.ExpressionTree;
 import com.sun.source.tree.Tree;
 import com.sun.source.tree.VariableTree;
@@ -29,7 +28,7 @@ import com.sun.tools.javac.util.Name;
 public class SingletonProcessor extends DProcessor {
 
     @Override
-    protected void processElement(final Element e, String annName, CompilationUnitTree cut, boolean warningsOnly) {
+    protected void processElement(final Element e, TypeElement ann, boolean warningsOnly) {
         Set<Modifier> modifiers = e.getModifiers();
         if (modifiers.contains(Modifier.ABSTRACT)) {
             msgr.printMessage(Kind.ERROR, "a Singleton must not be abstract", e);
@@ -41,7 +40,7 @@ public class SingletonProcessor extends DProcessor {
         Name getInstanceMethName;
         Name instanceVarName;
         boolean lazy = false;//default
-        if (annName.equals(Singleton.class.getCanonicalName())) {
+        if (ann.getQualifiedName().toString().equals(Singleton.class.getCanonicalName())) {
             final Singleton singleton = e.getAnnotation(Singleton.class);
             lazy = singleton.lazy();
             getInstanceMethName = elementUtils.getName(singleton.getInstance());

@@ -562,9 +562,14 @@ public class Resolver {
         java.util.List<Type> syms = new ArrayList<Type>();
         for (JCExpression arg : args) {
             Symbol s = getSymbol(arg, cut, n);
-            Type t = getType(s);
-            if (arg instanceof JCArrayAccess) {
-                t = (Type) ((ArrayType) t).getComponentType();
+            Type t;
+            if (arg instanceof JCParens && ((JCParens) arg).expr instanceof JCTypeCast) {
+                    t = ((JCTypeCast) ((JCParens) arg).expr).type;
+            } else {
+                t = getType(s);
+                if (arg instanceof JCArrayAccess) {
+                    t = (Type) ((ArrayType) t).getComponentType();
+                }
             }
             syms.add(t);
         }
@@ -700,8 +705,8 @@ public class Resolver {
         for (T p : pre) {
             lb.append(p);
         }
-        if(!before && !skipStmt){
-           lb.append(stmt);
+        if (!before && !skipStmt) {
+            lb.append(stmt);
         }
 
         for (T newStmt : newStmts) {

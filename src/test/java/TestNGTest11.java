@@ -23,7 +23,7 @@ public class TestNGTest11{
 
    @org.testng.annotations.Test
    public void t() {
-      int two = new Junit11().one + 1;
+      int two = new TestNG11().one + 1;
       assertEquals(2,two);
       Junit11.p(two,new Double(2),"who", "said", "varargs are difficult to test with the reflection API?");
    }
