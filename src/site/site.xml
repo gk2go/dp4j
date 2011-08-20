@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="ISO-8859-1"?>
 <project name="dp4j">
-	<!--	
+	<!--
 	<skin>
 		<groupId>org.apache.maven.skins</groupId>
 		<artifactId>maven-stylus-skin</artifactId>
@@ -10,9 +10,9 @@
 	<version position="right"/>
 	<publishDate position="right"/>
 	<bannerLeft>
-    	<name>dp4j - Injects Reflection and Design Patterns</name>
-    	<src>https://sites.google.com/a/mysimpatico.com/home/config/app/images/logo.gif</src>
-    	<href>http://maven.apache.org/</href>
+    	<name>TOOL TO TEST PRIVATE METHODS AND USE DESIGN PATTERNS IN JAVA dp4j</name>
+    	<src>https://sites.google.com/a/mysimpatico.com/dp4j/_/rsrc/1311798026657/config/customLogo.gif</src>
+    	<href>http://dp4j.com/</href>
   	</bannerLeft>
 	<!--
   	<bannerRight>

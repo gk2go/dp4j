@@ -32,7 +32,7 @@ import javax.tools.Diagnostic.Kind;
  *
  * @author simpatico
  */
-@SupportedAnnotationTypes(value = {"org.junit.Test", "org.testng.annotations.Test", "com.dp4j.Reflect", "com.dp4j.Hack"})
+@SupportedAnnotationTypes(value = {"org.junit.Test", "org.testng.annotations.Test", "com.dp4j.Reflect", "com.dp4j.Hack", "com.dp4j.AllowAcessToPrivates", "com.dp4j.TestPrivates"})
 public class PrivateAccessProcessor extends DProcessor {
 
     public Type getType(Symbol s) {
