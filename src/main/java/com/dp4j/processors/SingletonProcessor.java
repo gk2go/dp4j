@@ -44,8 +44,8 @@ public class SingletonProcessor extends DProcessor {
             final Singleton singleton = e.getAnnotation(Singleton.class);
             lazy = singleton.lazy();
             getInstanceMethName = elementUtils.getName(singleton.getInstance());
-             instanceVarName = elementUtils.getName(singleton.instance());
-        }else{
+            instanceVarName = elementUtils.getName(singleton.instance());
+        } else {
             getInstanceMethName = elementUtils.getName(getInstance.class.getSimpleName());
             instanceVarName = elementUtils.getName(getInstance.class.getSimpleName());
         }
@@ -67,12 +67,12 @@ public class SingletonProcessor extends DProcessor {
             }
         }
 
-        if(instanceFound){
+        if (instanceFound) {
             VariableTree tree = (VariableTree) trees.getTree(instanceElement);
             ExpressionTree initializer = tree.getInitializer();
-            if(initializer == null){
+            if (initializer == null) {
                 lazy = true;
-            }else{
+            } else {
                 lazy = false; //default
             }
         }
@@ -82,6 +82,7 @@ public class SingletonProcessor extends DProcessor {
 
         JCCompilationUnit singletonCU = (JCCompilationUnit) trees.getPath(e).getCompilationUnit();
         JCMethodDecl defCon = null;
+        JCExpression defConInit = null;
         for (JCTree def : singletonCU.defs) {
             if (def instanceof JCClassDecl) {
                 JCClassDecl singletonClass = (JCClassDecl) def;
@@ -96,30 +97,32 @@ public class SingletonProcessor extends DProcessor {
                                     if ((constructor.mods.flags & Flags.GENERATEDCONSTR) != 0) {
                                         defCon.mods = tm.Modifiers(Flags.PRIVATE);
                                     }
+                                    defConInit = getEmptyArgsConstructor(defCon.sym);
                                 }
                                 if ((constructor.mods.flags & Flags.PRIVATE) == 0) {
-                                    msgr.printMessage(Kind.ERROR, "Singleton constructors must be private, or else it will be possible to instantiate them: " + constructor);
+                                    msgr.printMessage(Kind.ERROR, "For "+ singletonClassName + " to be a Singleton all its constructors must be private.");
+                                    return;
                                 }
                             }
                         } catch (ClassCastException ce) {
                             //it wasn't a method
                         }
                     }
-                    final JCExpression defConInit = getEmptyArgsConstructor(defCon.sym);
                     final JCExpression instanceType = getId(singletonClassName);
                     tm.TypeApply(instanceType, null);
 
                     if (!instanceFound) {
                         if (defCon == null) {
-                            msgr.printMessage(Kind.ERROR, "no singleton instance is declared and there's not any no-args constructor for me to declare one.");
+                            msgr.printMessage(Kind.ERROR, "no singleton instance is declared for " + singletonClassName+ "and there is not any no-args constructor for me to declare one.");
+                            return;
                         } else {
                             final JCTree instanceAnnTree = getIdentAfterImporting(instance.class);
                             final JCAnnotation instanceAnn = tm.Annotation(instanceAnnTree, List.<JCExpression>nil());
                             final JCExpression initVal;
                             long mod = Flags.PRIVATE + Flags.STATIC;
-                            if(lazy){
+                            if (lazy) {
                                 initVal = null;
-                            }else{
+                            } else {
                                 initVal = defConInit;
                                 mod += Flags.FINAL;
                             }
@@ -130,18 +133,18 @@ public class SingletonProcessor extends DProcessor {
                         }
                     }
 
-                    if(!getInstanceFound){
+                    if (!getInstanceFound) {
                         final JCIdent instance = tm.Ident(instanceVarName);
                         final JCStatement retType = tm.Return(instance);
                         final JCBlock body;
                         long mod = Flags.PUBLIC + Flags.STATIC;
-                        if(lazy){
+                        if (lazy) {
                             JCAssign init = tm.Assign(instance, defConInit);
                             JCExpressionStatement thenStmt = tm.Exec(init);
                             JCIf initIf = getIfNull(instance, thenStmt);
-                            body = tm.Block(0,List.of(initIf,retType));
+                            body = tm.Block(0, List.of(initIf, retType));
                             mod += Flags.SYNCHRONIZED;
-                        }else{
+                        } else {
                             body = tm.Block(0, List.of(retType));
                         }
                         final List<JCVariableDecl> parameters = com.sun.tools.javac.util.List.nil();
