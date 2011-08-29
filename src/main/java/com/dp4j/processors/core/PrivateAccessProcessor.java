@@ -817,7 +817,7 @@ public class PrivateAccessProcessor extends DProcessor {
     JCParens cast(JCMethodInvocation reflectedAccess, Type t) {
         final JCExpression castedAccess;
         final String methName = reflectedAccess.meth.toString();
-        if(!t.isPrimitive() && (methName.endsWith("invoke") || methName.endsWith("newInstance")))
+        if(!t.isPrimitive() || methName.endsWith("invoke") || methName.endsWith("newInstance"))
             castedAccess = tm.TypeCast(rs.getBoxedType(t), reflectedAccess);
         else castedAccess = reflectedAccess;
         return tm.Parens(castedAccess);
