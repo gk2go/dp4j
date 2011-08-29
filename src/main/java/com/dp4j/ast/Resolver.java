@@ -8,6 +8,7 @@ import com.sun.source.tree.CompilationUnitTree;
 import com.sun.source.tree.Scope;
 import com.sun.source.tree.Tree;
 import com.sun.source.util.TreePath;
+import com.sun.tools.javac.code.Type.TypeVar;
 import com.sun.tools.javac.util.Name;
 import com.sun.tools.javac.code.Symbol.*;
 import com.sun.tools.javac.tree.JCTree.*;
@@ -564,11 +565,17 @@ public class Resolver {
             Symbol s = getSymbol(arg, cut, n);
             Type t;
             if (arg instanceof JCParens && ((JCParens) arg).expr instanceof JCTypeCast) {
-                    t = ((JCTypeCast) ((JCParens) arg).expr).type;
+                t = ((JCTypeCast) ((JCParens) arg).expr).type;
             } else {
                 t = getType(s);
+
                 if (arg instanceof JCArrayAccess) {
-                    t = (Type) ((ArrayType) t).getComponentType();
+                    if (t instanceof com.sun.tools.javac.code.Type.TypeVar) {
+                        com.sun.tools.javac.code.Type.TypeVar tt = (com.sun.tools.javac.code.Type.TypeVar) t;
+                        t = t.removeBounds();
+                    } else {
+                        t = (Type) ((ArrayType) t).getComponentType();
+                    }
                 }
             }
             syms.add(t);
