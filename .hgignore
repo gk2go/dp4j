@@ -17,3 +17,6 @@ build
 ^dp4j\.iws$
 ^dp4j\.jar$
 ^log$
+^dp4j esecutivo$
+^logo def Ai$
+^dp4j-1\.2-SNAPSHOT-jar-with-dependencies\.jar$

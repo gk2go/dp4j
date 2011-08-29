@@ -16,7 +16,7 @@ public class TestAcessingPrivateObject {
     @Test
     public void testAcessingObjectDP4J() throws Exception {
         ObjectToTestDp4j testObject = new ObjectToTestDp4j();
-        // assertEquals(123, testObject.privateField);
-//        assertEquals(456, (int) testObject.privateMethod());
-        }
+        assertEquals(123, testObject.privateField);
+//        assertEquals(456, testObject.privateMethod());
+    }
 }
