@@ -14,4 +14,9 @@ public class ASingleton {
     private ASingleton(){
 
     }
+
+
+    private final boolean inlineSyns = false;
+        private static final boolean stat = false;
+
 }

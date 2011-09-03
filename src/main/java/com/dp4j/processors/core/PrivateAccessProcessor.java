@@ -62,7 +62,7 @@ public class PrivateAccessProcessor extends DProcessor {
         if (annName.equals(Reflect.class.getCanonicalName())) {
             final Reflect reflect = e.getAnnotation(Reflect.class);
             catchExceptions = reflect.catchExceptions();
-        } else if (annName.equals(Hack.class.getCanonicalName())){
+        } else if (annName.equals(Hack.class.getCanonicalName())) {
             catchExceptions = true;
         } else {
             catchExceptions = false;
@@ -178,7 +178,7 @@ public class PrivateAccessProcessor extends DProcessor {
         return encBlock.stats;
     }
 
-        /**
+    /**
      * @param stmt
      * @param vars
      * @param cut
@@ -299,7 +299,13 @@ public class PrivateAccessProcessor extends DProcessor {
                 final Type argType = rs.getType(arg, cut, n);
                 JCExpression newArg = processCond(arg, cut, n, encBlock);
                 if (!newArg.equals(arg)) {
-                    mi.args = replace(arg, mi.args, cast((JCMethodInvocation)newArg, argType));
+                    final JCExpression castedNewArg;
+                    if(newArg instanceof JCMethodInvocation){
+                        castedNewArg = cast((JCMethodInvocation) newArg, argType);
+                    }else{
+                        castedNewArg = newArg;
+                    }
+                    mi.args = replace(arg, mi.args, castedNewArg);
                 }
             }
         }
@@ -323,7 +329,7 @@ public class PrivateAccessProcessor extends DProcessor {
                 final Type argType = rs.getType(arg, cut, n);
                 JCExpression newArg = processCond(arg, cut, n, encBlock);
                 if (!newArg.equals(arg)) {
-                    init.args = rs.injectBefore(arg, init.args, true, cast((JCMethodInvocation)newArg, argType));
+                    init.args = rs.injectBefore(arg, init.args, true, cast((JCMethodInvocation) newArg, argType));
                 }
             }
         }
@@ -409,7 +415,7 @@ public class PrivateAccessProcessor extends DProcessor {
                     Scope validScope = trees.getScope(trees.getPath(cut, constChangeStmt));
                     encBlock.stats = (com.sun.tools.javac.util.List<JCStatement>) processStmt(constChangeStmt, cut, encBlock, validScope);
                 }
-                return reflectedFieldSetter;
+                return processCond(reflectedFieldSetter, cut, n, encBlock);
             }
         }
         return assignExp;
@@ -428,8 +434,9 @@ public class PrivateAccessProcessor extends DProcessor {
         } else if (ifExp instanceof JCNewClass) {
             return processCond((JCNewClass) ifExp, cut, n, encBlock);
         } else if (ifExp instanceof JCTypeCast) {
-        } else if (ifExp instanceof JCParens) {
             return processCond((JCTypeCast) ifExp, cut, n, encBlock);
+        } else if (ifExp instanceof JCParens) {
+            return processCond(((JCParens) ifExp).expr, cut, n, encBlock);
         } else if (ifExp instanceof JCLiteral) {
             return processCond((JCLiteral) ifExp, cut, n, encBlock);
         } else if (ifExp instanceof JCIdent) {
@@ -440,8 +447,8 @@ public class PrivateAccessProcessor extends DProcessor {
             return processCond((JCAssign) ifExp, cut, n, encBlock);
         } else if (ifExp instanceof JCArrayAccess) {
             return processCond((JCArrayAccess) ifExp, cut, n, encBlock);
-        } else if (ifExp instanceof JCUnary){
-            return processCond(((JCUnary)ifExp).arg, cut, n, encBlock);
+        } else if (ifExp instanceof JCUnary) {
+            return processCond(((JCUnary) ifExp).arg, cut, n, encBlock);
         }
         return ifExp;
     }
@@ -717,8 +724,8 @@ public class PrivateAccessProcessor extends DProcessor {
         return mi;
     }
 
-    public void addAnyReflectionAccessExceptions(final Node n){
-       n.exceptions.add("java.lang.IllegalAccessException");
+    public void addAnyReflectionAccessExceptions(final Node n) {
+        n.exceptions.add("java.lang.IllegalAccessException");
         n.exceptions.add("java.lang.IllegalArgumentException");
     }
 
@@ -817,9 +824,11 @@ public class PrivateAccessProcessor extends DProcessor {
     JCParens cast(JCMethodInvocation reflectedAccess, Type t) {
         final JCExpression castedAccess;
         final String methName = reflectedAccess.meth.toString();
-        if(!t.isPrimitive() || methName.endsWith("invoke") || methName.endsWith("newInstance"))
+        if (!t.isPrimitive() || methName.endsWith("invoke") || methName.endsWith("newInstance")) {
             castedAccess = tm.TypeCast(rs.getBoxedType(t), reflectedAccess);
-        else castedAccess = reflectedAccess;
+        } else {
+            castedAccess = reflectedAccess;
+        }
         return tm.Parens(castedAccess);
     }
 }
