@@ -6,6 +6,8 @@
 package com.dp4j.samples;
 
 import com.dp4j.Reflect;
+import java.util.logging.Level;
+import java.util.logging.Logger;
 import org.junit.Test;
 
 /**
@@ -67,5 +69,16 @@ public class ParsingTest {
             } else {
                 ints = new int[5];
             }
+    }
+
+//    @Test
+//    public void dp4j4Test() throws Exception{
+//     Thread.sleep(1);
+//    }
+
+    @Test
+    @Reflect(all=true)
+    public void dp4j1Test(){
+        Logger.getLogger(ParsingTest.class.getName()).log(Level.FINE,"");
     }
 }

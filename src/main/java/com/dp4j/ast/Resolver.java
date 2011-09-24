@@ -628,7 +628,8 @@ public class Resolver {
             for (Type arg : actual) {
                 Symbol ts = formal.get(i);
                 final Type formalType = ts.type;
-                if (!sameArg(arg, formalType)) {
+                boolean assignable = typeUtils.isAssignable(arg, formalType);
+                if (!assignable && !sameArg(arg, formalType)) {
                     return false;
                 }
                 i++;
