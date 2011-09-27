@@ -312,10 +312,10 @@ public abstract class DProcessor extends AbstractProcessor {
         } catch (Exception e) {
             e.printStackTrace();
         }
-        return onlyHandler(annotations);
+        return isOnlyHandler(annotations);
     }
 
-    protected boolean onlyHandler(Set<? extends TypeElement> annotations) {
+    protected boolean isOnlyHandler(Set<? extends TypeElement> annotations) {
         return true;
     }
 

@@ -121,6 +121,16 @@ public class PrivateAccessProcessor extends DProcessor {
         return tree;
     }
 
+    private JCExpression cast(JCExpression newArg, final Type argType) {
+        JCExpression castedNewArg;
+        if(newArg instanceof JCMethodInvocation){
+            castedNewArg = cast((JCMethodInvocation) newArg, argType);
+        }else{
+            castedNewArg = newArg;
+        }
+        return castedNewArg;
+    }
+
     private Scope getScope(Tree stmt, final CompilationUnitTree cut, Scope validScope) {
         if (stmt instanceof JCVariableDecl) {
             JCExpression exp = ((JCVariableDecl) stmt).init;
@@ -179,14 +189,11 @@ public class PrivateAccessProcessor extends DProcessor {
     }
 
     /**
-     * @param stmt
-     * @param vars
+     * required for injecting reflection statements globally, and also when not possible locally, eg. if-expr
+     * @param n
      * @param cut
-     * @param packageName
-     * @param scope
-     * @param stats required for injecting reflection statements globally, and also when not possible locally, eg. if-expr
-     * @param varSyms
-     * @return
+     * @param encBlock
+     * @return encBlock possibly with reflection injected
      */
     protected List<? extends Tree> processStmt(StmtNode n, final CompilationUnitTree cut, JCBlock encBlock) {
         final StatementTree stmt = n.actual;
@@ -264,6 +271,9 @@ public class PrivateAccessProcessor extends DProcessor {
             }
             loop.body = (JCStatement) blockify(loop.body);
             loop.body = processElement((JCBlock) loop.body, cut, loop.expr);
+        } else if (stmt instanceof JCReturn){
+            JCReturn ret = (JCReturn) stmt;
+            ret.expr = cast(processCond(ret.expr, cut, n, encBlock), methTree.getReturnType().type);
         }
         if (!n.exceptions.isEmpty()) {
             if (catchExceptions) {
@@ -300,11 +310,7 @@ public class PrivateAccessProcessor extends DProcessor {
                 JCExpression newArg = processCond(arg, cut, n, encBlock);
                 if (!newArg.equals(arg)) {
                     final JCExpression castedNewArg;
-                    if(newArg instanceof JCMethodInvocation){
-                        castedNewArg = cast((JCMethodInvocation) newArg, argType);
-                    }else{
-                        castedNewArg = newArg;
-                    }
+                    castedNewArg = cast(newArg, argType);
                     mi.args = replace(arg, mi.args, castedNewArg);
                 }
             }
@@ -360,8 +366,7 @@ public class PrivateAccessProcessor extends DProcessor {
     }
 
     protected JCExpression processCond(JCBinary ifB, final CompilationUnitTree cut, Node n, JCBlock encBlock) {
-//            if (ifB.lhs instanceof JCFieldAccess) {
-//                final JCFieldAccess fa = (JCFieldAccess) ifB.lhs;
+
         ifB.rhs = processCond(ifB.rhs, cut, n, encBlock);
 
         final boolean accessible = isAccessible(ifB.lhs, cut, n);
@@ -658,7 +663,8 @@ public class PrivateAccessProcessor extends DProcessor {
      * @param cut
      * @param accessor assumed to be accessible. TODO: get rid of assumption!
      * @param args
-     * @return
+     * @param n
+     * @return the method invocation of invoke
      */
     JCMethodInvocation getReflectedAccess(Symbol s, final CompilationUnitTree cut, JCExpression accessor, com.sun.tools.javac.util.List<JCExpression> args, Node n) {
         final Name getterName;
@@ -729,7 +735,7 @@ public class PrivateAccessProcessor extends DProcessor {
         n.exceptions.add("java.lang.IllegalArgumentException");
     }
 
-    /**
+ /**
      * TODO: refactor with getReflectedFieldGetter
      * @param fa
      * @param value
@@ -737,7 +743,7 @@ public class PrivateAccessProcessor extends DProcessor {
      * @param primitiveField
      * @param n
      * @param staticField
-     * @return
+     * @return method invocation that sets the field accessed in fa
      */
     JCMethodInvocation getReflectedFieldSetter(JCFieldAccess fa, final JCExpression value, final CompilationUnitTree cut, boolean primitiveField, Node n, final boolean staticField) {
         final Name field = getFieldVar(fa.name);
@@ -801,10 +807,11 @@ public class PrivateAccessProcessor extends DProcessor {
 
     /**
      * Junit or someone else might want to handle it
-     * @return
+     * @param annotations
+     * @return true if it's the only handler for all the given annotations.
      */
     @Override
-    protected boolean onlyHandler(Set<? extends TypeElement> annotations) {
+    protected boolean isOnlyHandler(Set<? extends TypeElement> annotations) {
         if (annotations.size() == 1) {
             TypeElement next = annotations.iterator().next();
             if (next.getQualifiedName().toString().equals(Reflect.class.getCanonicalName())) {
@@ -819,7 +826,7 @@ public class PrivateAccessProcessor extends DProcessor {
      * http://www.informit.com/articles/article.aspx?p=30871&seqNum=5
      * @param reflectedAccess
      * @param t
-     * @return
+     * @return parenthesis with the method casted to t
      */
     JCParens cast(JCMethodInvocation reflectedAccess, Type t) {
         final JCExpression castedAccess;

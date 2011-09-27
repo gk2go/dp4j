@@ -122,11 +122,11 @@
                 </executions>
 http://cdivilly.wordpress.com/2010/03/16/maven-and-jsr-269-annotation-processors/
             </plugin>-->
-<!--            <plugin>
+            <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-javadoc-plugin</artifactId>
-                <version>2.7</version>
-                		<executions>
+                <version>2.6.1</version>
+                <executions>
                     <execution>
                         <id>generate-javadoc</id>
                         <phase>package</phase>
@@ -135,7 +135,7 @@ http://cdivilly.wordpress.com/2010/03/16/maven-and-jsr-269-annotation-processors
                         </goals>
                     </execution>
                 </executions>
-            </plugin>-->
+            </plugin>
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-deploy-plugin</artifactId>

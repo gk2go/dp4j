@@ -140,12 +140,12 @@ public class Resolver {
 //        } TODO: cannot look-up?
         return s;
     }
-
-    /**
-     * cannot handle just like a fieldAccess? No, need to strip args and params
+/**
+     *  cannot handle just like a fieldAccess? No, need to strip args and params
      * @param mi
-     * @param scope
-     * @return
+     * @param cut
+     * @param n
+     * @return the method symbol of mi
      */
     public MethodSymbol getSymbol(final JCMethodInvocation mi, CompilationUnitTree cut, Node n) {
         Name mName = getName(mi);
