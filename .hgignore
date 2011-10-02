@@ -1,4 +1,5 @@
 \.orig$
+\.class$
 \.orig\..*$
 \.chg\..*$
 \.rej$
