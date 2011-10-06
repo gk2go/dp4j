@@ -5,7 +5,7 @@
     <artifactId>dp4j</artifactId>
     <name>dp4j</name>
     <description>document, validate, and generate Design Patterns implementations with annotations</description>
-    <version>1.2-SNAPSHOT</version>
+    <version>1.2</version>
     <url>http://dp4j.com</url>
     <parent>
         <groupId>org.sonatype.oss</groupId>
@@ -320,66 +320,66 @@
                                     Generating TESTDRIVE for ${project.version} version
                                 </echo>
                                 <exec executable="chmod">
-                                    <arg value="777"/>
-                                    <arg value="tools/gen_testdrive.sh"/>
+                                    <arg value="777" />
+                                    <arg value="tools/gen_testdrive.sh" />
                                 </exec>
                                 <exec executable="tools/gen_testdrive.sh" failonerror="true">
-                                    <arg value="${project.version}"/>
+                                    <arg value="${project.version}" />
                                 </exec>
                                 <echo>
                                     Generating MD5 checksum for ${project.version} version
                                 </echo>
                                 <exec executable="openssl" failonerror="true" input="target/dp4j-${project.version}-jar-with-dependencies.jar" output="target/dp4j-${project.version}-jar-with-dependencies.md5">
-                                    <arg value="md5"/>
+                                    <arg value="md5" />
                                 </exec>
                                 <echo>Uploading http://downloads.sourceforge.net/project/dp4j/${project.version}/dp4j-${project.version}-jar-with-dependencies.jar</echo>
                                 <exec executable="rsync" failonerror="true">
-                                    <arg value="-e"/>
-                                    <arg value="ssh -i ${user.home}/.ssh/id_dsa"/>
-                                    <arg value="target/dp4j-${project.version}-jar-with-dependencies.jar"/>
-                                    <arg value="simpatico1,dp4j@frs.sourceforge.net:/home/frs/project/d/dp/dp4j/${project.version}/"/>
+                                    <arg value="-e" />
+                                    <arg value="ssh -i ${user.home}/.ssh/id_dsa" />
+                                    <arg value="target/dp4j-${project.version}-jar-with-dependencies.jar" />
+                                    <arg value="simpatico1,dp4j@frs.sourceforge.net:/home/frs/project/d/dp/dp4j/${project.version}/" />
                                 </exec>
                                 <echo>Uploading http://downloads.sourceforge.net/project/dp4j/${project.version}/dp4j-${project.version}-jar-with-dependencies.md5</echo>
                                 <exec executable="rsync" failonerror="true">
-                                    <arg value="-e"/>
-                                    <arg value="ssh -i ${user.home}/.ssh/id_dsa"/>
-                                    <arg value="target/dp4j-${project.version}-jar-with-dependencies.md5"/>
-                                    <arg value="simpatico1,dp4j@frs.sourceforge.net:/home/frs/project/d/dp/dp4j/${project.version}/"/>
+                                    <arg value="-e" />
+                                    <arg value="ssh -i ${user.home}/.ssh/id_dsa" />
+                                    <arg value="target/dp4j-${project.version}-jar-with-dependencies.md5" />
+                                    <arg value="simpatico1,dp4j@frs.sourceforge.net:/home/frs/project/d/dp/dp4j/${project.version}/" />
                                 </exec>
                                 <echo>Uploading http://downloads.sourceforge.net/project/dp4j/${project.version}/TESTDRIVE</echo>
                                 <exec executable="rsync" failonerror="true">
-                                    <arg value="-e"/>
-                                    <arg value="ssh -i ${user.home}/.ssh/id_dsa"/>
-                                    <arg value="target/TESTDRIVE"/>
-                                    <arg value="simpatico1,dp4j@frs.sourceforge.net:/home/frs/project/d/dp/dp4j/${project.version}/"/>
+                                    <arg value="-e" />
+                                    <arg value="ssh -i ${user.home}/.ssh/id_dsa" />
+                                    <arg value="target/TESTDRIVE" />
+                                    <arg value="simpatico1,dp4j@frs.sourceforge.net:/home/frs/project/d/dp/dp4j/${project.version}/" />
                                 </exec>
                                 <exec executable="chmod">
-                                    <arg value="777"/>
-                                    <arg value="target/TESTDRIVE"/>
+                                    <arg value="777" />
+                                    <arg value="target/TESTDRIVE" />
                                 </exec>
                                 <echo>Starting TESTDRIVE</echo>
                                 <exec executable="target/TESTDRIVE" failonerror="true">
                                 </exec>
                                 <echo>Cleaning after TESTDRIVE</echo>
                                 <exec executable="rm">
-                                    <arg value="dp4j-${project.version}-jar-with-dependencies.jar"/>
+                                    <arg value="dp4j-${project.version}-jar-with-dependencies.jar" />
                                 </exec>
                                 <exec executable="rm">
-                                    <arg value="Test10.java"/>
+                                    <arg value="Test10.java" />
                                 </exec>
                                 <echo>Uploading javadoc</echo>
                                 <exec executable="rsync" failonerror="true">
-                                    <arg value="-re"/>
-                                    <arg value="ssh -i ${user.home}/.ssh/id_dsa"/>
-                                    <arg value="target/apidocs/"/>
-                                    <arg value="simpatico1@web.sourceforge.net:/home/project-web/dp4j/htdocs/apidocs/"/>
+                                    <arg value="-re" />
+                                    <arg value="ssh -i ${user.home}/.ssh/id_dsa" />
+                                    <arg value="target/apidocs/" />
+                                    <arg value="simpatico1@web.sourceforge.net:/home/project-web/dp4j/htdocs/apidocs/" />
                                 </exec>
                                 <echo>Uploading site</echo>
                                 <exec executable="rsync" failonerror="true">
-                                    <arg value="-re"/>
-                                    <arg value="ssh -i ${user.home}/.ssh/id_dsa"/>
-                                    <arg value="target/site/"/>
-                                    <arg value="simpatico1@web.sourceforge.net:/home/project-web/dp4j/htdocs/"/>
+                                    <arg value="-re" />
+                                    <arg value="ssh -i ${user.home}/.ssh/id_dsa" />
+                                    <arg value="target/site/" />
+                                    <arg value="simpatico1@web.sourceforge.net:/home/project-web/dp4j/htdocs/" />
                                 </exec>
                             </tasks>
                         </configuration>
