@@ -50,7 +50,7 @@ public class InstanceProcessor extends DProcessor {
         }
 
         final Singleton singletonAnn = singleton.getAnnotation(Singleton.class);
-        if (singletonAnn == null) {
+        if (singletonAnn != null) {
             if (singletonAnn.lazy()) {
                 VariableTree tree = (VariableTree) trees.getTree(e);
                 ExpressionTree initializer = tree.getInitializer();
