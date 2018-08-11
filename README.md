@@ -9,7 +9,7 @@ In a nutshell, when you add ```dp4j.jar``` to your project's ```CLASSPATH```, Dp
 ```javac -cp dp4j-1.0-jar-with-dependencies.jar -Averbose=true REPLACE-WITH-YOUR-JAVA-CLASS.java```
 
 # Publications
-[Implementing patterns with annotations](https://github.com/gk2go/dp4j/wiki/Testscript)
+[Implementing patterns with annotations](https://dl.acm.org/citation.cfm?id=2524636)
 
 [Compile-time checked Reflection API](Compile-Time%20Checked%20Reflection%20API.pdf) 
 
